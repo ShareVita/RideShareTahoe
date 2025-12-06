@@ -44,3 +44,6 @@ public/sitemap-0.xml
 supabase/.temp
 .open-next
 *.log
+
+# cloudflare
+.wrangler
