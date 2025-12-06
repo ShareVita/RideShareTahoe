@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 import type { CreateEmailOptions } from 'resend';
 import { createElement } from 'react';
 import config from '@/config';
-
+import striptags from 'striptags';
 let resendClient: Resend;
 
 const getResendClient = () => {
@@ -119,22 +119,8 @@ export const sendEmail = async ({ to, subject, text, html, replyTo }: EmailParam
   validateEmailContent(subject, text, html);
   // Ensure we have both text and HTML versions for better deliverability
   if (!text && html) {
-    // Strip HTML tags for text version if not provided
-    let sanitized = html;
-    let previous;
-    // Remove all <script> blocks in a loop until none remain
-    do {
-      previous = sanitized;
-      sanitized = sanitized.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
-    } while (sanitized !== previous);
-    // Remove all <style> blocks in a loop until none remain
-    do {
-      previous = sanitized;
-      sanitized = sanitized.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
-    } while (sanitized !== previous);
-    // Remove all remaining HTML tags, and normalize whitespace
-    text = sanitized
-      .replace(/<[^>]+>/g, '')
+    // Strip HTML tags for text version if not provided, using a robust library
+    text = striptags(html)
       .replace(/&nbsp;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();

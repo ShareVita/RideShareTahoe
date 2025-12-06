@@ -68,7 +68,8 @@
     "react-tooltip": "^5.26.3",
     "resend": "^6.5.2",
     "typescript": "^5.9.3",
-    "zod": "^4.1.8"
+    "zod": "^4.1.8",
+    "striptags": "^3.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.28.5",
