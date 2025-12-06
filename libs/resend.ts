@@ -120,12 +120,23 @@ export const sendEmail = async ({ to, subject, text, html, replyTo }: EmailParam
   // Ensure we have both text and HTML versions for better deliverability
   if (!text && html) {
     // Strip HTML tags for text version if not provided
-    text = html
-      .replaceAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replaceAll(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replaceAll(/<[^>]+>/g, '')
-      .replaceAll('&nbsp;', ' ')
-      .replaceAll(/\s+/g, ' ')
+    let sanitized = html;
+    let previous;
+    // Remove all <script> blocks in a loop until none remain
+    do {
+      previous = sanitized;
+      sanitized = sanitized.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+    } while (sanitized !== previous);
+    // Remove all <style> blocks in a loop until none remain
+    do {
+      previous = sanitized;
+      sanitized = sanitized.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+    } while (sanitized !== previous);
+    // Remove all remaining HTML tags, and normalize whitespace
+    text = sanitized
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
