@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import config from '@/config';
+import striptags from 'striptags';
 
 export interface EmailTemplate {
   subject: string;
@@ -122,8 +123,7 @@ export async function loadEmailTemplate(
     text = fs.readFileSync(textPath, 'utf8');
   } catch {
     // If text template doesn't exist, generate from HTML
-    text = html
-      .replaceAll(/<[^>]*>/g, '')
+    text = striptags(html)
       .replaceAll(/\s+/g, ' ')
       .trim();
   }
