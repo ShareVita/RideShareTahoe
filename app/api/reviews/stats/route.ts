@@ -13,10 +13,8 @@ export async function GET(request: NextRequest) {
     const userIdParam = searchParams.get('userId');
 
     // If authentication failed, only allow access when userId is explicitly provided
-    if (authError || !user) {
-      if (!userIdParam) {
-        return createUnauthorizedResponse(authError);
-      }
+    if ((authError || !user) && !userIdParam) {
+      return createUnauthorizedResponse(authError);
     }
 
     const userId = userIdParam || user?.id;
