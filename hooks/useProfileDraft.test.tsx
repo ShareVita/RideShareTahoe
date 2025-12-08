@@ -60,12 +60,14 @@ const mockRemoveEventListener = jest.fn((event, callback) => {
 
 // Helper to simulate a storage event from another tab
 const dispatchStorageEvent = (newValue: string | null) => {
-  const event = new StorageEvent('storage', {
+  const event = {
+    type: 'storage',
     key: 'profileDraft',
     newValue,
-  });
+  };
+
   if (storageEventListeners.storage) {
-    storageEventListeners.storage(event);
+    storageEventListeners.storage(event as StorageEvent);
   }
 };
 

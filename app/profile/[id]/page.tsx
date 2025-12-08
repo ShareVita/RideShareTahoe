@@ -296,7 +296,7 @@ export default function PublicProfilePage() {
               )}
 
               {/* Report Button */}
-              {currentUser && currentUser.id !== profile.id && (
+              {currentUser.id !== profile.id && (
                 <button
                   onClick={() => setIsReportModalOpen(true)}
                   className="ml-2 text-red-600 hover:text-red-700 font-medium text-sm transition-colors"
@@ -306,7 +306,7 @@ export default function PublicProfilePage() {
                 </button>
               )}
 
-              {currentUser && currentUser.id === profile.id && (
+              {currentUser.id === profile.id && (
                 <Link
                   href="/profile/edit"
                   className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -456,14 +456,12 @@ export default function PublicProfilePage() {
       )}
 
       {/* Report Modal */}
-      {profile && (
-        <ReportModal
-          isOpen={isReportModalOpen}
-          onClose={() => setIsReportModalOpen(false)}
-          reportedUserId={profile.id}
-          reportedUserName={`${profile.first_name} ${profile.last_name}`}
-        />
-      )}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        reportedUserId={profile.id}
+        reportedUserName={`${profile.first_name} ${profile.last_name}`}
+      />
     </div>
   );
 }

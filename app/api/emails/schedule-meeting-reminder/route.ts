@@ -47,11 +47,11 @@ export async function POST(request: NextRequest) {
     await scheduleMeetingReminder({
       userId,
       meetingId,
-      meetingTitle: meetingTitle || meeting.title,
+      meetingTitle: meetingTitle,
       startsAt: new Date(startsAt),
       payload: {
         meetingId,
-        title: meetingTitle || meeting.title,
+        title: meetingTitle,
         startsAt: new Date(startsAt).toISOString(),
       },
     });
