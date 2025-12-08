@@ -66,7 +66,7 @@ function LoginContent() {
 
     try {
       const { type, provider } = options;
-      const redirectURL = globalThis.location.origin + '/api/auth/callback';
+      const redirectURL = globalThis.location.origin + '/community';
 
       if (type === 'oauth' && provider) {
         // Use Supabase's built-in OAuth but with custom branding
