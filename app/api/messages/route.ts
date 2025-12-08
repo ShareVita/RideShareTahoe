@@ -1,63 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
-import {
-  createClient as createSupabaseClient,
-  SupabaseClient,
-  User,
-  AuthError,
-} from '@supabase/supabase-js';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
-// Helper to get authenticated user, falling back to Bearer token if needed
-async function getAuthenticatedUser(
-  request: NextRequest,
-  supabaseCookieClient: SupabaseClient
-): Promise<{ user: User | null; authError: AuthError | null; supabase: SupabaseClient }> {
-  let supabase = supabaseCookieClient;
-  let {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  // Fallback to Bearer token if no session from cookies
-  if ((authError || !user) && request.headers.get('Authorization')) {
-    const token = request.headers.get('Authorization')?.split(' ')[1];
-    if (token) {
-      // Create a new client with the token to ensure RLS works
-      supabase = createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        }
-      );
-
-      const { data, error } = await supabase.auth.getUser();
-      if (!error && data.user) {
-        user = data.user;
-        authError = null;
-      }
-    }
-  }
-
-  return { user, authError, supabase };
-}
-
+/**
+ * Sends a new message between users.
+ * Requires an active booking/ride context between the sender and recipient.
+ */
 export async function POST(request: NextRequest) {
   try {
-    const supabaseCookieClient = await createClient();
-    const { user, authError, supabase } = await getAuthenticatedUser(request, supabaseCookieClient);
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
     const { recipient_id, content, ride_post_id } = await request.json();
@@ -188,18 +141,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Retrieves messages for a specific conversation.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const supabaseCookieClient = await createClient();
-    const { user, authError, supabase } = await getAuthenticatedUser(request, supabaseCookieClient);
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
     const { searchParams } = new URL(request.url);

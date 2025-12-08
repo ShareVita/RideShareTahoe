@@ -1,42 +1,18 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { NextRequest, NextResponse } from 'next/server';
 import { createTripBookingSchema } from '@/libs/validations/trips';
 import { z } from 'zod';
 
-export async function POST(request: Request) {
+/**
+ * Creates a new trip booking request.
+ * Validates ride availability, seat count, and ensures no self-booking.
+ */
+export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    );
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
 
     const json = await request.json();
@@ -53,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Ride not found' }, { status: 404 });
     }
 
-    if (ride.poster_id === session.user.id) {
+    if (ride.poster_id === user.id) {
       return NextResponse.json({ error: 'You cannot book your own ride' }, { status: 400 });
     }
 
@@ -70,7 +46,7 @@ export async function POST(request: Request) {
       .from('trip_bookings')
       .select('id')
       .eq('ride_id', body.ride_id)
-      .eq('passenger_id', session.user.id)
+      .eq('passenger_id', user.id)
       .single();
 
     if (existingBooking) {
@@ -85,7 +61,7 @@ export async function POST(request: Request) {
       .insert({
         ride_id: body.ride_id,
         driver_id: ride.poster_id,
-        passenger_id: session.user.id,
+        passenger_id: user.id,
         pickup_location: body.pickup_location,
         pickup_time: new Date(`${body.pickup_date}T${body.pickup_time}:00`).toISOString(),
         passenger_notes: body.passenger_notes,

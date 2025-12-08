@@ -1,15 +1,16 @@
-import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { vehicleSchema } from '@/libs/validations/vehicle';
+import { getAuthenticatedUser } from '@/libs/supabase/auth';
+import { z } from 'zod';
 
+/**
+ * Updates an existing vehicle.
+ * Enforces ownership check before modification.
+ */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const supabase = await createClient();
     const { id } = await params;
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -20,7 +21,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validationResult.error.flatten() },
+        { error: 'Validation failed', details: z.treeifyError(validationResult.error) },
         { status: 400 }
       );
     }
@@ -59,17 +60,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
+/**
+ * Deletes a vehicle.
+ * Enforces ownership check before deletion.
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
     const { id } = await params;
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

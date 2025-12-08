@@ -1,14 +1,17 @@
-import { createClient } from '@/libs/supabase/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET /api/reviews - Get reviews for a specific user or all reviews
+/**
+ * Retrieves reviews, optionally filtered by userId.
+ * Supports pagination.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Check authentication
-    // Check authentication (optional for GET)
-    await supabase.auth.getUser();
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
+    }
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -65,16 +68,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/reviews - Create a new review
+/**
+ * Creates a new review for a completed ride booking.
+ * Validates booking status, input fields, and ensures one review per trip per user.
+ */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -202,6 +202,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Validates the review input fields.
+ * Enforces rating bounds (1-5) and minimum comment word count (5).
+ */
 function validateReviewInput(bookingId: string, rating: number, comment: string) {
   if (!bookingId || !rating || !comment) {
     return { error: 'Missing required fields', status: 400 };
@@ -238,6 +242,9 @@ interface Booking {
   [key: string]: unknown;
 }
 
+/**
+ * Checks if the user is a participant in the booking and if the trip is completed.
+ */
 function validateBookingEligibility(booking: Booking, userId: string) {
   if (booking.driver_id !== userId && booking.passenger_id !== userId) {
     return {
@@ -268,6 +275,9 @@ function validateBookingEligibility(booking: Booking, userId: string) {
   return null;
 }
 
+/**
+ * Infers the reviewer and reviewed roles based on the original posting type.
+ */
 function determineReviewRoles(postType: string, posterId: string, reviewerId: string) {
   let reviewerRole = '';
   let reviewedRole = '';

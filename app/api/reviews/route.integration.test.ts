@@ -25,9 +25,10 @@ jest.mock('@/libs/supabase/server', () => ({
 
 // Test configuration
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const TEST_EMAIL_DOMAIN = '@example.com';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 interface PendingReviewResponse {
   booking_id: string;
@@ -91,7 +92,7 @@ describeIntegration('Reviews API Integration Test', () => {
       email: driverEmail,
       password: 'TestPassword123!',
     });
-    const driverClient = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const driverClient = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       global: { headers: { Authorization: `Bearer ${driverSession.session!.access_token}` } },
     });
 
@@ -128,7 +129,7 @@ describeIntegration('Reviews API Integration Test', () => {
       email: passengerEmail,
       password: 'TestPassword123!',
     });
-    const passengerClient = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const passengerClient = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
       global: { headers: { Authorization: `Bearer ${passengerSession.session!.access_token}` } },
     });
 
@@ -165,15 +166,13 @@ describeIntegration('Reviews API Integration Test', () => {
 
     // Mock createClient
     (createClient as jest.Mock).mockResolvedValue(
-      createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: { headers: { Authorization: `Bearer ${accessToken}` } },
       })
     );
 
-    const response = await GET_PENDING(); // It doesn't take request, uses headers/cookies from mock?
-    // Wait, GET_PENDING uses `createClient` which we mocked.
-    // However, `GET` in pending/route.ts defines `export async function GET()`.
-    // It calls `await createClient()`.
+    const req = new NextRequest(`${BASE_URL}/api/reviews/pending`);
+    const response = await GET_PENDING(req);
 
     expect(response.status).toBe(200);
     const data = await response.json();
@@ -198,7 +197,7 @@ describeIntegration('Reviews API Integration Test', () => {
 
     // Mock createClient to return an authenticated client for this user
     (createClient as jest.Mock).mockResolvedValue(
-      createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -206,7 +205,7 @@ describeIntegration('Reviews API Integration Test', () => {
         },
       })
     );
-    const req = new NextRequest('http://localhost:3000/api/reviews', {
+    const req = new NextRequest(`${BASE_URL}/api/reviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -254,12 +253,12 @@ describeIntegration('Reviews API Integration Test', () => {
 
     // Mock createClient
     (createClient as jest.Mock).mockResolvedValue(
-      createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: { headers: { Authorization: `Bearer ${accessToken}` } },
       })
     );
 
-    const req = new NextRequest('http://localhost:3000/api/reviews', {
+    const req = new NextRequest(`${BASE_URL}/api/reviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -289,7 +288,7 @@ describeIntegration('Reviews API Integration Test', () => {
 
     // Mock createClient to return an authenticated client for this user
     (createClient as jest.Mock).mockResolvedValue(
-      createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -298,7 +297,7 @@ describeIntegration('Reviews API Integration Test', () => {
       })
     );
 
-    const req = new NextRequest(`http://localhost:3000/api/reviews?userId=${driverId}`, {
+    const req = new NextRequest(`${BASE_URL}/api/reviews?userId=${driverId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

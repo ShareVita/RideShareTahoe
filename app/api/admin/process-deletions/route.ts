@@ -1,27 +1,19 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
-// POST /api/admin/process-deletions - Process deletion requests that are ready
-export async function POST() {
+/**
+ * Processes all account deletion requests that have passed their scheduled date.
+ * Validates admin status before execution.
+ */
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
-    // Check if user is admin (you can implement your own admin check logic)
-    // For now, we'll use a simple check - you might want to add an admin role to profiles
+    // Verify admin role via profiles table
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -80,23 +72,16 @@ export async function POST() {
   }
 }
 
-// GET /api/admin/process-deletions - Get pending deletion requests
-export async function GET() {
+/**
+ * Retrieves all pending deletion requests for admin review.
+ * Calculates days remaining for each request.
+ */
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
     // Check if user is admin

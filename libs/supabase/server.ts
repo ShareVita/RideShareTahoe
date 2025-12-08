@@ -3,23 +3,23 @@ import { cookies } from 'next/headers';
 import { getCookieOptions } from '@/libs/cookieOptions';
 
 // #region TYPES
-type SupabaseKeyType = 'anon' | 'service_role';
+type SupabaseKeyType = 'PUBLISHABLE' | 'service_role';
 // #endregion TYPES
 
 /**
  * @async
  * @function createClient
  * @description Creates a server-side Supabase client with cookie handling.
- * @param {SupabaseKeyType} type - Specifies which key to use: 'anon' (default) for client operations, or 'service_role' for backend administrative tasks.
+ * @param {SupabaseKeyType} type - Specifies which key to use: 'PUBLISHABLE' (default) for client operations, or 'service_role' for backend administrative tasks.
  */
-export async function createClient(type: SupabaseKeyType = 'anon') {
+export async function createClient(type: SupabaseKeyType = 'PUBLISHABLE') {
   const cookieStore = await cookies();
 
   // Determine which key to use based on the 'type' argument
   const supabaseKey =
     type === 'service_role'
       ? process.env.SUPABASE_SERVICE_ROLE_KEY!
-      : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      : process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, supabaseKey, {
     cookieOptions: getCookieOptions() as CookieOptions,

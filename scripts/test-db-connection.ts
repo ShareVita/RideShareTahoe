@@ -6,11 +6,11 @@ import path from 'node:path';
 config({ path: path.resolve(__dirname, '../.env.test.local') });
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   console.error(
-    'Error: Missing environment variables. Make sure .env.test.local exists and has NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+    'Error: Missing environment variables. Make sure .env.test.local exists and has NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.'
   );
   process.exit(1);
 }
@@ -18,7 +18,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 console.log('Testing Supabase Connection...');
 console.log('URL:', SUPABASE_URL);
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 try {
   const email = `diagnostic-${Date.now()}@test.local`;

@@ -1,5 +1,5 @@
-import { createClient } from '@/libs/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
 interface BookingWithProfiles {
   id: string;
@@ -18,27 +18,19 @@ interface BookingWithProfiles {
   [key: string]: unknown;
 }
 
-// GET /api/reviews/pending - Get pending reviews for the current user
-export async function GET() {
+/**
+ * Retrieves a list of past bookings that the current user has not yet reviewed.
+ * Filters for confirmed or completed bookings where the trip date has passed.
+ */
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
-    // 1. Get all confirmed/completed bookings where the user is a participant
-    // We fetch bookings that are either 'completed' or 'confirmed'
+    // Fetch confirmed/completed bookings where the user is a participant
     const { data: bookings, error: bookingsError } = await supabase
       .from('trip_bookings')
       .select(
@@ -72,7 +64,7 @@ export async function GET() {
       return NextResponse.json({ pendingReviews: [] });
     }
 
-    // 2. Get all reviews created by this user for these bookings
+    // Fetch existing reviews to identify which bookings are already reviewed
     const bookingIds = pastBookings.map((b) => b.id);
     const { data: reviews, error: reviewsError } = await supabase
       .from('reviews')
@@ -84,7 +76,7 @@ export async function GET() {
 
     const reviewedBookingIds = new Set(reviews?.map((r) => r.booking_id) || []);
 
-    // 3. Filter out bookings that have already been reviewed
+    // Exclude already reviewed bookings
     const pendingReviews = pastBookings
       .filter((booking) => !reviewedBookingIds.has(booking.id))
       .map((booking) => {

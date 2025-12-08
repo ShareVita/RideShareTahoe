@@ -39,7 +39,7 @@ Create a `.env.test.local` file with:
 ```env
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key-here
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
 # App URL (for API endpoint testing)
@@ -188,7 +188,7 @@ If you get connection errors:
 
 If you get authentication errors:
 
-1. Verify your `NEXT_PUBLIC_SUPABASE_ANON_KEY` is correct
+1. Verify your `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is correct
 2. For admin operations, ensure `SUPABASE_SERVICE_ROLE_KEY` is set
 3. Check that email confirmation is disabled for local testing:
    ```bash
@@ -268,7 +268,7 @@ jobs:
         run: RUN_INTEGRATION_TESTS=true npm test -- route.integration.test.ts
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: Stop Supabase

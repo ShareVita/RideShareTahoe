@@ -1,23 +1,15 @@
-import { createClient } from '@/libs/supabase/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET /api/reviews/[id] - Get a specific review
+/**
+ * Retrieves a detailed review by ID.
+ */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
     const { id } = await params;
@@ -49,16 +41,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-// PATCH /api/reviews/[id] - Update a review
+/**
+ * Updates an existing review.
+ * Only allows updates by the original reviewer.
+ */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const supabase = await createClient();
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -143,19 +132,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-// DELETE /api/reviews/[id] - Delete a review
+/**
+ * Deletes a review.
+ * Only allows deletion by the original reviewer.
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },

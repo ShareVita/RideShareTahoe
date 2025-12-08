@@ -1,6 +1,10 @@
-import { createClient } from '@/libs/supabase/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * Retrieves a log of email events (sent, failed, etc.).
+ * Supports filtering by type, status, and user.
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -10,7 +14,11 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const userId = searchParams.get('userId');
 
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
+
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
+    }
 
     // Build query
     let query = supabase

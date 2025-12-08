@@ -1,24 +1,16 @@
-import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
+/**
+ * Retrieves a list of upcoming community events.
+ * Filters by event type and sorts by date.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          details: userError,
-        },
-        { status: 401 }
-      );
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
 
     // Get URL parameters for filtering
@@ -85,24 +77,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * Creates a new community event.
+ * Requires title, date, and location.
+ */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          details: userError,
-        },
-        { status: 401 }
-      );
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
 
     const body = await request.json();

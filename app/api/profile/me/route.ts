@@ -1,7 +1,7 @@
 'use server';
 
-import { NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
 interface ProfileSocialsRow {
   user_id: string;
@@ -30,19 +30,15 @@ interface ProfileResponse {
 }
 
 /**
- * Returns the active user's profile and social links so the client can render the dashboard.
+ * Retrieves the authenticated user's profile and social links.
+ * Used for populating the user dashboard.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
 
     const { data: profile, error: profileError } = await supabase

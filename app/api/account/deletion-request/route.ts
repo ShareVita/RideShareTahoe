@@ -1,34 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
-import { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { PostgrestError } from '@supabase/supabase-js';
 
-type UserResponse = Awaited<ReturnType<SupabaseClient['auth']['getUser']>>;
-
-// POST /api/account/deletion-request - Request account deletion
+/**
+ * Submits a new account deletion request.
+ * Checks for existing requests and creates a new one with a 30-day scheduled deletion date.
+ */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    // Log the authentication attempt for debugging
-    console.log('Auth check:', {
-      user: user?.id,
-      error: authError?.message,
-    });
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
-      console.log('Authentication failed:', authError);
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
     const body = await request.json();
@@ -87,16 +70,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/account/deletion-request - Get user's deletion request status
-export async function GET() {
+/**
+ * Retrieves the status of a user's pending deletion request.
+ * Returns the request details and days remaining until deletion.
+ */
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     // Log the authentication attempt for debugging
     console.log('GET Auth check:', {
@@ -105,13 +85,7 @@ export async function GET() {
     });
 
     if (authError || !user) {
-      console.log('GET Authentication failed:', authError);
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
 
     // Get user's deletion request status
@@ -161,23 +135,20 @@ export async function GET() {
   }
 }
 
-// DELETE /api/account/deletion-request - Cancel deletion request
-export async function DELETE() {
+/**
+ * Cancels a pending account deletion request.
+ * This effectively "undeletes" the account before the process is finalized.
+ */
+export async function DELETE(request: NextRequest) {
   const startTime = Date.now();
 
   try {
     console.log('Starting deletion cancellation request...');
 
-    const supabase = await createClient();
-    const user = await authenticateUser(supabase);
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
 
     console.log(`User authenticated: ${user.id}`);
@@ -224,26 +195,6 @@ export async function DELETE() {
   } catch (error: unknown) {
     return handleCancellationError(error, startTime);
   }
-}
-
-async function authenticateUser(supabase: SupabaseClient) {
-  // Check authentication with timeout
-  const authPromise = supabase.auth.getUser();
-  const authTimeout = new Promise<UserResponse>((_, reject) =>
-    setTimeout(() => reject(new Error('Authentication timeout')), 5000)
-  );
-
-  const {
-    data: { user },
-    error: authError,
-  } = await Promise.race([authPromise, authTimeout]);
-
-  if (authError || !user) {
-    console.log('Authentication failed:', authError);
-    return null;
-  }
-
-  return user;
 }
 
 function handleUpdateError(updateError: PostgrestError) {

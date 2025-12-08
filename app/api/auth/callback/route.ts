@@ -2,8 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/libs/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
 
-// #region TYPES
-// NOTE: Use your actual schema types (e.g., from database.types.ts) here for safety.
+// Define types locally for safety (mirroring database schema)
 interface Profile {
   id: string;
   first_name: string | null;
@@ -15,14 +14,10 @@ interface Profile {
   display_lat: number | null;
   display_lng: number | null;
 }
-// #endregion TYPES
-
-// #region HELPER_FUNCTIONS
 
 /**
- * @function determineRedirectPath
- * @description Determines the final destination URL based on user status and profile completeness.
- * Includes a cache-busting parameter to force client-side session refresh.
+ * Determines the final destination URL based on user status and profile completeness.
+ * Appends a cache-busting parameter to ensure client-side session freshness.
  */
 function determineRedirectPath(
   finalRedirectBaseUrl: string,
@@ -62,15 +57,13 @@ function determineRedirectPath(
 }
 
 /**
- * @async
- * @function processCodeExchangeAndProfileUpdate
- * @description Executes the core logic: exchange code, update profile, send email, and route.
+ * Executes the core OAuth logic: code exchange, profile synchronization, emails, and final routing.
  */
 async function processCodeExchangeAndProfileUpdate(
   requestUrl: URL,
   code: string
 ): Promise<NextResponse> {
-  // Use createClient() which is configured to default to the secure Anon Key and handles cookies.
+  // Use secure Publishable Key client with cookie handling
   const supabase = await createClient();
 
   // 1. Exchange Code
@@ -173,13 +166,9 @@ async function processCodeExchangeAndProfileUpdate(
   // Use NextResponse.redirect() which sets the status and Location header.
   return NextResponse.redirect(redirectPath);
 }
-// #endregion HELPER_FUNCTIONS
-
-// #region HANDLER
 /**
- * @async
- * @function GET
- * @description Handles the OAuth callback from a provider.
+ * Handles the OAuth callback from the authentication provider.
+ * Exchanges the code for a session and sets up the user profile.
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const requestUrl = new URL(req.url);
@@ -210,4 +199,3 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   console.log('⚠️ No code present - Redirecting to login');
   return NextResponse.redirect(new URL('/login', requestUrl.origin));
 }
-// #endregion HANDLER

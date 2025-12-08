@@ -9,23 +9,18 @@ param(
 $SupabaseStatus = npx supabase status -o env | Out-String;
 
 # Regex to find the specific key and capture its value
-$AnonPattern = 'ANON_KEY=(?:\s*")?([^"\s]+)';
 $ServicePattern = 'SERVICE_ROLE_KEY=(?:\s*")?([^"\s]+)';
 $PublishablePattern = 'PUBLISHABLE_KEY=(?:\s*")?([^"\s]+)';
 
-# 1. Capture Anonymous Key Value
-$AnonMatch = [regex]::Match($SupabaseStatus, $AnonPattern);
-$AnonKeyRawValue = $AnonMatch.Groups[1].Value;
-
-# 2. Capture Service Key Value
+# 1. Capture Service Key Value
 $ServiceMatch = [regex]::Match($SupabaseStatus, $ServicePattern);
 $ServiceKeyRawValue = $ServiceMatch.Groups[1].Value;
 
-# 3. Capture Publishable Key Value
+# 2. Capture Publishable Key Value
 $PublishableMatch = [regex]::Match($SupabaseStatus, $PublishablePattern);
 $PublishableKeyRawValue = $PublishableMatch.Groups[1].Value; 
 
-if (-not $AnonKeyRawValue -or -not $ServiceKeyRawValue) {
+if (-not $ServiceKeyRawValue -or -not $PublishableKeyRawValue) {
     Write-Error 'Error: Key values could not be extracted from the Supabase status output.';
     exit 1;
 }
@@ -35,13 +30,7 @@ if (-not $AnonKeyRawValue -or -not $ServiceKeyRawValue) {
 # Explicitly capture the entire file content into the $NewContent variable.
 $NewContent = @(
     Get-Content -Path $ENV_FILE | ForEach-Object {
-        
-        # Check and replace the Anon Key
-        if ($_ -match '^NEXT_PUBLIC_SUPABASE_ANON_KEY=') {
-            "NEXT_PUBLIC_SUPABASE_ANON_KEY=$AnonKeyRawValue"
-        }
-        # Check and replace the Service Key
-        elseif ($_ -match '^SUPABASE_SERVICE_ROLE_KEY=') {
+        if ($_ -match '^SUPABASE_SERVICE_ROLE_KEY=') {
             "SUPABASE_SERVICE_ROLE_KEY=$ServiceKeyRawValue"
         }
         elseif ($_ -match '^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=') {
@@ -58,4 +47,4 @@ $NewContent = @(
 
 $NewContent | Set-Content -Path $ENV_FILE;
 
-Write-Host "✅ Supabase ANONYMOUS_KEY and SERVICE_ROLE_KEY successfully updated in $ENV_FILE.";
+Write-Host "✅ Supabase SERVICE_ROLE_KEY and PUBLISHABLE_KEY successfully updated in $ENV_FILE.";

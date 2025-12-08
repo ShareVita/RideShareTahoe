@@ -1,18 +1,17 @@
-import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { vehicleSchema } from '@/libs/validations/vehicle';
 import { z } from 'zod';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
-export async function GET() {
+/**
+ * Retrieves all vehicles owned by the authenticated user.
+ */
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createUnauthorizedResponse(authError);
     }
 
     const { data: vehicles, error } = await supabase
@@ -33,16 +32,15 @@ export async function GET() {
   }
 }
 
+/**
+ * Registers a new vehicle for the authenticated user.
+ */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createUnauthorizedResponse(authError);
     }
 
     const body = await request.json();

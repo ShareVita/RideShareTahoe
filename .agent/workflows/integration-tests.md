@@ -34,7 +34,7 @@ To run the integration tests in a CI environment (like GitHub Actions), you need
     ```bash
     export RUN_INTEGRATION_TESTS=true
     export NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
-    export NEXT_PUBLIC_SUPABASE_ANON_KEY="<your-anon-key>"
+    export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="<your-publishable-key>"
     export SUPABASE_SERVICE_ROLE_KEY="<your-service-role-key>"
     ```
 

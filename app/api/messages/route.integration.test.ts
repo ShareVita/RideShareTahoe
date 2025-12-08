@@ -18,7 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Test configuration
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const TEST_EMAIL_DOMAIN = '@example.com';
 
@@ -185,7 +185,7 @@ describeIntegration('Messages API Integration Test', () => {
       expect(driverSessionError).toBeNull();
       expect(driverSession.session).toBeDefined();
 
-      const userAClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const userAClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${driverSession.session!.access_token}`,
@@ -230,7 +230,7 @@ describeIntegration('Messages API Integration Test', () => {
       expect(passengerSessionError).toBeNull();
       expect(passengerSession.session).toBeDefined();
 
-      const userBClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const userBClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${passengerSession.session!.access_token}`,
@@ -276,7 +276,7 @@ describeIntegration('Messages API Integration Test', () => {
       expect(sessionData.session).toBeDefined();
 
       // Create a Supabase client with User A's session
-      const userAClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const userAClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${sessionData.session!.access_token}`,
@@ -339,7 +339,7 @@ describeIntegration('Messages API Integration Test', () => {
       expect(sessionData.session).toBeDefined();
 
       // Create a Supabase client with User B's session
-      const userBClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const userBClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${sessionData.session!.access_token}`,
@@ -400,7 +400,7 @@ describeIntegration('Messages API Integration Test', () => {
       expect(sessionData.session).toBeDefined();
 
       // Create a Supabase client with User B's session
-      const userBClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const userBClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${sessionData.session!.access_token}`,
@@ -449,7 +449,7 @@ describeIntegration('Messages API Integration Test', () => {
       expect(sessionData.session).toBeDefined();
 
       // Create a Supabase client with User A's session
-      const userAClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const userAClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${sessionData.session!.access_token}`,
@@ -500,7 +500,7 @@ describeIntegration('Messages API Integration Test', () => {
 
       expect(signInError).toBeNull();
 
-      const userAClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const userAClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         global: {
           headers: {
             Authorization: `Bearer ${sessionData.session!.access_token}`,
@@ -526,10 +526,10 @@ describeIntegration('Messages API Integration Test', () => {
 
     it('should prevent unauthenticated users from accessing messages', async () => {
       // Create an unauthenticated client
-      const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const client = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
       // Try to fetch messages without authentication
-      const { data: messages } = await anonClient.from('messages').select('*');
+      const { data: messages } = await client.from('messages').select('*');
 
       // Should return empty array due to RLS
       expect(messages).toEqual([]);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { sendEmail } from '@/libs/resend';
 import { strictRateLimit } from '@/libs/rateLimit';
 
@@ -32,7 +32,39 @@ const updateResultsWithBatch = (results: BulkEmailResult, batchResults: BatchRes
   }
 };
 
+/**
+ * Sends bulk emails to users.
+ * Supports batch processing, rate limiting, and email personalization.
+ */
 export async function POST(request: NextRequest) {
+  const { user, authError, supabase } = await getAuthenticatedUser(request);
+
+  if (authError || !user) {
+    return createUnauthorizedResponse(authError);
+  }
+
+  // Check for admin role
+  // If user.role is not present, fetch from supabase
+  let isAdmin = false;
+  if (user.role && user.role === 'admin') {
+    isAdmin = true;
+  } else if (supabase) {
+    // Try to fetch user role from database
+    const { data, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    if (!error && data && data.role === 'admin') {
+      isAdmin = true;
+    }
+  }
+  if (!isAdmin) {
+    return NextResponse.json(
+      { error: 'Forbidden: Admin access required' },
+      { status: 403 }
+    );
+  }
   try {
     // Apply rate limiting
     const rateLimitResult = strictRateLimit(request);
@@ -83,9 +115,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Create Supabase client with service role key for admin access
-    const supabase = await createClient();
 
     // Get all users with email addresses
     const { data: users, error: usersError } = await supabase

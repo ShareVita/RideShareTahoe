@@ -78,7 +78,7 @@ $env:RUN_INTEGRATION_TESTS="true"; npm test -- messages-simple.integration.test.
 3. Create `.env.test.local`:
    ```env
    NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=<from supabase status>
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<from supabase status>
    RUN_INTEGRATION_TESTS=true
    NEXT_PUBLIC_APP_URL=http://localhost:3000
    ```

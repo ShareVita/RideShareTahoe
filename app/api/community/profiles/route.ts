@@ -1,4 +1,4 @@
-import { createClient } from '@/libs/supabase/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -7,12 +7,13 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1'));
     const limit = Math.max(1, Number.parseInt(searchParams.get('limit') || '24'));
     const offset = (page - 1) * limit;
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
+
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
+    }
 
     const role = searchParams.get('role');
-
-    const supabase = await createClient();
-
-    console.log('Profiles API called with params:', { page, limit, offset, role });
 
     // Build the main query for eligible profiles
     let query = supabase

@@ -2,11 +2,6 @@ import config from '@/config';
 
 import { Metadata } from 'next';
 
-// These are all the SEO tags you can add to your pages.
-// It prefills data with default title/description/OG, etc.. and you can customize it for each page.
-// It's already added in the root layout.js so you don't have to add it to every page.
-// But I recommend setting the canonical URL for each page (export const metadata = getSEOTags({canonicalUrlRelative: "/"});)
-
 interface SEOProps {
   title?: string;
   description?: string;

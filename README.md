@@ -54,7 +54,7 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 3. **Edit secrets**
 
    Update `.env.local` with:
-   - Verify Supabase connection values (URL, anon key, service role key)
+   - Verify Supabase connection values (URL, publishable key, service role key)
    - Optional `RESEND_API_KEY` for sending emails
    - Optional `CRON_SECRET_TOKEN` for the deletion cron job (`scripts/setup-deletion-cron.sh` explains how to use this)
 
@@ -65,7 +65,7 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 ## Environment variables
 
 - The template lives in `.env.example`; it documents the required Supabase/Resend keys and sets `NODE_ENV=development` by default.
-- `scripts/populate-env-keys.ps1` / `scripts/populate-env-keys.sh` are invoked by the Taskfile to refresh Supabase anon and service keys when the local stack starts.
+- `scripts/populate-env-keys.ps1` / `scripts/populate-env-keys.sh` are invoked by the Taskfile to refresh Supabase publishable and service keys when the local stack starts.
 - Optional placeholders for Stripe/OpenAI remain commented for historical reference, but we rely solely on Supabase and Resend for now.
 
 ## Helpful commands

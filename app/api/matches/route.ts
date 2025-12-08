@@ -1,29 +1,24 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { calculateDistance } from '@/libs/distance';
 
-export async function GET(request: Request) {
+/**
+ * Finds potential carpool matches based on location proximity and user role.
+ * - Drivers see passengers.
+ * - Passengers see drivers.
+ * - Results are sorted by distance.
+ */
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = Number.parseInt(searchParams.get('limit') || '4');
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
 
-    // Get current user's profile (for location and role)
+    // Fetch profile for role-based matching logic
     const { data: currentProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id, display_lat, display_lng, role, first_name')
@@ -75,7 +70,7 @@ export async function GET(request: Request) {
 
     console.log('Matching criteria:', { targetRoles });
 
-    // Get all potential match profiles with location (bio not required)
+    // Fetch closest profiles matching the target role criteria
     const profileQuery = supabase
       .from('profiles')
       .select(
