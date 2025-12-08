@@ -94,7 +94,7 @@ describe('RidePostCard', () => {
     expect(screen.getByText('John Doe')).toBeInTheDocument();
   });
 
-  it('should not render owner info section if owner', () => {
+  it('should not render owner info section when current user is the owner', () => {
     const ownerPost = { ...mockPost, poster_id: 'user-1' };
     render(
       <RidePostCard
