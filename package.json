@@ -48,7 +48,6 @@
   "dependencies": {
     "@headlessui/react": "^2.1.0",
     "@hookform/resolvers": "^5.2.2",
-    "@opennextjs/cloudflare": "^1.14.3",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.45.0",
     "@tailwindcss/postcss": "^4.1.16",
@@ -67,9 +66,9 @@
     "react-hot-toast": "^2.4.1",
     "react-tooltip": "^5.26.3",
     "resend": "^6.5.2",
+    "striptags": "^3.2.0",
     "typescript": "^5.9.3",
-    "zod": "^4.1.8",
-    "striptags": "^3.2.0"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@babel/core": "^7.28.5",
@@ -103,8 +102,7 @@
     "stylelint-config-standard": "^39.0.1",
     "stylelint-config-tailwindcss": "^1.0.0",
     "supabase": "^2.51.0",
-    "tailwindcss": "^4.1.16",
-    "wrangler": "^4.53.0"
+    "tailwindcss": "^4.1.16"
   },
   "babel": {
     "presets": [
