@@ -43,6 +43,28 @@ export async function POST(request: NextRequest) {
     return createUnauthorizedResponse(authError);
   }
 
+  // Check for admin role
+  // If user.role is not present, fetch from supabase
+  let isAdmin = false;
+  if (user.role && user.role === 'admin') {
+    isAdmin = true;
+  } else if (supabase) {
+    // Try to fetch user role from database
+    const { data, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    if (!error && data && data.role === 'admin') {
+      isAdmin = true;
+    }
+  }
+  if (!isAdmin) {
+    return NextResponse.json(
+      { error: 'Forbidden: Admin access required' },
+      { status: 403 }
+    );
+  }
   try {
     // Apply rate limiting
     const rateLimitResult = strictRateLimit(request);
