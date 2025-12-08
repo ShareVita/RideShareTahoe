@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'logos-world.net', port: '', pathname: '/**' },
       {
         protocol: 'https',
-        hostname: 'utrvultsbtsywypztfnn.supabase.co',
+        hostname: '*.supabase.co',
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
