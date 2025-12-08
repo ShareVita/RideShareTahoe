@@ -1,4 +1,4 @@
-import { getAuthenticatedUser } from '@/libs/supabase/auth';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -7,9 +7,17 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(request: NextRequest) {
   try {
-    const { user, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
     const { searchParams } = new URL(request.url);
+
+    // If authentication failed, only allow access when userId is explicitly provided
+    if (authError || !user) {
+      if (!searchParams.get('userId')) {
+        return createUnauthorizedResponse(authError);
+      }
+    }
+
     const userId = searchParams.get('userId') || user?.id;
 
     if (!userId) {
