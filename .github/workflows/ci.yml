@@ -65,16 +65,21 @@ jobs:
 
       - name: Start Local Supabase
         run: |
-          supabase start -x studio,realtime,logflare,imgproxy
+          supabase start -x studio,realtime,logflare,imgproxy | tee supabase.log
           # Wait ensures services are up (start implies wait but good to be sure)
 
       - name: Set Environment Variables
         run: |
-          supabase status -o json > supabase-status.json
-          cat supabase-status.json
-          echo "NEXT_PUBLIC_SUPABASE_URL=$(jq -r .api_url supabase-status.json)" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(jq -r .anon_key supabase-status.json)" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(jq -r .service_role_key supabase-status.json)" >> $GITHUB_ENV
+          # Parse credentials from startup log since status command is unreliable in CI
+          API_URL=$(grep "API URL:" supabase.log | awk -F ': ' '{print $2}' | tr -d '[:space:]')
+          ANON_KEY=$(grep "anon key:" supabase.log | awk -F ': ' '{print $2}' | tr -d '[:space:]')
+          SERVICE_KEY=$(grep "service_role key:" supabase.log | awk -F ': ' '{print $2}' | tr -d '[:space:]')
+
+          echo "Detected API URL: $API_URL"
+
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> $GITHUB_ENV
 
       - name: Run Integration Tests
         run: npm run test:integration
