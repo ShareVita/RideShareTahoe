@@ -40,7 +40,7 @@ export default function VehicleForm({
       const url = initialData
         ? `/api/community/vehicles/${initialData.id}`
         : '/api/community/vehicles';
-      const method = initialData ? 'PATCH' : 'POST';
+      const method = initialData ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
