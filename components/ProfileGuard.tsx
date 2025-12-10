@@ -1,39 +1,73 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import React, { useEffect, useRef } from 'react';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
+import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 
 const PUBLIC_PATHS = new Set(['/login', '/signup', '/auth/callback', '/']);
+const PUBLIC_PATH_PREFIXES = ['/community'];
 const PROFILE_SETUP_PATHS = new Set(['/complete-profile', '/profile/edit']);
 
 export default function ProfileGuard({ children }: { readonly children: React.ReactNode }) {
   const { user, loading: authLoading } = useUser();
   const { data: profile, isLoading: profileLoading } = useUserProfile();
-  const router = useRouter();
   const pathname = usePathname();
+  const {
+    isPromptOpen,
+    profileCompletionModal,
+    showProfileCompletionPrompt,
+    hideProfileCompletionPrompt,
+  } = useProfileCompletionPrompt({ closeRedirect: '/' });
+
+  const showPromptRef = useRef(showProfileCompletionPrompt);
+  useEffect(() => {
+    showPromptRef.current = showProfileCompletionPrompt;
+  }, [showProfileCompletionPrompt]);
+
+  const hidePromptRef = useRef(hideProfileCompletionPrompt);
+  useEffect(() => {
+    hidePromptRef.current = hideProfileCompletionPrompt;
+  }, [hideProfileCompletionPrompt]);
 
   useEffect(() => {
     // Wait for all loading to finish
-    if (authLoading || profileLoading) return;
+    if (authLoading || profileLoading) {
+      return;
+    }
 
     // If not logged in, we don't need to check profile (AppLayout/Middleware handles auth protection)
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     // Check if current path is public or part of the setup flow
     const isPublicPath = PUBLIC_PATHS.has(pathname);
+    const hasPublicPrefix = PUBLIC_PATH_PREFIXES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
     const isSetupPath = PROFILE_SETUP_PATHS.has(pathname);
+    const isProtectedPath = !isPublicPath && !hasPublicPrefix && !isSetupPath;
 
-    if (isPublicPath || isSetupPath) return;
-
-    // If logged in but no profile or incomplete profile (no first name), redirect to complete-profile
-    if (!profile?.first_name) {
-      router.push('/complete-profile');
+    if (!isProtectedPath) {
+      hidePromptRef.current?.();
+      return;
     }
-  }, [user, profile, authLoading, profileLoading, pathname, router]);
+
+    if (profile?.first_name) {
+      hidePromptRef.current?.();
+      return;
+    }
+
+    showPromptRef.current?.();
+  }, [user, profile, authLoading, profileLoading, pathname]);
 
   // We render children while checking to avoid flash of white content
   // The useEffect will handle the redirect if needed
+  if (isPromptOpen) {
+    return profileCompletionModal;
+  }
+
   return <>{children}</>;
 }

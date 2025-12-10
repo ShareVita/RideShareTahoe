@@ -10,7 +10,6 @@ interface Profile {
   first_name: string;
   photo_url: string | null;
   city: string | null;
-  neighborhood: string | null;
   role: string;
   bio_excerpt: string | null;
   display_lat?: number;

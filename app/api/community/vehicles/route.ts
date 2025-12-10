@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vehicleSchema } from '@/libs/validations/vehicle';
 import { z } from 'zod';
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import {
+  getAuthenticatedUser,
+  createUnauthorizedResponse,
+  ensureProfileComplete,
+} from '@/libs/supabase/auth';
 
 /**
  * Retrieves all vehicles owned by the authenticated user.
@@ -42,6 +46,9 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
+
+    const profileError = await ensureProfileComplete(supabase, user.id, 'adding vehicles');
+    if (profileError) return profileError;
 
     const body = await request.json();
     const validationResult = vehicleSchema.safeParse(body);

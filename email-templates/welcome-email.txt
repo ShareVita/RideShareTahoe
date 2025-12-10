@@ -1,34 +1,34 @@
-Welcome to ShareSkippy!
+Welcome to RideShareTahoe!
 
 Hi {{userName}},
 
-Welcome to ShareSkippy! We're thrilled to have you join our community of dog lovers! ShareSkippy is all about connecting dog owners and dog enthusiasts to create amazing experiences together.
+Welcome aboard RideShareTahoe! We're thrilled to have you join our community of drivers and passengers traveling between the Bay Area and Lake Tahoe. Together, we're reducing traffic, sharing costs, and building trips that feel safe and fun.
 
-Ready to get started?
-Consider sharing your availability to help schedule your first meeting!
+Ready to hit the road?
+Share your next trip or availability to help others find the perfect match.
 
-Here's what you can do on ShareSkippy:
-• Schedule Playdates: Connect with other dog owners for fun meetups
-• Chat & Connect: Message fellow dog lovers in your area  
-• Share Reviews: Rate experiences and help others find great connections
-• Share Availability: Let others know when you're available for dog activities
+Here's what you can do on RideShareTahoe:
+• Plan Rides: Match with drivers heading to Tahoe or passengers looking for a seat
+• Message Safely: Chat with potential travel buddies right inside the platform
+• Share Ratings: Give feedback and build trust with the community
+• Share Availability: Let riders know when you're headed up the mountain
 
-Start Exploring ShareSkippy: {{appUrl}}
+Start Exploring RideShareTahoe: {{appUrl}}
 
-Pro tip: Complete your profile with photos of your furry friend to get more connection requests! The more details you share, the better matches you'll find.
+Pro tip: Complete your profile with a photo and a few trip details so others know what kind of rider or driver you are. The clearer your profile, the better the matches.
 
-If you have any questions or need help getting started, don't hesitate to reach out to our support team. We're here to help make your ShareSkippy experience amazing!
+Need anything? Our support team is happy to help you get started.
 
-Happy tails and wagging adventures,
-The ShareSkippy Team 🐕
+Happy travels,
+The RideShareTahoe Team 🏔️
 
-FAQ page: {{appUrl}}/faq
+FAQ: {{appUrl}}/faq
 Safety guidelines: {{appUrl}}/safety
 Unsubscribe: {{unsubscribeUrl}}
 
-ShareSkippy LLC
+RideShareTahoe LLC
 123 Main Street, Suite 100
 San Francisco, CA 94102
 United States
 
-You received this welcome email as a new member of ShareSkippy. We're excited to have you join our community! If you no longer wish to receive emails from us, you can unsubscribe here: {{unsubscribeUrl}}
+You received this welcome email as a new member of RideShareTahoe. We're excited to be part of your next Tahoe trip! If you no longer wish to receive emails from us, you can unsubscribe here: {{unsubscribeUrl}}

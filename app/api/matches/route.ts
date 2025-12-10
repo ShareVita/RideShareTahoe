@@ -81,7 +81,6 @@ export async function GET(request: NextRequest) {
         profile_photo_url,
         bio,
         city,
-        neighborhood,
         role,
         display_lat,
         display_lng,

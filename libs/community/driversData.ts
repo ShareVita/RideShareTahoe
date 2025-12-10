@@ -58,7 +58,6 @@ export const fetchDrivers = async (
       first_name,
       last_name,
       profile_photo_url,
-      neighborhood,
       city,
       state,
       bio,

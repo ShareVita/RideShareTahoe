@@ -143,12 +143,6 @@ describe('EmailQueue', () => {
     });
 
     it('should send up to maxEmails then pause and reset', async () => {
-      // This test is tricky: 10 emails * 100ms delay = 1000ms window.
-      // The 11th check happens *exactly* when the window resets, skipping
-      // the "pause" logic.
-      // We must force the 10 emails to send *faster* than the window.
-      // We'll mock the internal 100ms delay to be 0ms *for this test*.
-
       const delaySpy = jest.spyOn(queue, 'delay').mockImplementation(function (ms: number) {
         // We only want to change the 100ms inter-email delay
         if (ms === 100) {

@@ -70,12 +70,16 @@ export default function RideForm({
     if (!vehicleId) return;
 
     const vehicle = vehicles.find((v) => v.id === vehicleId);
+
     if (vehicle) {
+      const isAwd = vehicle.drivetrain === 'AWD' || vehicle.drivetrain === '4WD';
       setFormData((prev) => ({
         ...prev,
-        // Combine make, model, year, and color into a descriptive string
-        // Since database only has 'car_type' (text) and 'has_awd' (bool)
-        car_type: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color})`,
+        // Combine make, model, year, color, and drivetrain into a descriptive string
+        car_type: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color}) ${
+          vehicle.drivetrain ? `- ${vehicle.drivetrain}` : ''
+        }`,
+        has_awd: isAwd,
       }));
     }
   };
@@ -395,23 +399,6 @@ export default function RideForm({
               </div>
             </div>
           )}
-
-          <div className="flex items-center">
-            <input
-              id="has_awd"
-              name="has_awd"
-              type="checkbox"
-              checked={formData.has_awd}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800"
-            />
-            <label
-              htmlFor="has_awd"
-              className="ml-2 block text-sm text-gray-900 dark:text-gray-300"
-            >
-              Vehicle has AWD/4WD (Recommended for Tahoe)
-            </label>
-          </div>
         </div>
       )}
 

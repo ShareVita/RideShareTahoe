@@ -43,7 +43,6 @@ const defaultProfile: UserProfile = {
   email: 'jane@example.com',
   avatar_url: '',
   role: 'driver',
-  neighborhood: 'Lakeview',
   city: 'Tahoe City',
   state: 'CA',
   bio: 'I love ridesharing together with neighbors.',
@@ -187,12 +186,6 @@ describe('ProfileEditPage', () => {
     fireEvent.change(screen.getByLabelText(/Zip Code/i), {
       target: { value: '96145' },
     });
-    // Mock location validation (display_lat/lng are required)
-    // Since we can't easily mock the internal state update from geocoding in this integration test without more complex mocking,
-    // we might need to rely on initialData having these or mock the form state update if possible.
-    // However, the component checks `!formState.display_lat` on submit.
-    // The initialData in `setHooksToDefault` (defaultProfile) doesn't have display_lat/lng set in the test setup?
-    // Let's check `defaultProfile` in the test file.
 
     fireEvent.click(screen.getByRole('button', { name: /Save profile/i }));
 

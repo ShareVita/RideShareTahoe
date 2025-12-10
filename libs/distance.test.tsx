@@ -7,7 +7,6 @@ const COORDINATES = {
   LONDON: { lat: 51.5074, lng: 0.1278 }, // London, UK
 };
 
-// **FIXED CONSTANTS:** These values are the actual distances calculated by your
 // 'calculateDistance' function using R=3959 miles and the coordinates above.
 const NYC_TO_LA_ACTUAL = 2445.71; // Previously 2440.9
 const NYC_TO_LONDON_ACTUAL = 3471.82; // Previously 3455.5

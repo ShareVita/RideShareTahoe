@@ -43,9 +43,8 @@ export default function StoriesSection({ heading, stories, cta }: StoriesSection
               key={`${story.author}-${story.quote.substring(0, 10)}`}
               className="bg-slate-800/40 border border-white/10 rounded-3xl p-8 shadow-2xl backdrop-blur-md hover:-translate-y-2 transition-transform duration-300"
             >
-              <div className="text-4xl text-brand-primary mb-4 opacity-50">“</div>
               <p className="text-lg leading-relaxed text-slate-100 font-light italic relative z-10">
-                {story.quote}
+                &ldquo;{story.quote}&rdquo;
               </p>
               <div className="mt-8 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-linear-to-br from-brand-primary to-brand-secondary flex items-center justify-center text-white font-bold text-sm">

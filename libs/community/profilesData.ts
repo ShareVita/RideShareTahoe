@@ -27,11 +27,11 @@ interface ProfilesQueryRow {
   first_name: string | null;
   last_name: string | null;
   profile_photo_url: string | null;
-  neighborhood: string | null;
   city: string | null;
   state: string | null;
   bio: string | null;
   role: string | null;
+  pronouns: string | null;
   profile_socials: ProfileSocialsRow | null;
 }
 
@@ -85,11 +85,11 @@ export const fetchProfiles = async (
       first_name,
       last_name,
       profile_photo_url,
-      neighborhood,
       city,
       state,
       bio,
       role,
+      pronouns,
       profile_socials (
         facebook_url,
         instagram_url,
@@ -131,11 +131,11 @@ export const fetchProfiles = async (
     first_name: profile.first_name,
     last_name: profile.last_name,
     profile_photo_url: profile.profile_photo_url,
-    neighborhood: profile.neighborhood,
     city: profile.city,
     state: profile.state,
     bio: profile.bio,
     role: profile.role,
+    pronouns: profile.pronouns || null,
     // Flatten social URLs
     facebook_url: profile.profile_socials?.facebook_url || null,
     instagram_url: profile.profile_socials?.instagram_url || null,

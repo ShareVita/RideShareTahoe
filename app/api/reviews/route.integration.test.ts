@@ -12,7 +12,8 @@
  * 5. Verify review exists
  */
 
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/types/database.types';
 import { POST, GET } from './route';
 import { GET as GET_PENDING } from './pending/route';
 import { NextRequest } from 'next/server';
@@ -24,9 +25,32 @@ jest.mock('@/libs/supabase/server', () => ({
 }));
 
 // Test configuration
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== 'undefined' &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== 'null' &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.trim() !== ''
+    ? process.env.NEXT_PUBLIC_SUPABASE_URL
+    : 'http://127.0.0.1:54321';
+const SUPABASE_PUBLISHABLE_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY !== 'undefined' &&
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY !== 'null'
+    ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    : 'test-anon-key';
+
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY !== 'undefined' &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY !== 'null'
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY
+    : process.env.SUPABASE_SERVICE_KEY || '';
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn(
+    'WARNING: SUPABASE_SERVICE_ROLE_KEY is missing. Integration tests requiring admin access will fail.'
+  );
+}
 const TEST_EMAIL_DOMAIN = '@example.com';
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
@@ -41,7 +65,7 @@ const isIntegrationTest = process.env.RUN_INTEGRATION_TESTS === 'true';
 const describeIntegration = isIntegrationTest ? describe : describe.skip;
 
 describeIntegration('Reviews API Integration Test', () => {
-  let supabaseAdmin: ReturnType<typeof createSupabaseClient>;
+  let supabaseAdmin: SupabaseClient<Database>;
   let driverId: string;
   let passengerId: string;
   let driverEmail: string;
@@ -49,7 +73,10 @@ describeIntegration('Reviews API Integration Test', () => {
   let rideId: string;
   let bookingId: string;
   beforeAll(async () => {
-    supabaseAdmin = createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing. Cannot run integration tests.');
+    }
+    supabaseAdmin = createSupabaseClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -77,6 +104,12 @@ describeIntegration('Reviews API Integration Test', () => {
     if (createDriverError) throw createDriverError;
     driverId = driverAuth.user.id;
 
+    // Update Driver Profile to ensure firstName is set (required for reviews)
+    await supabaseAdmin
+      .from('profiles')
+      .update({ first_name: 'Driver', last_name: 'Integration' })
+      .eq('id', driverId);
+
     // 2. Create Passenger
     const { data: passengerAuth, error: createPassengerError } =
       await supabaseAdmin.auth.admin.createUser({
@@ -86,6 +119,12 @@ describeIntegration('Reviews API Integration Test', () => {
       });
     if (createPassengerError) throw createPassengerError;
     passengerId = passengerAuth.user.id;
+
+    // Update Passenger Profile to ensure firstName is set (required for reviews)
+    await supabaseAdmin
+      .from('profiles')
+      .update({ first_name: 'Passenger', last_name: 'Integration' })
+      .eq('id', passengerId);
 
     // Login as Driver to create Ride (RLS)
     const { data: driverSession } = await supabaseAdmin.auth.signInWithPassword({
@@ -244,6 +283,12 @@ describeIntegration('Reviews API Integration Test', () => {
     if (createError) throw createError;
     const randomId = randomAuth.user.id;
 
+    // Update Random User Profile to pass the profile check, so we can test the 404/403 booking check
+    await supabaseAdmin
+      .from('profiles')
+      .update({ first_name: 'Random', last_name: 'User' })
+      .eq('id', randomId);
+
     // Login
     const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
       email: randomEmail,
@@ -272,7 +317,7 @@ describeIntegration('Reviews API Integration Test', () => {
     });
 
     const response = await POST(req);
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(403);
 
     // Cleanup
     await supabaseAdmin.auth.admin.deleteUser(randomId);

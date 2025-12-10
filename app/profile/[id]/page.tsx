@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/libs/supabase/client';
-import { formatLocation } from '@/libs/utils';
+import { formatLocation, formatPronouns } from '@/libs/utils';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import UserReviews from '@/components/UserReviews';
 import ReviewModal from '@/components/ReviewModal';
@@ -19,11 +19,12 @@ interface Profile {
   profile_photo_url?: string;
   city?: string;
   state?: string;
-  neighborhood?: string;
   bio?: string;
   role: 'driver' | 'passenger' | 'both';
+  pronouns?: string | null;
   support_preferences?: string[];
   support_story?: string;
+  [key: string]: unknown;
 }
 
 interface ProfileSocials {
@@ -130,6 +131,14 @@ export default function PublicProfilePage() {
     loadProfile();
     checkPendingReviews();
   }, [loadProfile, checkPendingReviews]);
+
+  const profilePronouns = useMemo(() => {
+    if (!profile?.pronouns || profile.pronouns === 'prefer not to answer') {
+      return null;
+    }
+
+    return formatPronouns(profile.pronouns);
+  }, [profile?.pronouns]);
 
   if (authLoading || loading) {
     return (
@@ -253,6 +262,7 @@ export default function PublicProfilePage() {
             <div className="flex-1 text-center sm:text-left">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 {profile.first_name} {profile.last_name}
+                {profilePronouns && ` (${profilePronouns})`}
               </h1>
               <div className="flex items-center justify-center sm:justify-start space-x-2 mb-3">
                 <span className="text-2xl">{getRoleIcon(profile.role)}</span>
@@ -262,20 +272,18 @@ export default function PublicProfilePage() {
               </div>
 
               {/* Location */}
-              {(profile.neighborhood || profile.city) && (
+              {profile.city && (
                 <div className="flex items-center justify-center sm:justify-start text-gray-600 dark:text-gray-400 mb-4">
                   <span className="mr-2">📍</span>
                   <span>
                     {(() => {
                       const formattedLocation = formatLocation({
-                        neighborhood: profile.neighborhood,
                         city: profile.city,
                         state: profile.state,
                       });
                       if (!formattedLocation) return null;
                       return (
                         <>
-                          {formattedLocation.neighborhood && `${formattedLocation.neighborhood}, `}
                           {formattedLocation.city}
                           {formattedLocation.state && `, ${formattedLocation.state}`}
                         </>

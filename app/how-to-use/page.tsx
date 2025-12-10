@@ -109,7 +109,7 @@ export default function HowToUsePage() {
                         </p>
                         <ul className="list-disc list-inside text-gray-600 space-y-1">
                           <li>Add your name, photo, and bio</li>
-                          <li>Set your location (city and neighborhood)</li>
+                          <li>Set your location (city)</li>
                           <li>Choose your role: Driver, Passenger, or Both</li>
                           <li>Link your social profiles for trust</li>
                         </ul>
@@ -249,7 +249,7 @@ export default function HowToUsePage() {
                           <strong>Date:</strong> Find rides on specific days
                         </li>
                         <li>
-                          <strong>Location:</strong> Search by city or neighborhood
+                          <strong>Location:</strong> Search by city
                         </li>
                         <li>
                           <strong>Role:</strong> Filter by Drivers or Passengers

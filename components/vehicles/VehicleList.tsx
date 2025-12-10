@@ -11,6 +11,7 @@ interface VehicleWithId {
   year: number;
   color: string;
   license_plate?: string;
+  drivetrain?: 'FWD' | 'RWD' | 'AWD' | '4WD';
 }
 
 export default function VehicleList() {
@@ -82,7 +83,7 @@ export default function VehicleList() {
 
       {(isAdding || editingVehicle) && (
         <VehicleForm
-          initialData={editingVehicle || undefined}
+          initialData={editingVehicle ?? undefined}
           onSuccess={() => {
             setIsAdding(false);
             setEditingVehicle(null);
@@ -119,7 +120,9 @@ export default function VehicleList() {
               <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
                 {vehicle.year} {vehicle.make} {vehicle.model}
               </h4>
-              <p className="text-gray-600 dark:text-gray-300">Color: {vehicle.color}</p>
+              <p className="text-gray-600 dark:text-gray-300">
+                {vehicle.color} • {vehicle.drivetrain || 'Unknown Drivetrain'}
+              </p>
               {vehicle.license_plate && (
                 <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                   Plate: {vehicle.license_plate}

@@ -1,16 +1,21 @@
 INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000001', 'michael.johnson1@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
 UPDATE public.profiles SET first_name = 'Michael', last_name = 'Johnson', role = 'driver', city = 'San Francisco', state = 'CA', bio = 'Professional driver, very reliable.' WHERE id = '00000000-0000-0000-0000-000000000001';
+UPDATE public.profiles SET pronouns = 'he/him' WHERE id = '00000000-0000-0000-0000-000000000001';
 
 INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000002', 'emily.chen2@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
 UPDATE public.profiles SET first_name = 'Emily', last_name = 'Chen', role = 'driver', city = 'Oakland', state = 'CA', bio = 'First time to Tahoe, excited!' WHERE id = '00000000-0000-0000-0000-000000000002';
+UPDATE public.profiles SET pronouns = 'she/her' WHERE id = '00000000-0000-0000-0000-000000000002';
 
 INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000003', 'david.lee3@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
 UPDATE public.profiles SET first_name = 'David', last_name = 'Lee', role = 'passenger', city = 'San Jose', state = 'CA', bio = 'EV driver, charging stops included.' WHERE id = '00000000-0000-0000-0000-000000000003';
+UPDATE public.profiles SET pronouns = 'they/them' WHERE id = '00000000-0000-0000-0000-000000000003';
 
 INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000004', 'jessica.rodriguez4@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
 UPDATE public.profiles SET first_name = 'Jessica', last_name = 'Rodriguez', role = 'driver', city = 'Sacramento', state = 'CA', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000004';
+UPDATE public.profiles SET pronouns = 'prefer not to answer' WHERE id = '00000000-0000-0000-0000-000000000004';
 
 INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000005', 'alex.wang5@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+-- Pronouns left null intentionally because Alex did not share them in this seed data set.
 UPDATE public.profiles SET first_name = 'Alex', last_name = 'Wang', role = 'driver', city = 'Palo Alto', state = 'CA', bio = 'Music lover, bring your playlist!' WHERE id = '00000000-0000-0000-0000-000000000005';
 
 INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000006', 'ryan.kim6@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');

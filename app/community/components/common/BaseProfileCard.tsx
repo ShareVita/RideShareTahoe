@@ -44,8 +44,7 @@ export const BaseProfileCard: React.FC<BaseProfileCardProps> = ({
             <div className="h-5">
               {profile.city ? (
                 <p className="text-sm text-gray-600 dark:text-slate-400 truncate">
-                  📍 {profile.neighborhood ? `${profile.neighborhood}, ` : ''}
-                  {profile.city}
+                  📍 {profile.city}
                   {profile.state ? `, ${profile.state}` : ''}
                 </p>
               ) : (

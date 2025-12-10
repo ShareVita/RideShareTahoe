@@ -21,49 +21,29 @@ export default function OurStoryPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* How RideShareTahoe Began */}
         <section className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            How RideShareTahoe Began
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">How It Started</h2>
           <div className="space-y-4 text-lg text-gray-700 leading-relaxed">
             <p>
-              Hi, I&apos;m the founder of RideShareTahoe — a free, community-driven way to connect
-              drivers and passengers for trips to the mountains.
+              The idea started with a simple problem: I wanted to go skiing, but I didn&apos;t have
+              a car. Renting one was expensive, I didn&apos;t want to make the long drive by myself,
+              and trying to find a ride felt like solving a puzzle with missing pieces. There were
+              WhatsApp groups, Discord servers, Reddit threads, Facebook pages&hellip; all full of
+              people offering or looking for rides.
             </p>
             <p>
-              The idea came from a simple problem. I wanted to go skiing but didn&apos;t have a car,
-              and renting one was too expensive. I posted on a local forum asking if anyone was
-              driving up and had an empty seat. Within hours, I had multiple offers. Total
-              strangers. All willing to share their ride.
+              So I&apos;d spend half my night bouncing between them, scrolling endlessly, hoping to
+              spot someone going my way. The community <em>existed</em> &mdash; I just couldn&apos;t
+              reach it.
             </p>
             <p>
-              That moment stuck with me. It showed me how willing people are to help each other —
-              and how sharing a ride can turn a long drive into a fun road trip with new friends.
+              I was frustrated that there wasn&apos;t one place to connect with everyone, filter by
+              date and destination, and actually match with the right people.
             </p>
-          </div>
-        </section>
-
-        {/* Building a Community, Not a Service */}
-        <section className="bg-white rounded-2xl shadow-lg p-8 md:p-12 mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            Building a Community, Not a Service
-          </h2>
-          <div className="space-y-4 text-lg text-gray-700 leading-relaxed">
+            <p className="font-bold text-gray-900">So I built it.</p>
             <p>
-              I didn&apos;t want to build just another ride-hailing app. I wanted to create a space
-              that feels neighborly — where people help each other because they care about the
-              environment and community, not just for profit.
-            </p>
-            <p>
-              RideShareTahoe is about connection over commerce. It&apos;s for the driver who wants
-              company on the road, the student who needs a lift, the skier who wants to reduce their
-              carbon footprint, and everyone in between.
-            </p>
-            <p className="font-semibold text-gray-900">
-              Fewer cars on the road.
-              <br />
-              More friends on the slopes.
-              <br />
-              Everyone wins.
+              RideShareTahoe is my attempt to fix that chaos &mdash; to give mountain lovers one
+              clean, simple, friendly place to connect. No more scattered group chats. No more
+              digging. Just people helping each other get outside.
             </p>
           </div>
         </section>

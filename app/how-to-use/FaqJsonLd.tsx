@@ -53,10 +53,10 @@ export default function FaqJsonLd() {
       },
       {
         '@type': 'Question',
-        name: 'How do I edit or hide my posts?',
+        name: 'How do I edit or delete my posts?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: "Go to the Community page and click on the 'My Rides' tab. Find the post you want to modify and click 'Edit' to update it, or 'Hide' to remove it from the listings.",
+          text: "Go to the Community page and click on the 'My Rides' tab. Find the post you want to modify and click 'Edit' to update it, or 'Delete' to remove it from the listings.",
         },
       },
     ],

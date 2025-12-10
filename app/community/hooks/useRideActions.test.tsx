@@ -84,7 +84,7 @@ describe('useRideActions', () => {
     const filteredPosts = filterFn(initialPosts);
     expect(filteredPosts).toEqual([{ id: 'post-2' }]);
 
-    expect(globalThis.alert).toHaveBeenCalledWith('Post hidden successfully');
+    expect(globalThis.alert).toHaveBeenCalledWith('Post deleted successfully');
   });
 
   it('should handle Supabase errors', async () => {
@@ -98,7 +98,7 @@ describe('useRideActions', () => {
     });
 
     expect(mockSetMyRides).not.toHaveBeenCalled();
-    expect(globalThis.alert).toHaveBeenCalledWith(expect.stringContaining('Failed to hide post'));
+    expect(globalThis.alert).toHaveBeenCalledWith(expect.stringContaining('Failed to delete post'));
     expect(console.error).toHaveBeenCalled();
   });
 
@@ -113,6 +113,6 @@ describe('useRideActions', () => {
     });
 
     expect(mockSetMyRides).not.toHaveBeenCalled();
-    expect(globalThis.alert).toHaveBeenCalledWith('Failed to hide post: Unknown error');
+    expect(globalThis.alert).toHaveBeenCalledWith('Failed to delete post: Unknown error');
   });
 });

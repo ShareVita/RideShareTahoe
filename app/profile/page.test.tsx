@@ -13,13 +13,17 @@ jest.mock('@/components/providers/SupabaseUserProvider', () => ({
   useUser: jest.fn(),
 }));
 
-jest.mock('@/libs/utils', () => ({
-  formatLocation: jest.fn((loc) => ({
-    neighborhood: loc.neighborhood,
-    city: loc.city,
-    state: loc.state,
-  })),
-}));
+jest.mock('@/libs/utils', () => {
+  const actualUtils = jest.requireActual('@/libs/utils');
+
+  return {
+    formatLocation: jest.fn((loc) => ({
+      city: loc.city,
+      state: loc.state,
+    })),
+    formatPronouns: actualUtils.formatPronouns,
+  };
+});
 
 jest.mock(
   '../../components/DeleteAccountModal',
@@ -47,6 +51,28 @@ jest.spyOn(console, 'error').mockImplementation(() => {});
 
 const mockFetch = jest.fn();
 
+const baseProfile = {
+  id: 'user-123',
+  first_name: 'John',
+  last_name: 'Doe',
+  role: 'pet_owner',
+  profile_photo_url: 'https://example.com/photo.png',
+  bio: 'This is my bio.',
+  city: 'My City',
+  state: 'TX',
+  support_preferences: ['sick_recovering', 'other'],
+  support_story: 'This is my support story.',
+  facebook_url: 'https://facebook.com/john',
+  instagram_url: 'https://instagram.com/john',
+  pronouns: 'he/him',
+};
+
+const baseSocials = {
+  user_id: 'user-123',
+  facebook_url: 'https://facebook.com/john',
+  instagram_url: 'https://instagram.com/john',
+};
+
 const createMockFetchResponse = (status: number, body?: unknown) => ({
   ok: status >= 200 && status < 300,
   status,
@@ -68,6 +94,21 @@ describe('ProfilePage', () => {
       signOut: jest.fn().mockResolvedValue({ error: null }),
     });
   });
+
+  const renderProfileWithOverrides = async (
+    overrides: Partial<typeof baseProfile>,
+    expectedHeading: string
+  ) => {
+    const profile = { ...baseProfile, ...overrides };
+    mockFetch.mockResolvedValueOnce(
+      createMockFetchResponse(200, { profile, socials: baseSocials })
+    );
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: expectedHeading })).toBeInTheDocument();
+    });
+    return profile;
+  };
 
   it('shows the loading spinner while user is loading', () => {
     render(<ProfilePage />);
@@ -139,22 +180,6 @@ describe('ProfilePage', () => {
   });
 
   it('renders the full profile when user and data are loaded', async () => {
-    const mockProfile = {
-      id: 'user-123',
-      first_name: 'John',
-      last_name: 'Doe',
-      role: 'pet_owner',
-      profile_photo_url: 'https://example.com/photo.png',
-      bio: 'This is my bio.',
-      neighborhood: 'My Neighborhood',
-      city: 'My City',
-      state: 'TX',
-      support_preferences: ['sick_recovering', 'other'],
-      support_story: 'This is my support story.',
-      facebook_url: 'https://facebook.com/john',
-      instagram_url: 'https://instagram.com/john',
-    };
-
     mockedUseUser.mockReturnValue({
       user: {
         id: 'user-123',
@@ -167,38 +192,67 @@ describe('ProfilePage', () => {
       session: null,
       signOut: jest.fn().mockResolvedValue({ error: null }),
     });
-    const mockSocials = {
-      user_id: 'user-123',
-      facebook_url: 'https://facebook.com/john',
-      instagram_url: 'https://instagram.com/john',
-    };
-    mockFetch.mockResolvedValueOnce(
-      createMockFetchResponse(200, { profile: mockProfile, socials: mockSocials })
-    );
-
-    render(<ProfilePage />);
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'John Doe' })).toBeInTheDocument();
-    });
+    await renderProfileWithOverrides({}, 'John Doe (He/Him)');
 
     expect(screen.getByAltText('Profile')).toHaveAttribute('src', 'https://example.com/photo.png');
     expect(screen.getByText('This is my bio.')).toBeInTheDocument();
 
-    expect(screen.getByText('📍 My Neighborhood, My City, TX')).toBeInTheDocument();
+    expect(screen.getByText('📍 My City, TX')).toBeInTheDocument();
 
     expect(screen.getByRole('link', { name: '📘 Facebook' })).toHaveAttribute(
       'href',
-      'https://facebook.com/john'
+      baseSocials.facebook_url
     );
     expect(screen.getByRole('link', { name: '📷 Instagram' })).toHaveAttribute(
       'href',
-      'https://instagram.com/john'
+      baseSocials.instagram_url
     );
     expect(screen.queryByRole('link', { name: '💼 LinkedIn' })).not.toBeInTheDocument();
 
     expect(screen.getByTestId('deletion-status')).toBeInTheDocument();
     expect(screen.getByTestId('user-reviews')).toBeInTheDocument();
     expect(screen.getByTestId('delete-modal')).toBeInTheDocument();
+  });
+
+  const pronounCases = [
+    { pronouns: 'he/him', heading: 'John Doe (He/Him)' },
+    { pronouns: 'she/her', heading: 'John Doe (She/Her)' },
+    { pronouns: 'they/them', heading: 'John Doe (They/Them)' },
+  ] as const;
+
+  it.each(pronounCases)('shows %s beside the name', async ({ pronouns, heading }) => {
+    mockedUseUser.mockReturnValue({
+      user: {
+        id: 'user-123',
+        app_metadata: ['app'],
+        user_metadata: ['user'],
+        aud: 'aud',
+        created_at: '',
+      },
+      loading: false,
+      session: null,
+      signOut: jest.fn().mockResolvedValue({ error: null }),
+    });
+
+    await renderProfileWithOverrides({ pronouns }, heading);
+  });
+
+  it('does not render pronouns when prefer not to answer is selected', async () => {
+    mockedUseUser.mockReturnValue({
+      user: {
+        id: 'user-123',
+        app_metadata: ['app'],
+        user_metadata: ['user'],
+        aud: 'aud',
+        created_at: '',
+      },
+      loading: false,
+      session: null,
+      signOut: jest.fn().mockResolvedValue({ error: null }),
+    });
+
+    await renderProfileWithOverrides({ pronouns: 'prefer not to answer' }, 'John Doe');
+    const heading = screen.getByRole('heading', { name: 'John Doe' });
+    expect(heading).not.toHaveTextContent('(');
   });
 });

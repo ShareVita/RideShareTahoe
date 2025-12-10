@@ -17,12 +17,41 @@ function uuidv4() {
 jest.setTimeout(30000);
 
 // Test configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== 'undefined' &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== 'null' &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.trim() !== ''
+    ? process.env.NEXT_PUBLIC_SUPABASE_URL
+    : 'http://127.0.0.1:54321';
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY !== 'undefined' &&
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY !== 'null'
+    ? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    : 'test-anon-key';
+
+const serviceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY !== 'undefined' &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY !== 'null'
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY
+    : process.env.SUPABASE_SERVICE_KEY || '';
+
+if (!serviceRoleKey) {
+  console.warn(
+    'WARNING: SUPABASE_SERVICE_ROLE_KEY is missing. Integration tests requiring admin access will fail.'
+  );
+}
 const TEST_EMAIL_DOMAIN = '@example.com';
 
 // Setup admin client for user creation only
+if (!serviceRoleKey) {
+  // Use console.error because this is top-level (module scope) and throwing might crash the runner ungracefully,
+  // but throwing inside describe/beforeAll is better. However, this client is created at module level.
+  // We'll throw here to stop execution immediately.
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is missing. Cannot run integration tests.');
+}
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
     autoRefreshToken: false,

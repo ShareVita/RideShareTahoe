@@ -47,13 +47,6 @@ const CrispChat = () => {
       Crisp.user.setEmail(user.email || '');
       Crisp.user.setNickname(user.user_metadata?.full_name || user.email || 'User');
       Crisp.user.setAvatar(user.user_metadata?.avatar_url || '');
-
-      // Set custom data
-      // Crisp.user.setData({
-      //   id: user.id,
-      //   created_at: user.created_at,
-      //   last_sign_in: user.last_sign_in_at,
-      // });
     }
   }, [user, crispInitialized]);
 

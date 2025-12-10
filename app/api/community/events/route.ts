@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import {
+  getAuthenticatedUser,
+  createUnauthorizedResponse,
+  ensureProfileComplete,
+} from '@/libs/supabase/auth';
 
 /**
  * Retrieves a list of upcoming community events.
@@ -88,6 +92,9 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
+
+    const profileError = await ensureProfileComplete(supabase, user.id, 'creating events');
+    if (profileError) return profileError;
 
     const body = await request.json();
 

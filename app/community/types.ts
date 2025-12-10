@@ -43,11 +43,11 @@ export interface ProfileType {
   first_name: string | null;
   last_name: string | null;
   profile_photo_url: string | null;
-  neighborhood: string | null;
   city: string | null;
   state: string | null;
   bio: string | null;
   role: string | null;
+  pronouns?: string | null;
   community_support_badge: string | null;
   support_preferences: string[] | null;
   support_story: string | null;
@@ -159,6 +159,7 @@ export interface Vehicle {
   year: number;
   color: string;
   license_plate?: string;
+  drivetrain?: 'FWD' | 'RWD' | 'AWD' | '4WD';
   created_at?: string;
   updated_at?: string;
 }

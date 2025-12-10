@@ -7,6 +7,8 @@ import type { RidePostType, ProfileType } from '@/app/community/types';
 import TripBookingModal from '@/components/trips/TripBookingModal';
 import { RidePostActions } from './RidePostActions';
 import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
+import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
+import { useUserProfile } from '@/hooks/useProfile';
 
 interface RidePostCardProps {
   post: RidePostType;
@@ -86,6 +88,19 @@ export function RidePostCard({
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const isOwner = currentUserId === post.poster_id;
   const { hasBooking } = useHasActiveBooking(currentUserId, post.owner?.id);
+  const { data: profile } = useUserProfile();
+  const { showProfileCompletionPrompt, profileCompletionModal } = useProfileCompletionPrompt({
+    toastMessage: 'Please finish your profile before contacting other riders.',
+    closeRedirect: null,
+  });
+
+  const handleRestrictedAction = (action: () => void) => {
+    if (!profile?.first_name) {
+      showProfileCompletionPrompt();
+      return;
+    }
+    action();
+  };
 
   const cardBackground = 'bg-white dark:bg-slate-900';
   const { styles: badgeStyles, label: badgeLabel } = getBadgeConfig(post.posting_type);
@@ -99,10 +114,7 @@ export function RidePostCard({
   const returnDateLabel = formatDateLabel(post.return_date);
   const returnTimeLabel = formatTimeLabel(post.return_time);
   const hasReturnInfo = isCombinedRoundTrip && !!returnTimeLabel;
-  let vehicleDetails: string | null = post.car_type || null;
-  if (vehicleDetails && post.has_awd) {
-    vehicleDetails = `${vehicleDetails} (AWD)`;
-  }
+  const vehicleDetails: string | null = post.car_type || null;
   const vehicleLabel = vehicleDetails ? `Vehicle: ${vehicleDetails}` : null;
   const metaTags = [
     vehicleLabel,
@@ -225,11 +237,6 @@ export function RidePostCard({
                   {post.owner.first_name} {post.owner.last_name}
                 </p>
               </Link>
-              {post.owner.neighborhood && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {post.owner.neighborhood}
-                </p>
-              )}
             </div>
           </div>
         )}
@@ -237,10 +244,10 @@ export function RidePostCard({
         <RidePostActions
           post={post}
           isOwner={isOwner}
-          onMessage={onMessage}
+          onMessage={(recipient, post) => handleRestrictedAction(() => onMessage(recipient, post))}
           onDelete={onDelete}
           deleting={deleting}
-          onOpenBooking={() => setIsBookingOpen(true)}
+          onOpenBooking={() => handleRestrictedAction(() => setIsBookingOpen(true))}
           showBookingButton={!!showBookingButton}
           hasActiveBooking={hasBooking}
         />
@@ -251,6 +258,7 @@ export function RidePostCard({
         onClose={() => setIsBookingOpen(false)}
         ride={post}
       />
+      {profileCompletionModal}
     </>
   );
 }

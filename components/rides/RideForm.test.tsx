@@ -19,6 +19,16 @@ const mockVehicles: Vehicle[] = [
     year: 2020,
     color: 'Blue',
     license_plate: 'TAHOE1',
+    drivetrain: 'AWD',
+  },
+  {
+    id: 'v2',
+    owner_id: 'user1',
+    make: 'Honda',
+    model: 'Civic',
+    year: 2018,
+    color: 'Silver',
+    drivetrain: 'FWD',
   },
 ];
 
@@ -95,6 +105,45 @@ describe('RideForm', () => {
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalled();
+    });
+  });
+
+  it('sets has_awd based on selected vehicle drivetrain', async () => {
+    const user = userEvent.setup();
+    render(<RideForm onSave={mockOnSave} onCancel={mockOnCancel} vehicles={mockVehicles} />);
+
+    // Select AWD Vehicle
+    await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'v1');
+
+    // Fill required fields
+    await user.type(screen.getByLabelText(/Ride Title/i), 'AWD Trip');
+    await user.type(screen.getByLabelText(/Start Location/i), 'A');
+    await user.type(screen.getByLabelText(/End Location/i), 'B');
+    await user.type(screen.getByLabelText(/Departure Date/i), '2025-12-25');
+    await user.type(screen.getByLabelText(/Departure Time/i), '08:00');
+
+    await user.click(screen.getByRole('button', { name: /Post Ride/i }));
+
+    await waitFor(() => {
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          has_awd: true,
+          car_type: expect.stringContaining('AWD'),
+        })
+      );
+    });
+
+    // Select FWD Vehicle
+    await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'v2');
+    await user.click(screen.getByRole('button', { name: /Post Ride/i }));
+
+    await waitFor(() => {
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          has_awd: false,
+          car_type: expect.stringContaining('FWD'),
+        })
+      );
     });
   });
 });

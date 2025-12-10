@@ -1,4 +1,8 @@
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import {
+  getAuthenticatedUser,
+  createUnauthorizedResponse,
+  ensureProfileComplete,
+} from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -75,14 +79,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
+
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        {
-          status: 401,
-        }
-      );
+      return createUnauthorizedResponse(authError);
     }
+
+    const profileError = await ensureProfileComplete(supabase, user.id, 'leaving reviews');
+    if (profileError) return profileError;
 
     const { bookingId, rating, comment } = await request.json();
 
@@ -262,9 +265,6 @@ function validateBookingEligibility(booking: Booking, userId: string) {
   const tripEndDateTime = new Date(`${ride.departure_date}T${ride.departure_time}`);
   const now = new Date();
 
-  // Add a buffer, maybe 2 hours after departure? Or assume completed status is enough.
-  // Relying on status='completed' which should be set by another process or driver.
-  // But let's keep a basic check that it's not in the future.
   if (now < tripEndDateTime) {
     return {
       error: "You cannot review a trip that hasn't happened yet",

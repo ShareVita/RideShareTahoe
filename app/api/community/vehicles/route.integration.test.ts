@@ -111,6 +111,7 @@ describeVehicleIntegration('Vehicles API Integration Test', () => {
           year: 2023,
           color: 'TestColor',
           license_plate: 'TEST1234',
+          drivetrain: 'AWD',
         }),
       });
 
@@ -153,6 +154,7 @@ describeVehicleIntegration('Vehicles API Integration Test', () => {
           model: 'TestModel',
           year: 2023,
           color: 'TestColor',
+          drivetrain: 'FWD',
         }),
       });
 
@@ -175,6 +177,7 @@ describeVehicleIntegration('Vehicles API Integration Test', () => {
           model: 'TestModel',
           year: 2023,
           color: 'TestColor',
+          drivetrain: 'RWD',
         }),
       });
 

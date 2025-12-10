@@ -53,7 +53,6 @@ export function useRideDetail(rideId?: string): UseRideDetailResult {
             first_name,
             last_name,
             profile_photo_url,
-            neighborhood,
             city,
             bio,
             role,

@@ -1,24 +1,16 @@
-import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  createUnauthorizedResponse,
+  ensureProfileComplete,
+  getAuthenticatedUser,
+} from '@/libs/supabase/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          details: userError,
-        },
-        { status: 401 }
-      );
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
 
     // Get URL parameters for filtering
@@ -89,23 +81,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        {
-          error: 'Authentication required',
-          details: userError,
-        },
-        { status: 401 }
-      );
+    if (authError || !user) {
+      return createUnauthorizedResponse(authError);
     }
+
+    const profileError = await ensureProfileComplete(supabase, user.id, 'adding places');
+    if (profileError) return profileError;
 
     const body = await request.json();
 

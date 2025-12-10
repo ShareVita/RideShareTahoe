@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Meeting Scheduled - ShareSkippy</title>
+    <title>Trip Confirmed - RideShareTahoe</title>
     <style>
       body {
         font-family:
@@ -162,22 +162,22 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>Meeting Confirmed</h1>
-        <p>Your dog playdate has been scheduled successfully</p>
+        <h1>Trip Confirmed</h1>
+        <p>Your RideShareTahoe match is locked in</p>
       </div>
 
       <div class="content">
         <div class="greeting">
           <p>Hi {{userName}}!</p>
-          <p>Great news! Your meeting with {{otherUserName}} has been successfully scheduled.</p>
+          <p>Great news! Your RideShareTahoe trip with {{otherUserName}} is confirmed.</p>
         </div>
 
         <div class="meeting-details">
-          <h3>📅 Playdate Details</h3>
+          <h3>📅 Trip Details</h3>
           <div class="detail-row">
             <span class="detail-icon">👤</span>
             <span class="detail-label">With:</span>
-            <span class="detail-value">{{otherUserName}} & {{otherUserDogName}}</span>
+            <span class="detail-value">{{otherUserName}}</span>
           </div>
           <div class="detail-row">
             <span class="detail-icon">📅</span>
@@ -202,7 +202,7 @@
         </div>
 
         <div style="text-align: center">
-          <a href="{{meetingUrl}}" class="cta-button">View Meeting Details</a>
+          <a href="{{meetingUrl}}" class="cta-button">View Trip Details</a>
           <a href="{{messageUrl}}" class="cta-button secondary">Message {{otherUserName}}</a>
         </div>
 
@@ -217,8 +217,8 @@
         </div>
 
         <p>
-          <strong>Need to make changes?</strong> You can reschedule or cancel this meeting up to 2
-          hours before the scheduled time. Just visit the meeting details page or message
+          <strong>Need to make changes?</strong> You can reschedule or cancel this trip up to 2
+          hours before the scheduled time. Just visit the trip details page or message
           {{otherUserName}} directly.
         </p>
 
@@ -229,20 +229,20 @@
       </div>
 
       <div class="footer">
-        <p>Happy tails and wagging adventures,<br />The ShareSkippy Team 🐕</p>
+        <p>Safe travels,<br />The RideShareTahoe Team 🏔️</p>
         <p style="margin-top: 20px; font-size: 12px">
-          <a href="{{appUrl}}/meetings">View all meetings</a> |
+          <a href="{{appUrl}}/trips">View all trips</a> |
           <a href="{{appUrl}}/safety">Safety guidelines</a> |
           <a href="{{unsubscribeUrl}}">Unsubscribe</a>
         </p>
         <p style="margin-top: 15px; font-size: 11px; color: #9ca3af">
-          ShareSkippy LLC<br />
+          RideShareTahoe LLC<br />
           San Francisco, CA 94102<br />
           United States
         </p>
         <p style="margin-top: 10px; font-size: 11px; color: #9ca3af">
-          You received this confirmation because you scheduled a meeting on ShareSkippy. If you no
-          longer wish to receive meeting confirmations, you can
+          You received this confirmation because you scheduled a trip on RideShareTahoe. If you no
+          longer wish to receive confirmations, you can
           <a href="{{unsubscribeUrl}}" style="color: #2563eb">unsubscribe here</a>.
         </p>
       </div>

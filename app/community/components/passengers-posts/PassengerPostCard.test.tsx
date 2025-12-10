@@ -75,7 +75,7 @@ describe('PassengerPostCard', () => {
     );
 
     expect(screen.getByText('Edit')).toBeInTheDocument();
-    expect(screen.getByText('Hide')).toBeInTheDocument();
+    expect(screen.getByText('Delete')).toBeInTheDocument();
   });
 
   it('handles delete (owner)', () => {
@@ -93,7 +93,7 @@ describe('PassengerPostCard', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Hide'));
+    fireEvent.click(screen.getByText('Delete'));
     expect(mockOnDelete).toHaveBeenCalledWith('p1');
   });
 

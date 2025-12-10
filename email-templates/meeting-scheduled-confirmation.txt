@@ -1,32 +1,32 @@
-Meeting Confirmed on ShareSkippy
+Trip Confirmed on RideShareTahoe
 
 Hi {{userName}}!
 
-Great news! Your meeting has been confirmed on ShareSkippy.
+Awesome news—your RideShareTahoe trip is confirmed.
 
-Meeting Details:
+Trip Details:
 - Title: {{meetingTitle}}
 - Date: {{meetingDate}}
 - Time: {{meetingTime}}
 - Location: {{meetingLocation}}
 - With: {{otherParticipantName}}
 
-View Meeting Details: {{meetingUrl}}
+View Trip Details: {{meetingUrl}}
 
-Meeting Tips:
-- Arrive a few minutes early
-- Bring water for the dogs
-- Have fun and stay safe!
+Trip Tips:
+- Arrive a few minutes early so you can check in with your match
+- Pack layers and snacks for the road to Tahoe
+- Share any last-minute updates through RideShareTahoe messaging
 
-If you need to make any changes, please contact {{otherParticipantName}} directly through the ShareSkippy messaging system.
+Need to adjust something? Message {{otherParticipantName}} directly through RideShareTahoe.
 
-Happy meeting!
-The ShareSkippy Team 🐕
+Safe travels,
+The RideShareTahoe Team 🏔️
 
 ---
-ShareSkippy LLC
+RideShareTahoe LLC
 San Francisco, CA 94102
 United States
 
-You received this email because you have a meeting scheduled on ShareSkippy. 
+You received this email because you have a trip planned on RideShareTahoe.
 You can manage your notification preferences in your account settings or unsubscribe here: {{unsubscribeUrl}}

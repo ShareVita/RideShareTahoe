@@ -1,4 +1,8 @@
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import {
+  getAuthenticatedUser,
+  createUnauthorizedResponse,
+  ensureProfileComplete,
+} from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTripBookingSchema } from '@/libs/validations/trips';
 import { z } from 'zod';
@@ -14,6 +18,9 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
+
+    const profileError = await ensureProfileComplete(supabase, user.id, 'booking a ride');
+    if (profileError) return profileError;
 
     const json = await request.json();
     const body = createTripBookingSchema.parse(json);

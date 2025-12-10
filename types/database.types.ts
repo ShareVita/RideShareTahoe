@@ -11,7 +11,6 @@ export interface Database {
           role: string | null;
           email: string | null;
           profile_photo_url: string | null;
-          neighborhood: string | null;
           city: string | null;
           state: string | null;
           phone_number: string | null;
@@ -34,7 +33,6 @@ export interface Database {
           role?: string | null;
           email?: string | null;
           profile_photo_url?: string | null;
-          neighborhood?: string | null;
           city?: string | null;
           state?: string | null;
           phone_number?: string | null;
@@ -57,7 +55,6 @@ export interface Database {
           role?: string | null;
           email?: string | null;
           profile_photo_url?: string | null;
-          neighborhood?: string | null;
           city?: string | null;
           state?: string | null;
           phone_number?: string | null;
@@ -250,6 +247,52 @@ export interface Database {
             foreignKeyName: 'trip_bookings_ride_id_fkey';
             columns: ['ride_id'];
             referencedRelation: 'rides';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      vehicles: {
+        Row: {
+          id: string;
+          owner_id: string;
+          make: string;
+          model: string;
+          year: number;
+          color: string;
+          license_plate: string | null;
+          created_at: string;
+          updated_at: string;
+          drivetrain: string | null;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          make: string;
+          model: string;
+          year: number;
+          color: string;
+          license_plate?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          drivetrain?: string | null;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          make?: string;
+          model?: string;
+          year?: number;
+          color?: string;
+          license_plate?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          drivetrain?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'vehicles_owner_id_fkey';
+            columns: ['owner_id'];
+            referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
         ];

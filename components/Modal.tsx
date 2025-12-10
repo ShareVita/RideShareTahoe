@@ -1,6 +1,6 @@
 'use client';
 
-import { Dialog, Transition } from '@headlessui/react';
+import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { Fragment } from 'react';
 
 // A simple modal component which can be shown/hidden with a boolean and a function
@@ -18,7 +18,7 @@ const Modal = ({
   return (
     <Transition appear show={isModalOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={() => setIsModalOpen(false)}>
-        <Transition.Child
+        <TransitionChild
           as={Fragment}
           enter="ease-out duration-300"
           enterFrom="opacity-0"
@@ -28,11 +28,11 @@ const Modal = ({
           leaveTo="opacity-0"
         >
           <div className="fixed inset-0 bg-neutral-focus bg-opacity-50" />
-        </Transition.Child>
+        </TransitionChild>
 
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full overflow-hidden items-start md:items-center justify-center p-2">
-            <Transition.Child
+            <TransitionChild
               as={Fragment}
               enter="ease-out duration-300"
               enterFrom="opacity-0 scale-95"
@@ -41,11 +41,11 @@ const Modal = ({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="relative w-full max-w-3xl h-full overflow-visible transform text-left align-middle shadow-xl transition-all rounded-xl bg-base-100 p-6 md:p-8">
+              <DialogPanel className="relative w-full max-w-3xl h-full overflow-visible transform text-left align-middle shadow-xl transition-all rounded-xl bg-base-100 p-6 md:p-8">
                 <div className="flex justify-between items-center mb-4">
-                  <Dialog.Title as="h2" className="font-semibold">
+                  <DialogTitle as="h2" className="font-semibold">
                     I&apos;m a modal
-                  </Dialog.Title>
+                  </DialogTitle>
                   <button
                     className="btn btn-square btn-ghost btn-sm"
                     onClick={() => setIsModalOpen(false)}
@@ -63,8 +63,8 @@ const Modal = ({
                 </div>
 
                 <section>And here is my content</section>
-              </Dialog.Panel>
-            </Transition.Child>
+              </DialogPanel>
+            </TransitionChild>
           </div>
         </div>
       </Dialog>

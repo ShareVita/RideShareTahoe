@@ -63,3 +63,24 @@ export async function getAuthenticatedUser(
 
   return { user, authError, supabase };
 }
+
+/**
+ * Checks if the user's profile is complete (has a first name).
+ * Returns a 403 Forbidden response if incomplete, or null if complete.
+ */
+export async function ensureProfileComplete(
+  supabase: SupabaseClient,
+  userId: string,
+  actionDescription = 'performing this action'
+): Promise<NextResponse | null> {
+  const { data } = await supabase.from('profiles').select('first_name').eq('id', userId).single();
+
+  if (!data?.first_name) {
+    return NextResponse.json(
+      { error: `You must complete your profile before ${actionDescription}` },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}

@@ -1,7 +1,7 @@
 /**
  * Gets the correct cookie options based on the environment.
  *
- * - 'production': Sets a root domain (e.g., .shareskippy.com) to allow
+ * - 'production': Sets a root domain (e.g., .ridesharetahoe.com) to allow
  * cookies to be shared between 'www' and the root domain.
  *
  * - 'preview'/'development': Returns 'undefined' for the domain. This forces

@@ -1,8 +1,8 @@
-New Message on ShareSkippy
+New Message on RideShareTahoe
 
 Hi {{recipientName}}!
 
-You've received a new message on ShareSkippy from {{senderName}}.
+You’ve received a new message on RideShareTahoe from {{senderName}}.
 
 Message Preview:
 "{{messagePreview}}"
@@ -11,15 +11,15 @@ Time: {{messageTime}}
 
 View your messages: {{appUrl}}/messages
 
-Quick tip: Responding quickly helps build great connections in our community. The faster you reply, the more likely you are to schedule that perfect playdate!
+Quick tip: A timely reply keeps your trip plans moving and makes it easier to confirm seats or coordinating arrival details.
 
-Happy chatting,
-The ShareSkippy Team 🐕
+See you on the road,
+The RideShareTahoe Team 🏔️
 
 ---
-ShareSkippy LLC
+RideShareTahoe LLC
 San Francisco, CA 94102
 United States
 
-You received this notification because you have a new message on ShareSkippy. 
+You received this notification because you have a new message on RideShareTahoe. 
 You can manage your notification preferences in your account settings or unsubscribe here: {{unsubscribeUrl}}

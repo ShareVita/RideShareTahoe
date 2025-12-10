@@ -6,7 +6,6 @@ interface Profile {
   readonly first_name: string;
   readonly photo_url: string | null;
   readonly city: string | null;
-  readonly neighborhood: string | null;
   readonly role: string;
   readonly bio_excerpt: string | null;
   readonly display_lat?: number;
@@ -21,7 +20,7 @@ interface ProfileCardProps {
 }
 
 export default function ProfileCard({ profile, onMessage }: ProfileCardProps) {
-  const { id, first_name, photo_url, city, neighborhood, role, bio_excerpt } = profile;
+  const { id, first_name, photo_url, city, role, bio_excerpt } = profile;
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -76,11 +75,9 @@ export default function ProfileCard({ profile, onMessage }: ProfileCardProps) {
       </div>
 
       {/* Location */}
-      {(city || neighborhood) && (
+      {city && (
         <div className="mb-3">
-          <p className="text-sm text-gray-600">
-            📍 {[neighborhood, city].filter(Boolean).join(', ')}
-          </p>
+          <p className="text-sm text-gray-600">📍 {city}</p>
         </div>
       )}
 

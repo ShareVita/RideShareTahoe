@@ -8,7 +8,6 @@ export type ProfileData = {
   first_name: string;
   photo_url: string | null;
   city: string | null;
-  neighborhood: string | null;
   role: string;
   bio_excerpt: string | null;
   last_online_at: string;
@@ -33,7 +32,6 @@ describe('ProfileCard', () => {
     first_name: 'John',
     photo_url: 'https://example.com/photo.jpg',
     city: 'New York',
-    neighborhood: 'Brooklyn',
     role: 'driver',
     bio_excerpt:
       'Enjoys exploring the Sierra Nevada foothills while helping people get around town.',
@@ -59,15 +57,12 @@ describe('ProfileCard', () => {
     expect(profileImage).toHaveAttribute('src', baseProfile.photo_url);
 
     // Check role
-    // Check role
     // The role icon is in a sibling div of the Link containing the name
     expect(screen.getAllByText('🚗').length).toBeGreaterThan(0);
     expect(screen.getByText(/driver/i)).toBeInTheDocument();
 
     // Check location
-    expect(
-      screen.getByText(`📍 ${baseProfile.neighborhood}, ${baseProfile.city}`)
-    ).toBeInTheDocument();
+    expect(screen.getByText(`📍 ${baseProfile.city}`)).toBeInTheDocument();
 
     // Check bio
     expect(screen.getByText(baseProfile.bio_excerpt as string)).toBeInTheDocument();
@@ -87,7 +82,6 @@ describe('ProfileCard', () => {
       role: 'passenger',
       photo_url: null,
       city: null,
-      neighborhood: null,
       bio_excerpt: null,
       last_online_at: new Date().toISOString(),
     };
@@ -122,7 +116,7 @@ describe('ProfileCard', () => {
   });
 
   it('formats location correctly with only a city', () => {
-    const profileWithCity: ProfileData = { ...baseProfile, neighborhood: null };
+    const profileWithCity: ProfileData = { ...baseProfile };
     render(<ProfileCard profile={profileWithCity} onMessage={mockOnMessage} />);
     expect(screen.getByText(`📍 ${baseProfile.city}`)).toBeInTheDocument();
   });
@@ -159,7 +153,6 @@ describe('ProfileCard', () => {
     const profileWithEmptyStrings: ProfileData = {
       ...baseProfile,
       city: '',
-      neighborhood: '',
       bio_excerpt: '',
     };
     render(<ProfileCard profile={profileWithEmptyStrings} onMessage={mockOnMessage} />);

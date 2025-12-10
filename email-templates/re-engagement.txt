@@ -1,22 +1,21 @@
-We miss you, {{userName}}! 🐾
+We miss you, {{userName}}!
 
-It's been a bit since you joined ShareSkippy. The neighborhood has been wagging along without you, but it's not the same.
+It has been a while since you logged into RideShareTahoe, and our community of Tahoe travelers isn’t the same without you.
 
-Here's what's new nearby:
-🐕 More pups and pals have joined
-📅 Fresh playtime availability each week
-💬 Neighbors are looking to connect
+Here’s what’s happening on the road:
+• More drivers and riders matching for weekend and weekday trips
+• Fresh availability shared daily so you can find the right trip
+• Safety-first messaging lets you plan confidently with new neighbors
 
-Want to jump back in? The easiest way is to share your availability so neighbors know when you're available. That's how the real magic (and tail wags) start.
+Jump back in by sharing your upcoming availability—drivers and passengers rely on those signals to coordinate trips.
 
 Share Availability Now: {{appUrl}}/share-availability
 
-No barking — just a friendly tail wag. See you back in the pack soon!
-
-— The ShareSkippy Team
+See you on the road soon,
+The RideShareTahoe Team
 
 ---
-ShareSkippy · San Francisco, CA · United States
+RideShareTahoe · San Francisco, CA · United States
 Community: {{appUrl}}/community
 Share availability: {{appUrl}}/share-availability
 Unsubscribe: {{appUrl}}/unsubscribe?email={{userEmail}}

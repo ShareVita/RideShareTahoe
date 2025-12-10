@@ -78,7 +78,7 @@ export const fetchDriverRides = async (
   const posterIds = Array.from(new Set(rides.map((r) => r.poster_id)));
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, profile_photo_url, neighborhood, city, role')
+    .select('id, first_name, last_name, profile_photo_url, city, role')
     .in('id', posterIds);
 
   if (profilesError) {
@@ -187,7 +187,7 @@ export const fetchMyRides = async (
   // However, to be consistent and ensure we have the profile fields we expect:
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, profile_photo_url, neighborhood, city, role')
+    .select('id, first_name, last_name, profile_photo_url, city, role')
     .eq('id', currentUser.id)
     .single();
 
@@ -356,7 +356,6 @@ export const fetchAllRides = async (
     throw error;
   }
 
-
   if (!rides || rides.length === 0) {
     return {
       rides: [],
@@ -368,7 +367,7 @@ export const fetchAllRides = async (
   const posterIds = Array.from(new Set(rides.map((ride) => ride.poster_id)));
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, profile_photo_url, neighborhood, city, state, role')
+    .select('id, first_name, last_name, profile_photo_url, city, state, role')
     .in('id', posterIds);
 
   if (profilesError) {
@@ -451,7 +450,7 @@ export const fetchRideById = async (
   // Fetch owner profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, profile_photo_url, neighborhood, city, role')
+    .select('id, first_name, last_name, profile_photo_url, city, role')
     .eq('id', ride.poster_id)
     .single();
 

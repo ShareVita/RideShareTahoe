@@ -128,9 +128,6 @@ export function PassengerPostCard({
                 {post.owner.first_name} {post.owner.last_name}
               </p>
             </Link>
-            {post.owner.neighborhood && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">{post.owner.neighborhood}</p>
-            )}
           </div>
         </div>
       )}
@@ -162,7 +159,7 @@ export function PassengerPostCard({
                   deleting ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
-                {deleting ? '...' : 'Hide'}
+                {deleting ? '...' : 'Delete'}
               </button>
             )}
           </>

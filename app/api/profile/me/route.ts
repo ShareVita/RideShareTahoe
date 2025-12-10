@@ -18,10 +18,10 @@ interface ProfileRow {
   last_name: string;
   role: string | null;
   profile_photo_url?: string | null;
-  neighborhood?: string | null;
   city?: string | null;
   state?: string | null;
   bio?: string | null;
+  pronouns?: string | null;
 }
 
 interface ProfileResponse {

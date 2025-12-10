@@ -61,18 +61,6 @@ const LocationMap = React.memo(({ lat, lng, zoom = 12 }: LocationMapProps) => {
         </div>
       </div>
     `;
-
-    // Since we are setting textContent to HTML string which won't render HTML,
-    // we should really be using innerHTML if we want to render HTML.
-    // However, the original code used textContent.
-    // If the intention was to render the HTML structure, innerHTML is correct.
-    // If the intention was to show the code, textContent is correct.
-    // Given the context of a "map placeholder", it's likely intended to be innerHTML to show the visual representation.
-    // But to be safe and strictly follow "fix type errors", I will keep textContent but cast if needed,
-    // OR switch to innerHTML if it makes more sense.
-    // Actually, looking at the string, it IS HTML. Setting textContent will just show the HTML code as text.
-    // I will switch to innerHTML to make it actually work as a placeholder,
-    // but the main goal is fixing types.
     mapContainer.innerHTML = mapContainer.textContent;
   }, [lat, lng, zoom]);
 

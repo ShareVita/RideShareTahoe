@@ -148,6 +148,31 @@ export default function VehicleForm({
           )}
         </div>
 
+        <div>
+          <label
+            htmlFor="drivetrain"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Drivetrain
+          </label>
+          <select
+            id="drivetrain"
+            {...register('drivetrain')}
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          >
+            <option value="">Select type</option>
+            <option value="FWD">FWD (Front Wheel Drive)</option>
+            <option value="RWD">RWD (Rear Wheel Drive)</option>
+            <option value="AWD">AWD (All Wheel Drive)</option>
+            <option value="4WD">4WD (Four Wheel Drive)</option>
+          </select>
+          {errors.drivetrain && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              {errors.drivetrain.message}
+            </p>
+          )}
+        </div>
+
         <div className="md:col-span-2">
           <label
             htmlFor="license_plate"

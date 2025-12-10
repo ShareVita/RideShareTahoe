@@ -18,6 +18,7 @@ export interface UserProfile {
   zip_code: string | null;
   is_admin?: boolean;
   is_banned?: boolean;
+  pronouns?: string | null;
   // Add other profile fields here
   [key: string]: unknown;
 }

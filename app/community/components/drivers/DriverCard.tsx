@@ -41,8 +41,7 @@ export const DriverCard: React.FC<DriverCardProps> = ({ driver }) => {
           <div className="h-5">
             {driver.city ? (
               <p className="text-sm text-gray-600 dark:text-slate-400 truncate">
-                📍 {driver.neighborhood ? `${driver.neighborhood}, ` : ''}
-                {driver.city}
+                📍 {driver.city}
                 {driver.state ? `, ${driver.state}` : ''}
               </p>
             ) : (

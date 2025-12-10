@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import {
+  getAuthenticatedUser,
+  createUnauthorizedResponse,
+  ensureProfileComplete,
+} from '@/libs/supabase/auth';
 
 /**
  * Sends a new message between users.
@@ -12,6 +16,9 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
+
+    const profileError = await ensureProfileComplete(supabase, user.id, 'sending messages');
+    if (profileError) return profileError;
 
     const { recipient_id, content, ride_post_id } = await request.json();
 

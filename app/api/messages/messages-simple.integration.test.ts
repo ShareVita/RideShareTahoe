@@ -17,9 +17,6 @@ const describeIntegration = isIntegrationTest ? describe : describe.skip;
 
 describeIntegration('Simple Messages API Integration Test', () => {
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-  // You can manually create these test users in your Supabase dashboard
-  // or use existing test accounts
   const USER_A_EMAIL = process.env.TEST_USER_A_EMAIL || 'alice@test.com';
   const USER_A_PASSWORD = process.env.TEST_USER_A_PASSWORD || 'TestPassword123!';
   const USER_B_EMAIL = process.env.TEST_USER_B_EMAIL || 'bob@test.com';
@@ -88,10 +85,6 @@ describeIntegration('Simple Messages API Integration Test', () => {
   });
 
   describe('Messaging Flow', () => {
-    // Re-check running state or reuse variable? Reuse is fine but need to be careful of scope.
-    // Actually, simple way is to check in each test since we don't have global state across describes easily without reorganization.
-    // Or we can move isServerRunning to top level describe.
-
     it('should allow User A to send a message to User B', async () => {
       // We'll rely on the token existence as a proxy for "setup passed" which implies server is running
       if (!userAToken) return;
@@ -197,13 +190,6 @@ describeIntegration('Simple Messages API Integration Test', () => {
 
   describe('Error Handling', () => {
     it('should reject unauthenticated message sending', async () => {
-      // We can check if isServerRunning is true by checking if userAToken is set (implied) or we need access to isServerRunning variable.
-      // Since isServerRunning is scoped to describe('Authentication'), we can't access it here.
-      // However, we can check if token is missing. If token is missing, likely server is down OR auth failed.
-      // But this test expects 401, so even if server is up, we don't need token.
-      // We DO need to know if server is up though.
-      // Let's rely on a fetch check or imply it from tokens, or just try-catch the fetch.
-
       try {
         const response = await fetch(`${APP_URL}/api/messages`, {
           method: 'POST',

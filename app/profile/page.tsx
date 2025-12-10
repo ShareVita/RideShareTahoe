@@ -7,7 +7,7 @@ import DeleteAccountModal from '@/components/DeleteAccountModal';
 import DeletionRequestStatus from '@/components/DeletionRequestStatus';
 import UserReviews from '@/components/UserReviews';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
-import { formatLocation } from '@/libs/utils';
+import { formatLocation, formatPronouns } from '@/libs/utils';
 
 interface ProfileEntity {
   id: string;
@@ -16,7 +16,7 @@ interface ProfileEntity {
   profile_photo_url?: string | null;
   bio?: string | null;
   role: string;
-  neighborhood?: string | null;
+  pronouns?: string | null;
   city?: string | null;
   state?: string | null;
 
@@ -114,18 +114,25 @@ export default function ProfilePage() {
     return `${profile.first_name} ${profile.last_name}`;
   }, [profile]);
 
+  const profilePronouns = useMemo(() => {
+    if (!profile?.pronouns || profile.pronouns === 'prefer not to answer') {
+      return null;
+    }
+
+    return formatPronouns(profile.pronouns);
+  }, [profile?.pronouns]);
+
   const formattedLocation = useMemo(() => {
     if (!profile) {
       return null;
     }
 
     const location = formatLocation({
-      neighborhood: profile.neighborhood,
       city: profile.city,
       state: profile.state,
     });
 
-    const pieces = [location?.neighborhood, location?.city, location?.state].filter(Boolean);
+    const pieces = [location?.city, location?.state].filter(Boolean);
     return pieces.length ? `📍 ${pieces.join(', ')}` : null;
   }, [profile]);
 
@@ -215,6 +222,7 @@ export default function ProfilePage() {
             </p>
             <h1 className="text-3xl font-semibold text-gray-900 dark:text-white mt-1">
               {profileName}
+              {profilePronouns && ` (${profilePronouns})`}
             </h1>
           </div>
           <Link

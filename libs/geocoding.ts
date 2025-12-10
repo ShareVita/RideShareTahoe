@@ -19,7 +19,7 @@ interface NominatimResult {
  * @returns Promise resolving to coordinates or null on error
  */
 export async function geocodeLocation(query: string): Promise<Coordinates | null> {
-  if (!query || !query.trim()) {
+  if (!query?.trim()) {
     return null;
   }
 
@@ -30,14 +30,8 @@ export async function geocodeLocation(query: string): Promise<Coordinates | null
     // Check if it's a zip code (5 digits)
     const isZipCode = /^\d{5}$/.test(searchQuery);
 
-    // For zip codes, add country code for better accuracy
-    if (isZipCode) {
-      searchQuery = `${searchQuery}, USA`;
-    }
-    // For city names, ensure we have state if not provided
-    // (e.g., "Austin" becomes "Austin, TX, USA" if no state)
-    else if (!searchQuery.includes(',')) {
-      // If it's just a city name without state, add USA for better results
+    // For zip codes or city names without a state, add country code for better accuracy
+    if (isZipCode || !searchQuery.includes(',')) {
       searchQuery = `${searchQuery}, USA`;
     }
 
@@ -56,8 +50,8 @@ export async function geocodeLocation(query: string): Promise<Coordinates | null
     if (data && data.length > 0) {
       const result = data[0];
       const coords: Coordinates = {
-        lat: parseFloat(result.lat),
-        lng: parseFloat(result.lon),
+        lat: Number.parseFloat(result.lat),
+        lng: Number.parseFloat(result.lon),
       };
 
       return coords;
