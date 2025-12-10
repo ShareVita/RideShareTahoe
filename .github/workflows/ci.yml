@@ -66,17 +66,25 @@ jobs:
       - name: Start Local Supabase and Set Environment Variables
         id: supabase_env_setup
         run: |
-          # Start Supabase and capture the default environment variables as a source file.
-          supabase start --output env > supabase_ci_env.txt
+          # Capture start output (human readable table) to file
+          # We use 2>&1 to ensure we capture all output, and tee to see it in logs
+          supabase start -x studio,realtime,logflare,imgproxy 2>&1 | tee supabase.log
 
-          # Source the temporary file to load the default variables into the current shell session.
-          source supabase_ci_env.txt
+          # Strip ANSI colors to make parsing robust
+          sed -i 's/\x1b\[[0-9;]*m//g' supabase.log
 
-          # Map the default variables to the application-specific keys and export them 
-          # to the $GITHUB_ENV file for use in subsequent steps.
-          echo "NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$SUPABASE_ANON_KEY" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY" >> $GITHUB_ENV
+          # Parse credentials directly from the clean log using regex
+          # Matches: "API URL: http://..." and "anon key: ey..."
+          API_URL=$(grep -i "api url" supabase.log | grep -oE 'http://[^ ]+')
+          ANON_KEY=$(grep -i "anon key" supabase.log | grep -oE 'ey[a-zA-Z0-9._-]+')
+          SERVICE_KEY=$(grep -i "service_role key" supabase.log | grep -oE 'ey[a-zA-Z0-9._-]+')
+
+          echo "Detected API URL: $API_URL"
+
+          # Export to GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> $GITHUB_ENV
 
       - name: Wait for Supabase services
         run: |
