@@ -3,7 +3,7 @@ import type { CommunitySupabaseClient } from '@/libs/community/ridesData';
 import type { CommunityUser, RidePostType } from '../types';
 
 /**
- * Provides helpers for deleting ride posts created by the current user.
+ * Provides a helper for deleting ride posts created by the current user.
  *
  * @param supabase - Authenticated Supabase client scoped to the community schema.
  * @param user - Currently signed-in community user, if any.
