@@ -1,17 +1,12 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useCommunityRides } from './useCommunityRides';
 import { fetchMyRides } from '@/libs/community/ridesData';
-import { performCacheBusting } from '@/app/community/utils';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CommunityUser, RidePostType } from '../types';
 
 // Mock dependencies
 jest.mock('@/libs/community/ridesData', () => ({
   fetchMyRides: jest.fn(),
-}));
-
-jest.mock('@/app/community/utils', () => ({
-  performCacheBusting: jest.fn(),
 }));
 
 describe('useCommunityRides', () => {
@@ -39,7 +34,6 @@ describe('useCommunityRides', () => {
       expect(result.current.dataLoading).toBe(false);
     });
 
-    expect(performCacheBusting).toHaveBeenCalled();
     expect(fetchMyRides).toHaveBeenCalledWith(mockSupabase, mockUser);
     expect(result.current.myRides).toEqual(mockRides);
   });

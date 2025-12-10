@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { performCacheBusting } from '@/app/community/utils';
 import { fetchMyRides } from '@/libs/community/ridesData';
 
 import type { CommunityUser, RidePostType } from '../types';
@@ -25,7 +24,6 @@ export const useCommunityRides = (
   const fetchRidesData = useCallback(async () => {
     setDataLoading(true);
     try {
-      performCacheBusting();
       if (currentUser) {
         const mine = await fetchMyRides(supabase, currentUser);
         setMyRides(mine);

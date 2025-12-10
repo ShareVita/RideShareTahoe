@@ -1,13 +1,6 @@
 import { calculateDistance } from '@/libs/distance';
 import type { LocationFilterType, RidePostType } from './types';
 
-export const performCacheBusting = () => {
-  // In a real implementation, this might clear specific cache keys
-  // or invalidate service worker caches.
-  // For now, it's a placeholder to satisfy the import.
-  console.log('Cache busting performed');
-};
-
 /**
  * Filters rides by departure location (start_lat/start_lng).
  *
