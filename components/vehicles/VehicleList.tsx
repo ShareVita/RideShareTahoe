@@ -83,14 +83,7 @@ export default function VehicleList() {
 
       {(isAdding || editingVehicle) && (
         <VehicleForm
-          initialData={
-            editingVehicle
-              ? {
-                  ...editingVehicle,
-                  drivetrain: editingVehicle.drivetrain ?? 'AWD',
-                }
-              : undefined
-          }
+          initialData={editingVehicle ?? undefined}
           onSuccess={() => {
             setIsAdding(false);
             setEditingVehicle(null);
