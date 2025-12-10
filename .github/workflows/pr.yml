@@ -53,10 +53,8 @@ jobs:
           node-version: '22.x'
           cache: 'npm'
       - run: npm ci
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@ebf138c2969b58c7cd05dad865ca3e6e85d722ff
-        with:
-          version: latest
+      - name: Install Supabase CLI
+        run: npm install -g supabase
       - name: Start Local Supabase and Set Environment Variables
         id: supabase_env_setup
         run: |
