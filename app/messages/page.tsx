@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/libs/supabase';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
+import { validateUUID } from '@/libs/validation';
 
 import ReportModal from '@/components/ReportModal';
 import toast from 'react-hot-toast';
@@ -52,6 +53,31 @@ interface BookingRequest {
   driver?: Participant | null;
   passenger?: Participant | null;
   booking_id?: string | null;
+}
+
+/**
+ * Safely constructs a PostgREST .or() filter string with validated UUID parameters.
+ * This prevents injection attacks by validating that all IDs are proper UUIDs before interpolation.
+ *
+ * @param userId - The authenticated user's ID (must be a valid UUID)
+ * @param otherId - The other participant's ID (must be a valid UUID)
+ * @param field1 - The first field name for the filter (e.g., 'sender_id', 'driver_id')
+ * @param field2 - The second field name for the filter (e.g., 'recipient_id', 'passenger_id')
+ * @returns A validated filter string safe for use in .or()
+ * @throws Error if either ID fails UUID validation
+ */
+function buildSafeOrFilter(
+  userId: string,
+  otherId: string,
+  field1: string,
+  field2: string
+): string {
+  // Validate both IDs are proper UUIDs before using them in the query
+  validateUUID(userId, 'userId');
+  validateUUID(otherId, 'otherId');
+
+  // After validation, we can safely interpolate the UUIDs
+  return `and(${field1}.eq.${userId},${field2}.eq.${otherId}),and(${field1}.eq.${otherId},${field2}.eq.${userId})`;
 }
 
 /**
@@ -110,6 +136,9 @@ export default function MessagesPage() {
     setFetchError(null);
 
     try {
+      // Validate user ID before using it in the query
+      validateUUID(user.id, 'user.id');
+
       const { data, error } = await supabase
         .from('conversations')
         .select(
@@ -157,12 +186,13 @@ export default function MessagesPage() {
     setMessagesLoading(true);
 
     try {
+      // Build a safe filter with validated UUIDs
+      const filter = buildSafeOrFilter(user.id, otherId, 'sender_id', 'recipient_id');
+
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .or(
-          `and(sender_id.eq.${user.id},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${user.id})`
-        )
+        .or(filter)
         .eq('conversation_id', currentConversation.id)
         .order('created_at', { ascending: true });
 
@@ -198,6 +228,9 @@ export default function MessagesPage() {
     setBookingRequestsLoading(true);
 
     try {
+      // Build a safe filter with validated UUIDs
+      const filter = buildSafeOrFilter(user.id, otherId, 'driver_id', 'passenger_id');
+
       let requestQuery = supabase
         .from('trip_bookings')
         .select(
@@ -205,9 +238,7 @@ export default function MessagesPage() {
           driver:profiles!trip_bookings_driver_id_fkey(id, first_name, last_name),
           passenger:profiles!trip_bookings_passenger_id_fkey(id, first_name, last_name)`
         )
-        .or(
-          `and(driver_id.eq.${user.id},passenger_id.eq.${otherId}),and(driver_id.eq.${otherId},passenger_id.eq.${user.id})`
-        )
+        .or(filter)
         .in('status', ['pending', 'invited']);
 
       if (currentConversation.ride?.id) {
