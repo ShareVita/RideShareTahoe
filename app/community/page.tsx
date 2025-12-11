@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/libs/supabase/client';
@@ -147,6 +148,15 @@ export default function CommunityPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="mb-6 sm:mb-8">
+          <Link
+            href="/messages"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium text-sm sm:text-base bg-linear-to-r from-blue-500 to-cyan-400 text-white shadow-lg shadow-blue-500/30 transition hover:translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+          >
+            <span>💬</span>
+            <span>Messages</span>
+          </Link>
         </div>
 
         {/* Rides Section - Shows all ride posts */}
