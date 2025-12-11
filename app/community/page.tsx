@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createClient } from '@/libs/supabase/client';
 import MessageModal from '@/components/MessageModal';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useCommunityRides } from '@/app/community/hooks/useCommunityRides';
-import { useNetworkInfo } from '@/app/community/hooks/useNetworkInfo';
 import { useMessageModal } from '@/app/community/hooks/useMessageModal';
 import { useRideActions } from '@/app/community/hooks/useRideActions';
 import { RidesTab } from '@/app/community/components/FindRidesTab';
@@ -23,43 +22,15 @@ import MyTripsView from '@/components/trips/MyTripsView';
 export default function CommunityPage() {
   const { user, isLoading: authLoading } = useProtectedRoute();
   const supabase = useMemo(() => createClient(), []);
-  const { dataLoading, myRides, setMyRides, fetchRidesData } = useCommunityRides(supabase, user);
-  const { networkInfo, detectNetwork } = useNetworkInfo();
+  const { dataLoading, myRides, setMyRides } = useCommunityRides(supabase, user);
   const { messageModal, openMessageModal, closeMessageModal } = useMessageModal();
   const { deletePost, deletingPost } = useRideActions(supabase, user, setMyRides);
 
   const searchParams = useSearchParams();
-  const initialView = searchParams.get('view');
-  const [activeTab, setActiveTab] = useState<string>(
-    initialView === 'my-posts' ? 'my-posts' : 'driver-rides'
-  );
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-
-  useEffect(() => {
+  const [activeTab, setActiveTab] = useState<string>(() => {
     const view = searchParams.get('view');
-    if (view === 'my-posts') {
-      setActiveTab('my-posts');
-    }
-  }, [searchParams]);
-
-  const refreshData = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await fetchRidesData();
-      detectNetwork();
-      // Note: PassengersSection and DriversTab fetch their own data,
-      // so we might want to trigger their refresh too if we had a global refresh context,
-      // but for now this refreshes MyRides and checks network.
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [detectNetwork, fetchRidesData]);
-
-  useEffect(() => {
-    detectNetwork();
-  }, [detectNetwork]);
+    return view === 'my-posts' ? 'my-posts' : 'driver-rides';
+  });
 
   if (authLoading || dataLoading) {
     return (
@@ -90,21 +61,6 @@ export default function CommunityPage() {
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
                 Find a ride or offer one to your neighbors
               </p>
-            </div>
-            <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
-              <button
-                onClick={refreshData}
-                disabled={refreshing}
-                className="bg-white/80 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2 disabled:opacity-50 shadow-sm backdrop-blur-sm"
-              >
-                <span>{refreshing ? '🔄' : '↻'}</span>
-                <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-              </button>
-              {networkInfo && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-white/50 dark:bg-slate-800/50 px-2 py-1 rounded-sm backdrop-blur-sm">
-                  {networkInfo.connectionType} • {networkInfo.online ? 'Online' : 'Offline'}
-                </div>
-              )}
             </div>
           </div>
         </div>
