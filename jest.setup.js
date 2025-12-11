@@ -1,6 +1,83 @@
 import '@testing-library/jest-dom';
 import { jest } from '@jest/globals';
 
+jest.mock('next/server', () => {
+  class MockNextResponse {
+    constructor(body, init = {}) {
+      this.body = body;
+      this.status = init?.status ?? 200;
+    }
+
+    async json() {
+      return this.body;
+    }
+  }
+
+  const NextResponse = {
+    json: (body, init) => new MockNextResponse(body, init),
+  };
+
+  class NextRequest {
+    constructor(input = '', init = {}) {
+      this.input = input;
+      this.init = init;
+      this.url = typeof input === 'string' ? input : (input?.url ?? '');
+      this.method = init.method ?? 'GET';
+      this.headersMap = new Map();
+
+      const headers = init.headers || {};
+      Object.entries(headers).forEach(([key, value]) => {
+        this.headersMap.set(key.toLowerCase(), String(value));
+      });
+
+      this.headers = {
+        get: (key) => this.headersMap.get(key.toLowerCase()) ?? null,
+        has: (key) => this.headersMap.has(key.toLowerCase()),
+      };
+    }
+
+    getHeaders() {
+      const headers = {};
+      this.headersMap.forEach((value, key) => {
+        headers[key] = value;
+      });
+      return headers;
+    }
+
+    async json() {
+      if (!this.init?.body) return null;
+      if (typeof this.init.body === 'string') {
+        return JSON.parse(this.init.body);
+      }
+      if (Buffer.isBuffer(this.init.body)) {
+        return JSON.parse(this.init.body.toString());
+      }
+      return this.init.body;
+    }
+  }
+
+  return {
+    NextRequest,
+    NextResponse,
+  };
+});
+
+if (!('Request' in globalThis)) {
+  function TestRequest(...args) {
+    this.args = args;
+  }
+  globalThis.Request = TestRequest;
+}
+
+if (!('Response' in globalThis)) {
+  function TestResponse(body, init = {}) {
+    this.body = body;
+    this.status = init.status ?? 200;
+  }
+  TestResponse.json = (content, init) => new TestResponse(content, init);
+  globalThis.Response = TestResponse;
+}
+
 // Mock the Next.js Image component
 // This prevents errors related to image source validation in the JSDOM environment.
 globalThis.console = {
