@@ -209,4 +209,120 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
       content: expect.stringContaining('confirmed'),
     });
   });
+
+  it('allows driver to deny their own invitation and sends appropriate message', async () => {
+    const bookingId = 'booking-invited';
+    const bookingRow = {
+      id: bookingId,
+      ride_id: 'ride-3',
+      driver_id: 'driver-3',
+      passenger_id: 'passenger-3',
+      status: 'invited',
+      pickup_location: 'Central Station',
+      pickup_time: '2025-12-27T10:00:00Z',
+      ride: {
+        id: 'ride-3',
+        title: 'Weekend Trip',
+        start_location: 'Reno',
+        end_location: 'Tahoe',
+        departure_date: '2025-12-27',
+        departure_time: '10:00',
+        available_seats: 3,
+      },
+      driver: { first_name: 'Driver', last_name: 'Three' },
+      passenger: { first_name: 'Rider', last_name: 'Three' },
+    };
+
+    const supabase = {
+      from: jest.fn((tableName: string) => {
+        if (tableName === 'trip_bookings') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({ data: bookingRow, error: null }),
+              }),
+            }),
+            update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+          };
+        }
+        return { select: jest.fn(), update: jest.fn() };
+      }),
+    } as unknown as SupabaseClient<Database>;
+
+    const user = { id: bookingRow.driver_id };
+    (getAuthenticatedUser as jest.Mock).mockResolvedValue({ user, authError: null, supabase });
+
+    const request = {
+      url: `https://example.com/api/trips/bookings/${bookingId}`,
+      json: jest.fn().mockResolvedValue({ action: 'deny' }),
+    } as unknown as NextRequest;
+
+    await PATCH(request, { params: Promise.resolve({ bookingId }) });
+
+    expect(sendConversationMessage).toHaveBeenCalledWith({
+      supabase,
+      senderId: user.id,
+      recipientId: bookingRow.passenger_id,
+      rideId: bookingRow.ride_id,
+      content: expect.stringContaining('cancelled the invitation'),
+    });
+  });
+
+  it('allows passenger to deny an invitation and sends appropriate message', async () => {
+    const bookingId = 'booking-invited-deny';
+    const bookingRow = {
+      id: bookingId,
+      ride_id: 'ride-4',
+      driver_id: 'driver-4',
+      passenger_id: 'passenger-4',
+      status: 'invited',
+      pickup_location: 'Bus Stop',
+      pickup_time: '2025-12-28T11:00:00Z',
+      ride: {
+        id: 'ride-4',
+        title: 'Daily Commute',
+        start_location: 'Carson City',
+        end_location: 'Tahoe',
+        departure_date: '2025-12-28',
+        departure_time: '11:00',
+        available_seats: 2,
+      },
+      driver: { first_name: 'Driver', last_name: 'Four' },
+      passenger: { first_name: 'Rider', last_name: 'Four' },
+    };
+
+    const supabase = {
+      from: jest.fn((tableName: string) => {
+        if (tableName === 'trip_bookings') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({ data: bookingRow, error: null }),
+              }),
+            }),
+            update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+          };
+        }
+        return { select: jest.fn(), update: jest.fn() };
+      }),
+    } as unknown as SupabaseClient<Database>;
+
+    const user = { id: bookingRow.passenger_id };
+    (getAuthenticatedUser as jest.Mock).mockResolvedValue({ user, authError: null, supabase });
+
+    const request = {
+      url: `https://example.com/api/trips/bookings/${bookingId}`,
+      json: jest.fn().mockResolvedValue({ action: 'deny' }),
+    } as unknown as NextRequest;
+
+    await PATCH(request, { params: Promise.resolve({ bookingId }) });
+
+    expect(sendConversationMessage).toHaveBeenCalledWith({
+      supabase,
+      senderId: user.id,
+      recipientId: bookingRow.driver_id,
+      rideId: bookingRow.ride_id,
+      content: expect.stringContaining('declined the invitation'),
+    });
+  });
 });

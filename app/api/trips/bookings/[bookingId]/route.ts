@@ -166,6 +166,12 @@ function getUserRole(
 
 /**
  * Determines if the action is valid for the current booking state and user role.
+ *
+ * Valid combinations:
+ * - Driver can approve/deny pending bookings (passenger requested to join)
+ * - Driver can deny invited bookings (driver cancels their own invitation)
+ * - Passenger can approve/deny invited bookings (driver invited passenger)
+ * - Passenger can cancel pending bookings (passenger cancels their own request)
  */
 function getActionType(
   action: 'approve' | 'deny' | 'cancel',
@@ -183,7 +189,7 @@ function getActionType(
   }
   if (action === 'deny') {
     if (
-      (userRole === 'driver' && status === 'pending') ||
+      (userRole === 'driver' && (status === 'pending' || status === 'invited')) ||
       (userRole === 'passenger' && status === 'invited')
     ) {
       return 'deny';
@@ -271,6 +277,10 @@ function buildBookingMessage({
       return `I confirmed ${passengerName} for ${rideLabel}. Pickup: ${booking.pickup_location ?? 'TBD'} ${pickupTime}`;
     }
     if (action === 'deny') {
+      // Driver denying a passenger request (pending) vs canceling their own invitation (invited)
+      if (booking.status === 'invited') {
+        return `I cancelled the invitation to ${passengerName} for ${rideLabel}.`;
+      }
       return `I declined the request from ${passengerName} for ${rideLabel}.`;
     }
   } else if (action === 'cancel') {
