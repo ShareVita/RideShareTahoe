@@ -210,7 +210,7 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
     });
   });
 
-  it('decrements seats when passenger accepts an invitation', async () => {
+  it('does not decrement seats when passenger accepts invitation (already decremented on creation)', async () => {
     const bookingId = 'booking-invitation';
     const ride = {
       id: 'ride-3',
@@ -219,7 +219,7 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
       end_location: 'Tahoe',
       departure_date: '2025-12-30',
       departure_time: '07:00',
-      available_seats: 3,
+      available_seats: 2, // Already decremented when invitation was created
     };
 
     const bookingRow = {
@@ -235,8 +235,7 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
       passenger: { first_name: 'Bob', last_name: 'Passenger' },
     };
 
-    const rideUpdateEq = jest.fn().mockResolvedValue({ error: null });
-    const rideUpdate = jest.fn().mockReturnValue({ eq: rideUpdateEq });
+    const rideUpdate = jest.fn();
 
     const supabase = {
       from: jest.fn((tableName: string) => {
@@ -267,8 +266,8 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
 
     await PATCH(request, { params: Promise.resolve({ bookingId }) });
 
-    expect(rideUpdate).toHaveBeenCalledWith({ available_seats: 2 });
-    expect(rideUpdateEq).toHaveBeenCalledWith('id', ride.id);
+    // Seats should NOT be decremented because they were already decremented when invitation was created
+    expect(rideUpdate).not.toHaveBeenCalled();
     expect(sendConversationMessage).toHaveBeenCalledWith({
       supabase,
       senderId: user.id,
@@ -278,7 +277,7 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
     });
   });
 
-  it('does not decrement seats when passenger denies an invitation', async () => {
+  it('restores seat when passenger denies an invitation', async () => {
     const bookingId = 'booking-deny-invitation';
     const ride = {
       id: 'ride-4',
@@ -287,7 +286,7 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
       end_location: 'Santa Cruz',
       departure_date: '2025-12-28',
       departure_time: '10:00',
-      available_seats: 2,
+      available_seats: 1, // Was decremented to 1 when invitation was created
     };
 
     const bookingRow = {
@@ -303,7 +302,8 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
       passenger: { first_name: 'Dana', last_name: 'Passenger' },
     };
 
-    const rideUpdate = jest.fn();
+    const rideUpdateEq = jest.fn().mockResolvedValue({ error: null });
+    const rideUpdate = jest.fn().mockReturnValue({ eq: rideUpdateEq });
 
     const supabase = {
       from: jest.fn((tableName: string) => {
@@ -334,7 +334,9 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
 
     await PATCH(request, { params: Promise.resolve({ bookingId }) });
 
-    expect(rideUpdate).not.toHaveBeenCalled();
+    // Seat should be restored (incremented) because it was decremented when invitation was created
+    expect(rideUpdate).toHaveBeenCalledWith({ available_seats: 2 });
+    expect(rideUpdateEq).toHaveBeenCalledWith('id', ride.id);
     expect(sendConversationMessage).toHaveBeenCalledWith({
       supabase,
       senderId: user.id,

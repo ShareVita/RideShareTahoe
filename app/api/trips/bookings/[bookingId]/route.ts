@@ -89,10 +89,35 @@ export async function PATCH(
     const nextStatus = body.action === 'approve' ? 'confirmed' : 'cancelled';
 
     const bookingRide = booking.ride;
-    if (nextStatus === 'confirmed' && bookingRide && bookingRide.available_seats !== null) {
+    // Only decrement seats when confirming a pending booking (driver approving passenger request)
+    // For invited bookings (passenger accepting invitation), seats were already decremented when invitation was created
+    if (
+      nextStatus === 'confirmed' &&
+      booking.status === 'pending' &&
+      bookingRide &&
+      bookingRide.available_seats !== null
+    ) {
       const seatResult = await handleSeatUpdate(supabase, bookingRide);
       if (seatResult !== true) {
         return NextResponse.json({ error: seatResult }, { status: 400 });
+      }
+    }
+
+    // If cancelling/denying an invitation, restore the seat since it was decremented when invitation was created
+    if (
+      nextStatus === 'cancelled' &&
+      booking.status === 'invited' &&
+      bookingRide &&
+      bookingRide.available_seats !== null
+    ) {
+      const { error: seatRestoreError } = await supabase
+        .from('rides')
+        .update({ available_seats: bookingRide.available_seats + 1 })
+        .eq('id', bookingRide.id);
+
+      if (seatRestoreError) {
+        console.error('Failed to restore seat after invitation denial', seatRestoreError);
+        // Continue anyway - the cancellation should still proceed
       }
     }
 

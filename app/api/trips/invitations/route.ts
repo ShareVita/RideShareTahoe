@@ -98,6 +98,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
+    // Decrement available seats when invitation is created (if seats are tracked)
+    if (ride.available_seats !== null) {
+      const { error: seatUpdateError } = await supabase
+        .from('rides')
+        .update({ available_seats: Math.max(ride.available_seats - 1, 0) })
+        .eq('id', body.ride_id);
+
+      if (seatUpdateError) {
+        console.error('Failed to update available seats for invitation', seatUpdateError);
+        // Note: We don't fail the invitation creation if seat update fails
+        // The invitation was already created successfully
+      }
+    }
+
     try {
       const { data: driverProfile } = await supabase
         .from('profiles')
