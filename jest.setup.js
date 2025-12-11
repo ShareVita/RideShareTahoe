@@ -8,8 +8,12 @@ jest.mock('next/server', () => {
       this.status = init?.status ?? 200;
     }
 
+    /**
+     * Mimics the asynchronous behavior of NextResponse.json().
+     * Returns the body in a future microtask to avoid masking async issues in tests.
+     */
     async json() {
-      return this.body;
+      return await Promise.resolve(this.body);
     }
   }
 
