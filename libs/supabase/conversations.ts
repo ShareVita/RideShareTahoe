@@ -31,21 +31,43 @@ export async function ensureConversationForRide(
   participantB: string,
   rideId: string | null = null
 ): Promise<ConversationRow> {
-  const matchFilter = `and(participant1_id.eq.${participantA},participant2_id.eq.${participantB}),and(participant1_id.eq.${participantB},participant2_id.eq.${participantA})`;
+  // Use parameterized queries instead of string interpolation to avoid filter injection
+  // Query 1: Check if participantA is participant1 and participantB is participant2
+  let query1 = supabase
+    .from('conversations')
+    .select('*')
+    .eq('participant1_id', participantA)
+    .eq('participant2_id', participantB);
 
-  let query = supabase.from('conversations').select('*').or(matchFilter);
+  query1 = rideId ? query1.eq('ride_id', rideId) : query1.is('ride_id', null);
 
-  query = rideId ? query.eq('ride_id', rideId) : query.is('ride_id', null);
+  const { data: match1, error: error1 } = await query1.maybeSingle<ConversationRow>();
 
-  const { data: existingConversation, error: fetchError } =
-    await query.maybeSingle<ConversationRow>();
-
-  if (fetchError) {
-    throw fetchError;
+  if (error1) {
+    throw error1;
   }
 
-  if (existingConversation) {
-    return existingConversation;
+  if (match1) {
+    return match1;
+  }
+
+  // Query 2: Check if participantB is participant1 and participantA is participant2
+  let query2 = supabase
+    .from('conversations')
+    .select('*')
+    .eq('participant1_id', participantB)
+    .eq('participant2_id', participantA);
+
+  query2 = rideId ? query2.eq('ride_id', rideId) : query2.is('ride_id', null);
+
+  const { data: match2, error: error2 } = await query2.maybeSingle<ConversationRow>();
+
+  if (error2) {
+    throw error2;
+  }
+
+  if (match2) {
+    return match2;
   }
 
   /**
