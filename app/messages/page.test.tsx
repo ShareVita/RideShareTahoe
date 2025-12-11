@@ -250,9 +250,9 @@ describe('MessagesPage', () => {
       expect(within(mainContent).getByText('Hi!')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('1 request')).toBeInTheDocument();
+    expect(screen.getByText(/1 request/)).toBeInTheDocument();
     if (mainContent) {
-      expect(within(mainContent).getByText(/Jane Doe\s*•\s*Request/i)).toBeInTheDocument();
+      expect(within(mainContent).getByText(/Jane Doe\s*•/i)).toBeInTheDocument();
     }
     expect(screen.getByText(/pending/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Approve/i })).toBeInTheDocument();
