@@ -13,6 +13,26 @@ const bookingActionSchema = z.object({
   action: z.enum(['approve', 'deny', 'cancel']),
 });
 
+/**
+ * Valid booking status values from the database schema.
+ * These values must match the CHECK constraint in the trip_bookings table.
+ */
+const VALID_BOOKING_STATUSES = [
+  'pending',
+  'confirmed',
+  'cancelled',
+  'completed',
+  'invited',
+] as const;
+type BookingStatus = (typeof VALID_BOOKING_STATUSES)[number];
+
+/**
+ * Validates that a status value is a valid booking status.
+ */
+function isValidBookingStatus(status: string): status is BookingStatus {
+  return (VALID_BOOKING_STATUSES as readonly string[]).includes(status);
+}
+
 type TripBookingRow = Database['public']['Tables']['trip_bookings']['Row'];
 type RideRow = Database['public']['Tables']['rides']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
@@ -219,12 +239,20 @@ async function handleSeatUpdate(
 
 /**
  * Updates the booking status.
+ * Validates that the status is a valid enum value from the database schema.
  */
 async function updateBookingStatus(
   supabase: SupabaseClient<Database>,
   bookingId: string,
   nextStatus: string
 ): Promise<true | Error> {
+  // Validate that nextStatus is a valid booking status enum value
+  if (!isValidBookingStatus(nextStatus)) {
+    return new Error(
+      `Invalid booking status: ${nextStatus}. Must be one of: ${VALID_BOOKING_STATUSES.join(', ')}`
+    );
+  }
+
   const { error } = await supabase
     .from('trip_bookings')
     .update({
