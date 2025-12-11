@@ -1,6 +1,32 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import * as conversationModule from './conversations';
 
+describe('alphabeticalCompare', () => {
+  it('returns negative when first string comes before second', () => {
+    expect(conversationModule.alphabeticalCompare('alpha', 'bravo')).toBeLessThan(0);
+  });
+
+  it('returns positive when first string comes after second', () => {
+    expect(conversationModule.alphabeticalCompare('zebra', 'apple')).toBeGreaterThan(0);
+  });
+
+  it('returns zero when strings are equal', () => {
+    expect(conversationModule.alphabeticalCompare('charlie', 'charlie')).toBe(0);
+  });
+
+  it('handles case-sensitive comparison correctly', () => {
+    // localeCompare by default is case-sensitive
+    const result = conversationModule.alphabeticalCompare('Apple', 'apple');
+    expect(result).not.toBe(0);
+  });
+
+  it('handles empty strings', () => {
+    expect(conversationModule.alphabeticalCompare('', 'text')).toBeLessThan(0);
+    expect(conversationModule.alphabeticalCompare('text', '')).toBeGreaterThan(0);
+    expect(conversationModule.alphabeticalCompare('', '')).toBe(0);
+  });
+});
+
 describe('ensureConversationForRide', () => {
   it('returns an existing conversation when one is found', async () => {
     const existingConversation = {

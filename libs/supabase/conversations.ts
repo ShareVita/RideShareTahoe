@@ -17,6 +17,17 @@ interface SendConversationMessageOptions {
 }
 
 /**
+ * Compare function for reliable alphabetical sorting using localeCompare.
+ *
+ * @param a - First string to compare.
+ * @param b - Second string to compare.
+ * @returns Negative if a < b, positive if a > b, zero if equal.
+ */
+export function alphabeticalCompare(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+/**
  * Ensures there is a conversation between two participants for the given ride.
  *
  * @param supabase - Supabase client used for querying the conversations table.
@@ -46,17 +57,6 @@ export async function ensureConversationForRide(
 
   if (existingConversation) {
     return existingConversation;
-  }
-
-  /**
-   * Compare function for reliable alphabetical sorting using localeCompare.
-   *
-   * @param a - First string to compare.
-   * @param b - Second string to compare.
-   * @returns Negative if a < b, positive if a > b, zero if equal.
-   */
-  function alphabeticalCompare(a: string, b: string): number {
-    return a.localeCompare(b);
   }
 
   const [firstParticipant, secondParticipant] = [participantA, participantB].sort(
