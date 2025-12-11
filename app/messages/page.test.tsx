@@ -11,7 +11,14 @@ jest.mock('@/hooks/useProtectedRoute', () => ({
 }));
 
 jest.mock('@/libs/validation', () => ({
-  validateUUID: jest.fn(() => true),
+  validateUUID: jest.fn((uuid: string, fieldName: string) => {
+    // Mock implementation that validates UUIDs like the real function
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(uuid)) {
+      throw new Error(`${fieldName} must be a valid UUID`);
+    }
+    return true;
+  }),
 }));
 
 jest.mock('@/libs/supabase', () => ({
@@ -70,7 +77,7 @@ describe('MessagesPage', () => {
 
     // Default to an authenticated user, as this is the component's primary state
     mockedUseProtectedRoute.mockReturnValue({
-      user: { id: '00000000-0000-0000-0000-000000000099' },
+      user: { id: '00000000-0000-4000-8000-000000000099' },
       isLoading: false,
     });
   });
@@ -99,7 +106,7 @@ describe('MessagesPage', () => {
   it('shows "No conversations yet" when logged in but fetch returns empty', async () => {
     // Set up the specific user for this test
     mockedUseProtectedRoute.mockReturnValue({
-      user: { id: '00000000-0000-0000-0000-000000000003' },
+      user: { id: '00000000-0000-4000-8000-000000000003' },
       isLoading: false,
     });
 
@@ -120,20 +127,20 @@ describe('MessagesPage', () => {
   });
 
   it('fetches and displays conversations, then loads messages for the first one', async () => {
-    const mockUser = { id: '00000000-0000-0000-0000-000000000001', email: 'user@test.com' };
+    const mockUser = { id: '00000000-0000-4000-8000-000000000001', email: 'user@test.com' };
     const mockConversations = [
       {
         id: 'convo-1',
-        participant1_id: '00000000-0000-0000-0000-000000000001',
-        participant2_id: '00000000-0000-0000-0000-000000000002',
+        participant1_id: '00000000-0000-4000-8000-000000000001',
+        participant2_id: '00000000-0000-4000-8000-000000000002',
         participant1: {
-          id: '00000000-0000-0000-0000-000000000001',
+          id: '00000000-0000-4000-8000-000000000001',
           first_name: 'Test',
           last_name: 'User',
           profile_photo_url: 'test.png',
         },
         participant2: {
-          id: '00000000-0000-0000-0000-000000000002',
+          id: '00000000-0000-4000-8000-000000000002',
           first_name: 'Jane',
           last_name: 'Doe',
           profile_photo_url: 'jane.png',
@@ -151,15 +158,15 @@ describe('MessagesPage', () => {
     const mockMessages = [
       {
         id: 'msg-1',
-        sender_id: '00000000-0000-0000-0000-000000000002',
-        recipient_id: '00000000-0000-0000-0000-000000000001',
+        sender_id: '00000000-0000-4000-8000-000000000002',
+        recipient_id: '00000000-0000-4000-8000-000000000001',
         content: 'Hello there!',
         created_at: '2023-10-27T10:00:00Z',
       },
       {
         id: 'msg-2',
-        sender_id: '00000000-0000-0000-0000-000000000001',
-        recipient_id: '00000000-0000-0000-0000-000000000002',
+        sender_id: '00000000-0000-4000-8000-000000000001',
+        recipient_id: '00000000-0000-4000-8000-000000000002',
         content: 'Hi!',
         created_at: '2023-10-27T10:01:00Z',
       },
@@ -170,7 +177,7 @@ describe('MessagesPage', () => {
         id: 'booking-1',
         ride_id: 'ride-1',
         driver_id: mockUser.id,
-        passenger_id: '00000000-0000-0000-0000-000000000002',
+        passenger_id: '00000000-0000-4000-8000-000000000002',
         status: 'pending',
         pickup_location: 'Downtown',
         pickup_time: '2025-12-01T10:00:00Z',
