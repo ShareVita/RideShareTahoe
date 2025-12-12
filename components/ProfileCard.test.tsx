@@ -8,7 +8,7 @@ export type ProfileData = {
   first_name: string;
   photo_url: string | null;
   city: string | null;
-  role: string;
+
   bio_excerpt: string | null;
   last_online_at: string;
 };
@@ -32,7 +32,7 @@ describe('ProfileCard', () => {
     first_name: 'John',
     photo_url: 'https://example.com/photo.jpg',
     city: 'New York',
-    role: 'driver',
+
     bio_excerpt:
       'Enjoys exploring the Sierra Nevada foothills while helping people get around town.',
     last_online_at: new Date().toISOString(),
@@ -56,11 +56,6 @@ describe('ProfileCard', () => {
     expect(profileImage).toBeInTheDocument();
     expect(profileImage).toHaveAttribute('src', baseProfile.photo_url);
 
-    // Check role
-    // The role icon is in a sibling div of the Link containing the name
-    expect(screen.getAllByText('🚗').length).toBeGreaterThan(0);
-    expect(screen.getByText(/driver/i)).toBeInTheDocument();
-
     // Check location
     expect(screen.getByText(`📍 ${baseProfile.city}`)).toBeInTheDocument();
 
@@ -79,7 +74,7 @@ describe('ProfileCard', () => {
     const minimalProfile: ProfileData = {
       id: '456-def',
       first_name: 'Jane',
-      role: 'passenger',
+
       photo_url: null,
       city: null,
       bio_excerpt: null,
@@ -93,26 +88,9 @@ describe('ProfileCard', () => {
     // Check for fallback icon instead of image
     expect(screen.queryByAltText('Jane')).not.toBeInTheDocument();
 
-    // Check role text
-    expect(screen.getByText(/passenger/i)).toBeInTheDocument();
-
     // Check that optional sections are not rendered
     expect(screen.queryByText(/📍/)).not.toBeInTheDocument();
     expect(screen.queryByText(baseProfile.bio_excerpt as string)).not.toBeInTheDocument();
-  });
-
-  it.each([
-    { role: 'driver', icon: '🚗', text: 'Driver' },
-    { role: 'passenger', icon: '👋', text: 'Passenger' },
-    { role: 'both', icon: '🚗/👋', text: 'Both' },
-    { role: 'unknown_role', icon: '👤', text: 'Unknown role' },
-  ])('displays the correct icon and text for role "$role"', ({ role, icon, text }) => {
-    const profileWithRole: ProfileData = { ...baseProfile, role, photo_url: null };
-    render(<ProfileCard profile={profileWithRole} onMessage={mockOnMessage} />);
-
-    // Role icon is shown in two places: header fallback and role line item
-    expect(screen.getAllByText(icon).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(new RegExp(text, 'i'))).toBeInTheDocument();
   });
 
   it('formats location correctly with only a city', () => {

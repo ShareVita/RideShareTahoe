@@ -20,7 +20,7 @@ interface Profile {
   city?: string;
   state?: string;
   bio?: string;
-  role: 'driver' | 'passenger' | 'both';
+
   pronouns?: string | null;
   support_preferences?: string[];
   support_story?: string;
@@ -199,32 +199,6 @@ export default function PublicProfilePage() {
     );
   }
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'driver':
-        return '🚗';
-      case 'passenger':
-        return '👋';
-      case 'both':
-        return '🚗👋';
-      default:
-        return '👤';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'driver':
-        return 'Driver';
-      case 'passenger':
-        return 'Passenger';
-      case 'both':
-        return 'Driver & Passenger';
-      default:
-        return 'Community Member';
-    }
-  };
-
   return (
     <div className="min-h-screen w-full bg-linear-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -254,7 +228,7 @@ export default function PublicProfilePage() {
               />
             ) : (
               <div className="w-24 h-24 sm:w-32 sm:h-32 bg-linear-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-full flex items-center justify-center text-4xl border-4 border-blue-100 dark:border-blue-900">
-                {getRoleIcon(profile.role)}
+                👤
               </div>
             )}
 
@@ -265,10 +239,7 @@ export default function PublicProfilePage() {
                 {profilePronouns && ` (${profilePronouns})`}
               </h1>
               <div className="flex items-center justify-center sm:justify-start space-x-2 mb-3">
-                <span className="text-2xl">{getRoleIcon(profile.role)}</span>
-                <span className="text-lg text-gray-600 dark:text-gray-300">
-                  {getRoleLabel(profile.role)}
-                </span>
+                <span className="text-lg text-gray-600 dark:text-gray-300">Community Member</span>
               </div>
 
               {/* Location */}

@@ -13,8 +13,6 @@ export async function GET(request: NextRequest) {
       return createUnauthorizedResponse(authError);
     }
 
-    const role = searchParams.get('role');
-
     // Build the main query for eligible profiles
     let query = supabase
       .from('profiles')
@@ -24,7 +22,7 @@ export async function GET(request: NextRequest) {
         first_name,
         profile_photo_url,
         city,
-        role,
+
         pronouns,
         bio,
         display_lat,
@@ -35,15 +33,6 @@ export async function GET(request: NextRequest) {
       )
       .not('bio', 'is', null)
       .neq('bio', '');
-
-    // Apply role filter
-    if (role && role !== 'both') {
-      // If role is specific (driver/passenger), include 'both' as well
-      query = query.or(`role.eq.${role},role.eq.both`);
-    } else {
-      // If no role or 'both', include all relevant roles
-      query = query.in('role', ['driver', 'passenger', 'both']);
-    }
 
     query = query
       .order('updated_at', { ascending: false })
@@ -80,7 +69,7 @@ export async function GET(request: NextRequest) {
         first_name: profile.first_name,
         photo_url: profile.profile_photo_url,
         city: profile.city,
-        role: profile.role,
+
         pronouns: profile.pronouns || null,
         bio_excerpt: bioExcerpt,
         display_lat: profile.display_lat,

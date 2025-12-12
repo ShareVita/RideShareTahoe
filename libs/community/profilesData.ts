@@ -30,30 +30,28 @@ interface ProfilesQueryRow {
   city: string | null;
   state: string | null;
   bio: string | null;
-  role: string | null;
+
   pronouns: string | null;
   profile_socials: ProfileSocialsRow | null;
 }
 
 /**
- * Fetches profiles with pagination and role filtering.
+ * Fetches profiles with pagination.
  *
  * @param supabase - Supabase client instance
- * @param role - Role to filter by ('driver', 'passenger', or 'all')
  * @param page - Page number (1-indexed)
  * @param pageSize - Number of profiles per page
  * @returns Promise with profiles array and pagination metadata
  */
 export const fetchProfiles = async (
   supabase: CommunitySupabaseClient,
-  role: 'driver' | 'passenger' | 'all' = 'all',
   page: number = 1,
   pageSize: number = 20
 ): Promise<FetchProfilesResponse> => {
   const offset = (page - 1) * pageSize;
 
   // Build the query for count
-  let countQuery = supabase
+  const countQuery = supabase
     .from('profiles')
     .select('*', { count: 'exact', head: true })
     .neq('first_name', '')
@@ -63,12 +61,6 @@ export const fetchProfiles = async (
     .neq('city', '')
     .not('city', 'is', null);
 
-  if (role === 'driver') {
-    countQuery = countQuery.or('role.eq.driver,role.eq.both');
-  } else if (role === 'passenger') {
-    countQuery = countQuery.or('role.eq.passenger,role.eq.both');
-  }
-
   const { count: totalCount, error: countError } = await countQuery;
 
   if (countError) {
@@ -77,7 +69,7 @@ export const fetchProfiles = async (
   }
 
   // Build the query for data
-  let dataQuery = supabase
+  const dataQuery = supabase
     .from('profiles')
     .select(
       `
@@ -88,7 +80,7 @@ export const fetchProfiles = async (
       city,
       state,
       bio,
-      role,
+
       pronouns,
       profile_socials (
         facebook_url,
@@ -107,12 +99,6 @@ export const fetchProfiles = async (
     .not('city', 'is', null)
     .order('created_at', { ascending: false })
     .range(offset, offset + pageSize - 1);
-
-  if (role === 'driver') {
-    dataQuery = dataQuery.or('role.eq.driver,role.eq.both');
-  } else if (role === 'passenger') {
-    dataQuery = dataQuery.or('role.eq.passenger,role.eq.both');
-  }
 
   const { data: profiles, error } = await dataQuery;
 
@@ -134,7 +120,7 @@ export const fetchProfiles = async (
     city: profile.city,
     state: profile.state,
     bio: profile.bio,
-    role: profile.role,
+
     pronouns: profile.pronouns || null,
     // Flatten social URLs
     facebook_url: profile.profile_socials?.facebook_url || null,

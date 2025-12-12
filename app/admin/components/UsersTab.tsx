@@ -11,7 +11,6 @@ interface UserData {
   first_name: string;
   last_name: string;
   email: string; // Ensure this is available in your profiles selection or add it if missing
-  role: string;
   is_banned: boolean;
   is_admin: boolean;
   profile_photo_url: string;
@@ -98,7 +97,7 @@ export default function UsersTab() {
     if (loading) {
       return (
         <tr>
-          <td colSpan={5} className="px-6 py-8 text-center">
+          <td colSpan={4} className="px-6 py-8 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
           </td>
         </tr>
@@ -108,7 +107,7 @@ export default function UsersTab() {
     if (users.length === 0) {
       return (
         <tr>
-          <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+          <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
             No users found matching your search.
           </td>
         </tr>
@@ -146,7 +145,6 @@ export default function UsersTab() {
             </div>
           </div>
         </td>
-        <td className="px-6 py-4 capitalize text-gray-700 dark:text-gray-300">{user.role}</td>
         <td className="px-6 py-4 whitespace-nowrap">
           {new Date(user.created_at).toLocaleDateString()}
         </td>
@@ -223,7 +221,6 @@ export default function UsersTab() {
             <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-700 dark:text-gray-300">
               <tr>
                 <th className="px-6 py-3">User</th>
-                <th className="px-6 py-3">Role</th>
                 <th className="px-6 py-3">Joined</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3 text-right">Actions</th>

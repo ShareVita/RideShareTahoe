@@ -132,8 +132,6 @@ export const reviewValidationSchema: ValidationSchema = {
   comment: (value: unknown) => validateStringLength(value, 'comment', 0, 1000),
 };
 
-const PROFILE_ROLES = ['dog_owner', 'dog_sitter', 'both', 'driver', 'passenger'] as const;
-
 export const profileValidationSchema: ValidationSchema = {
   first_name: (value: unknown) => {
     validateRequired(value, 'first_name');
@@ -146,7 +144,6 @@ export const profileValidationSchema: ValidationSchema = {
   phone_number: (value: unknown) => {
     if (value) validatePhoneNumber(value as string);
   },
-  role: (value: unknown) => validateEnum(value, 'role', PROFILE_ROLES),
 };
 
 // Validate request body against schema

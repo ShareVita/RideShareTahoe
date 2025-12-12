@@ -15,7 +15,7 @@ interface ProfileEntity {
   last_name: string;
   profile_photo_url?: string | null;
   bio?: string | null;
-  role: string;
+
   pronouns?: string | null;
   city?: string | null;
   state?: string | null;
@@ -254,15 +254,6 @@ export default function ProfilePage() {
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-                    Role
-                  </p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
-                    {profile.role}
-                  </p>
-                </div>
-
                 <div>
                   <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
                     Location

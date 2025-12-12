@@ -1,67 +1,87 @@
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000001', 'michael.johnson1@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Michael', last_name = 'Johnson', role = 'driver', city = 'San Francisco', state = 'CA', bio = 'Professional driver, very reliable.' WHERE id = '00000000-0000-0000-0000-000000000001';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000001', 'michael.johnson1@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Michael', last_name = 'Johnson', city = 'San Francisco', state = 'CA', bio = 'Professional driver, very reliable.' WHERE id = '00000000-0000-0000-0000-000000000001';
 UPDATE public.profiles SET pronouns = 'he/him' WHERE id = '00000000-0000-0000-0000-000000000001';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000002', 'emily.chen2@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Emily', last_name = 'Chen', role = 'driver', city = 'Oakland', state = 'CA', bio = 'First time to Tahoe, excited!' WHERE id = '00000000-0000-0000-0000-000000000002';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000002', 'emily.chen2@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Emily', last_name = 'Chen', city = 'Oakland', state = 'CA', bio = 'First time to Tahoe, excited!' WHERE id = '00000000-0000-0000-0000-000000000002';
 UPDATE public.profiles SET pronouns = 'she/her' WHERE id = '00000000-0000-0000-0000-000000000002';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000003', 'david.lee3@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'David', last_name = 'Lee', role = 'passenger', city = 'San Jose', state = 'CA', bio = 'EV driver, charging stops included.' WHERE id = '00000000-0000-0000-0000-000000000003';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000003', 'david.lee3@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'David', last_name = 'Lee', city = 'San Jose', state = 'CA', bio = 'EV driver, charging stops included.' WHERE id = '00000000-0000-0000-0000-000000000003';
 UPDATE public.profiles SET pronouns = 'they/them' WHERE id = '00000000-0000-0000-0000-000000000003';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000004', 'jessica.rodriguez4@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Jessica', last_name = 'Rodriguez', role = 'driver', city = 'Sacramento', state = 'CA', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000004';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000004', 'jessica.rodriguez4@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Jessica', last_name = 'Rodriguez', city = 'Sacramento', state = 'CA', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000004';
 UPDATE public.profiles SET pronouns = 'prefer not to answer' WHERE id = '00000000-0000-0000-0000-000000000004';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000005', 'alex.wang5@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000005', 'alex.wang5@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
 -- Pronouns left null intentionally because Alex did not share them in this seed data set.
-UPDATE public.profiles SET first_name = 'Alex', last_name = 'Wang', role = 'driver', city = 'Palo Alto', state = 'CA', bio = 'Music lover, bring your playlist!' WHERE id = '00000000-0000-0000-0000-000000000005';
+UPDATE public.profiles SET first_name = 'Alex', last_name = 'Wang', city = 'Palo Alto', state = 'CA', bio = 'Music lover, bring your playlist!' WHERE id = '00000000-0000-0000-0000-000000000005';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000006', 'ryan.kim6@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Ryan', last_name = 'Kim', role = 'passenger', city = 'Davis', state = 'CA', bio = 'Music lover, bring your playlist!' WHERE id = '00000000-0000-0000-0000-000000000006';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000006', 'ryan.kim6@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Ryan', last_name = 'Kim', city = 'Davis', state = 'CA', bio = 'Music lover, bring your playlist!' WHERE id = '00000000-0000-0000-0000-000000000006';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000007', 'maria.garcia7@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Maria', last_name = 'Garcia', role = 'driver', city = 'Reno', state = 'NV', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000007';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000007', 'maria.garcia7@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Maria', last_name = 'Garcia', city = 'Reno', state = 'NV', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000007';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000008', 'kenji.tanaka8@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Kenji', last_name = 'Tanaka', role = 'driver', city = 'Fremont', state = 'CA', bio = 'Chill driver, pet-friendly vehicle.' WHERE id = '00000000-0000-0000-0000-000000000008';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000008', 'kenji.tanaka8@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Kenji', last_name = 'Tanaka', city = 'Fremont', state = 'CA', bio = 'Chill driver, pet-friendly vehicle.' WHERE id = '00000000-0000-0000-0000-000000000008';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000009', 'chloe.miller9@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Chloe', last_name = 'Miller', role = 'passenger', city = 'San Mateo', state = 'CA', bio = 'Always happy to share the ride and costs.' WHERE id = '00000000-0000-0000-0000-000000000009';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000009', 'chloe.miller9@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Chloe', last_name = 'Miller', city = 'San Mateo', state = 'CA', bio = 'Always happy to share the ride and costs.' WHERE id = '00000000-0000-0000-0000-000000000009';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000010', 'ben.carter10@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Ben', last_name = 'Carter', role = 'driver', city = 'Berkeley', state = 'CA', bio = 'Chill driver, pet-friendly vehicle.' WHERE id = '00000000-0000-0000-0000-000000000010';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000010', 'ben.carter10@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Ben', last_name = 'Carter', city = 'Berkeley', state = 'CA', bio = 'Chill driver, pet-friendly vehicle.' WHERE id = '00000000-0000-0000-0000-000000000010';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000011', 'hannah.nguyen11@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Hannah', last_name = 'Nguyen', role = 'driver', city = 'San Francisco', state = 'CA', bio = 'Regular at Heavenly and Kirkwood.' WHERE id = '00000000-0000-0000-0000-000000000011';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000011', 'hannah.nguyen11@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Hannah', last_name = 'Nguyen', city = 'San Francisco', state = 'CA', bio = 'Regular at Heavenly and Kirkwood.' WHERE id = '00000000-0000-0000-0000-000000000011';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000012', 'diego.perez12@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Diego', last_name = 'Perez', role = 'passenger', city = 'Oakland', state = 'CA', bio = 'Flexible with times and pickup locations.' WHERE id = '00000000-0000-0000-0000-000000000012';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000012', 'diego.perez12@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Diego', last_name = 'Perez', city = 'Oakland', state = 'CA', bio = 'Flexible with times and pickup locations.' WHERE id = '00000000-0000-0000-0000-000000000012';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000013', 'priya.patel13@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Priya', last_name = 'Patel', role = 'driver', city = 'San Jose', state = 'CA', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000013';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000013', 'priya.patel13@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Priya', last_name = 'Patel', city = 'San Jose', state = 'CA', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000013';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000014', 'marcus.williams14@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Marcus', last_name = 'Williams', role = 'driver', city = 'Sacramento', state = 'CA', bio = 'Professional driver, very reliable.' WHERE id = '00000000-0000-0000-0000-000000000014';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000014', 'marcus.williams14@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Marcus', last_name = 'Williams', city = 'Sacramento', state = 'CA', bio = 'Professional driver, very reliable.' WHERE id = '00000000-0000-0000-0000-000000000014';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000015', 'olivia.brown15@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Olivia', last_name = 'Brown', role = 'passenger', city = 'Palo Alto', state = 'CA', bio = 'EV driver, charging stops included.' WHERE id = '00000000-0000-0000-0000-000000000015';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000015', 'olivia.brown15@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Olivia', last_name = 'Brown', city = 'Palo Alto', state = 'CA', bio = 'EV driver, charging stops included.' WHERE id = '00000000-0000-0000-0000-000000000015';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000016', 'elijah.davis16@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Elijah', last_name = 'Davis', role = 'driver', city = 'Davis', state = 'CA', bio = 'Professional driver, very reliable.' WHERE id = '00000000-0000-0000-0000-000000000016';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000016', 'elijah.davis16@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Elijah', last_name = 'Davis', city = 'Davis', state = 'CA', bio = 'Professional driver, very reliable.' WHERE id = '00000000-0000-0000-0000-000000000016';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000017', 'sophia.wilson17@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Sophia', last_name = 'Wilson', role = 'driver', city = 'Reno', state = 'NV', bio = 'Can help with driving if needed.' WHERE id = '00000000-0000-0000-0000-000000000017';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000017', 'sophia.wilson17@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Sophia', last_name = 'Wilson', city = 'Reno', state = 'NV', bio = 'Can help with driving if needed.' WHERE id = '00000000-0000-0000-0000-000000000017';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000018', 'liam.moore18@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Liam', last_name = 'Moore', role = 'passenger', city = 'Fremont', state = 'CA', bio = 'Chill driver, pet-friendly vehicle.' WHERE id = '00000000-0000-0000-0000-000000000018';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000018', 'liam.moore18@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Liam', last_name = 'Moore', city = 'Fremont', state = 'CA', bio = 'Chill driver, pet-friendly vehicle.' WHERE id = '00000000-0000-0000-0000-000000000018';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000019', 'emma.taylor19@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Emma', last_name = 'Taylor', role = 'driver', city = 'San Mateo', state = 'CA', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000019';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000019', 'emma.taylor19@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Emma', last_name = 'Taylor', city = 'San Mateo', state = 'CA', bio = 'Love weekend trips to Tahoe!' WHERE id = '00000000-0000-0000-0000-000000000019';
 
-INSERT INTO auth.users (id, email, encrypted_password, role, aud) VALUES ('00000000-0000-0000-0000-000000000020', 'sarah.martinez20@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
-UPDATE public.profiles SET first_name = 'Sarah', last_name = 'Martinez', role = 'driver', city = 'Berkeley', state = 'CA', bio = 'Flexible with times and pickup locations.' WHERE id = '00000000-0000-0000-0000-000000000020';
+INSERT INTO auth.users (id, email, encrypted_password, role, aud)
+VALUES ('00000000-0000-0000-0000-000000000020', 'sarah.martinez20@example.com', '$2a$10$dummy.hash.for.testing', 'authenticated', 'authenticated');
+UPDATE public.profiles SET first_name = 'Sarah', last_name = 'Martinez', city = 'Berkeley', state = 'CA', bio = 'Flexible with times and pickup locations.' WHERE id = '00000000-0000-0000-0000-000000000020';
 
 INSERT INTO public.vehicles (id, owner_id, make, model, year, color, license_plate) VALUES ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Tesla', 'Model Y', 2018, 'White', '0LNZ731');
 INSERT INTO public.vehicles (id, owner_id, make, model, year, color, license_plate) VALUES ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'Honda', 'CR-V', 2019, 'Red', '5FDW608');

@@ -10,7 +10,7 @@ interface Profile {
   first_name: string;
   photo_url: string | null;
   city: string | null;
-  role: string;
+
   bio_excerpt: string | null;
   display_lat?: number;
   display_lng?: number;
@@ -51,11 +51,9 @@ const SKELETON_IDS = Array.from({ length: 6 }, (_, i) => `skeleton-${i}`);
 const ITEMS_PER_PAGE = 24;
 
 export default function ProfilesList({
-  role,
   onMessage,
   locationFilter,
 }: {
-  readonly role: string;
   // eslint-disable-next-line no-unused-vars
   readonly onMessage: (_profile: Profile) => void;
   readonly locationFilter?: LocationFilter | null;
@@ -69,42 +67,39 @@ export default function ProfilesList({
   const listRef = useRef<HTMLDivElement>(null);
 
   // Fetch profiles
-  const fetchProfiles = useCallback(
-    async (page: number) => {
-      setLoading(true);
-      setError(null);
+  const fetchProfiles = useCallback(async (page: number) => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        const params = new URLSearchParams();
-        params.append('page', page.toString());
-        params.append('limit', ITEMS_PER_PAGE.toString());
-        params.append('role', role);
-        // Add multiple cache-busting parameters
-        params.append('_t', Date.now().toString());
-        params.append('_r', Math.random().toString(36).substring(7));
-        params.append('_v', '1.0.0');
+    try {
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', ITEMS_PER_PAGE.toString());
 
-        const response = await fetch(`/api/community/profiles?${params}`);
+      // Add multiple cache-busting parameters
+      params.append('_t', Date.now().toString());
+      params.append('_r', Math.random().toString(36).substring(7));
+      params.append('_v', '1.0.0');
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Error:', response.status, errorText);
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      const response = await fetch(`/api/community/profiles?${params}`);
 
-        const data = await response.json();
-
-        setProfiles(data.items);
-        setTotalCount(data.totalCount);
-      } catch (err) {
-        console.error('Error fetching profiles:', err);
-        setError('Failed to load profiles. Please try again.');
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    },
-    [role]
-  );
+
+      const data = await response.json();
+
+      setProfiles(data.items);
+      setTotalCount(data.totalCount);
+    } catch (err) {
+      console.error('Error fetching profiles:', err);
+      setError('Failed to load profiles. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Initial load and page changes
   useEffect(() => {
@@ -114,7 +109,7 @@ export default function ProfilesList({
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [role, locationFilter]);
+  }, [locationFilter]);
 
   // Filter profiles by location
   const filterProfilesByLocation = (profiles: Profile[], filter: LocationFilter | null) => {
@@ -139,20 +134,10 @@ export default function ProfilesList({
     });
   };
 
-  // Filter profiles by role first
-  const roleFilteredProfiles = profiles.filter((profile: Profile) => {
-    if (role === 'driver') {
-      return profile.role === 'driver' || profile.role === 'both';
-    } else if (role === 'passenger') {
-      return profile.role === 'passenger' || profile.role === 'both';
-    }
-    return true;
-  });
-
   // Then filter by location if filter is active
   const filteredProfiles = locationFilter
-    ? filterProfilesByLocation(roleFilteredProfiles, locationFilter)
-    : roleFilteredProfiles;
+    ? filterProfilesByLocation(profiles, locationFilter)
+    : profiles;
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
@@ -206,9 +191,9 @@ export default function ProfilesList({
       {/* No Profiles State */}
       {!loading && filteredProfiles.length === 0 && profiles.length > 0 && (
         <div className="text-center py-12">
-          <div className="text-6xl mb-4">{role === 'driver' ? '🚗' : '🙋'}</div>
+          <div className="text-6xl mb-4">👥</div>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-            No {role === 'driver' ? 'Drivers' : 'Passengers'} available right now
+            No community members available right now
           </h3>
           <p className="text-sm sm:text-base text-gray-600">Check back later for new profiles!</p>
         </div>

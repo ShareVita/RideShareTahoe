@@ -6,12 +6,6 @@ import { useUpdateProfile, type UpdatableProfileData } from '@/hooks/useProfile'
 import { geocodeLocation } from '@/libs/geocoding';
 import PhotoUpload from '@/components/ui/PhotoUpload';
 
-const ROLE_OPTIONS = [
-  { value: 'driver', label: 'Driver' },
-  { value: 'passenger', label: 'Passenger' },
-  { value: 'both', label: 'Driver & Passenger' },
-];
-
 const PRONOUN_OPTIONS = [
   { value: 'he/him', label: 'He/Him' },
   { value: 'she/her', label: 'She/Her' },
@@ -30,7 +24,7 @@ interface ProfileFormState {
   first_name: string;
   last_name: string;
   profile_photo_url: string;
-  role: string;
+
   pronouns: string;
   street_address: string;
   city: string;
@@ -67,17 +61,12 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   // Safely coerce incoming profile values to expected types
   const safeString = (value: unknown, fallback = ''): string =>
     typeof value === 'string' ? value : fallback;
-  const safeRole = (value: unknown, fallback: string): string => {
-    return value === 'driver' || value === 'passenger' || value === 'both'
-      ? (value as string)
-      : fallback;
-  };
 
   const [formState, setFormState] = useState<ProfileFormState>({
     first_name: safeString(initialData.first_name),
     last_name: safeString(initialData.last_name),
     profile_photo_url: safeString(initialData.profile_photo_url),
-    role: safeRole(initialData.role, 'driver'),
+
     pronouns: safeString(initialData.pronouns),
     street_address: safeString(initialData.street_address),
     city: safeString(initialData.city),
@@ -157,7 +146,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       first_name: formState.first_name.trim() || null,
       last_name: formState.last_name.trim() || null,
       profile_photo_url: formState.profile_photo_url || null,
-      role: formState.role,
+
       pronouns: formState.pronouns || null,
       street_address: formState.street_address.trim() || null,
       city: formState.city.trim() || null,
@@ -281,21 +270,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             className={getInputClass(formState.last_name)}
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">Role</span>
-          <select
-            name="role"
-            value={formState.role}
-            onChange={handleInputChange}
-            className="w-full rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white px-3 py-2 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none"
-          >
-            {ROLE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+
         <label className="space-y-2">
           <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">
             Pronouns <span className="text-xs font-normal text-gray-500"> (optional)</span>

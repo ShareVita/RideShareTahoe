@@ -16,7 +16,7 @@ interface ProfileRow {
   id: string;
   first_name: string;
   last_name: string;
-  role: string | null;
+
   profile_photo_url?: string | null;
   city?: string | null;
   state?: string | null;

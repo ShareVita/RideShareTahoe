@@ -59,7 +59,7 @@ describe('ProfilesList', () => {
     // Make fetch never resolve to keep loading state
     (globalThis.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
-    render(<ProfilesList role="driver" onMessage={mockOnMessage} />);
+    render(<ProfilesList onMessage={mockOnMessage} />);
 
     // Check for skeleton loader (animate-pulse class)
     // We expect multiple skeleton items
@@ -69,8 +69,8 @@ describe('ProfilesList', () => {
 
   it('renders profiles when fetch succeeds', async () => {
     const mockProfiles = [
-      { id: '1', first_name: 'John', role: 'driver' },
-      { id: '2', first_name: 'Jane', role: 'driver' },
+      { id: '1', first_name: 'John' },
+      { id: '2', first_name: 'Jane' },
     ];
     (globalThis.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -80,7 +80,7 @@ describe('ProfilesList', () => {
       }),
     });
 
-    render(<ProfilesList role="driver" onMessage={mockOnMessage} />);
+    render(<ProfilesList onMessage={mockOnMessage} />);
 
     await waitFor(() => {
       expect(screen.getByText('John')).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe('ProfilesList', () => {
   it('renders error state when fetch fails', async () => {
     (globalThis.fetch as jest.Mock).mockRejectedValue(new Error('API Error'));
 
-    render(<ProfilesList role="driver" onMessage={mockOnMessage} />);
+    render(<ProfilesList onMessage={mockOnMessage} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Failed to load profiles/i)).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe('ProfilesList', () => {
       }),
     });
 
-    render(<ProfilesList role="driver" onMessage={mockOnMessage} />);
+    render(<ProfilesList onMessage={mockOnMessage} />);
 
     expect(await screen.findByText('No profiles found')).toBeInTheDocument();
   });
@@ -116,7 +116,6 @@ describe('ProfilesList', () => {
     const mockProfiles = Array.from({ length: 25 }, (_, i) => ({
       id: `${i}`,
       first_name: `User ${i}`,
-      role: 'driver',
     }));
 
     (globalThis.fetch as jest.Mock).mockResolvedValue({
@@ -127,7 +126,7 @@ describe('ProfilesList', () => {
       }),
     });
 
-    render(<ProfilesList role="driver" onMessage={mockOnMessage} />);
+    render(<ProfilesList onMessage={mockOnMessage} />);
 
     await waitFor(() => {
       expect(screen.getByText('Next')).toBeInTheDocument();

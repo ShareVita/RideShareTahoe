@@ -55,7 +55,7 @@ const baseProfile = {
   id: 'user-123',
   first_name: 'John',
   last_name: 'Doe',
-  role: 'pet_owner',
+
   profile_photo_url: 'https://example.com/photo.png',
   bio: 'This is my bio.',
   city: 'My City',

@@ -40,7 +40,7 @@ export default function PassengersList({
     setError(null);
 
     try {
-      const response = await fetchProfiles(supabase, 'passenger', currentPage, pageSize);
+      const response = await fetchProfiles(supabase, currentPage, pageSize);
       setPassengers(response.profiles);
       setTotalCount(response.totalCount);
     } catch (err) {

@@ -6,7 +6,7 @@ interface Profile {
   readonly first_name: string;
   readonly photo_url: string | null;
   readonly city: string | null;
-  readonly role: string;
+
   readonly bio_excerpt: string | null;
   readonly display_lat?: number;
   readonly display_lng?: number;
@@ -20,20 +20,7 @@ interface ProfileCardProps {
 }
 
 export default function ProfileCard({ profile, onMessage }: ProfileCardProps) {
-  const { id, first_name, photo_url, city, role, bio_excerpt } = profile;
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'driver':
-        return '🚗';
-      case 'passenger':
-        return '👋';
-      case 'both':
-        return '🚗/👋';
-      default:
-        return '👤';
-    }
-  };
+  const { id, first_name, photo_url, city, bio_excerpt } = profile;
 
   return (
     <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200">
@@ -60,17 +47,13 @@ export default function ProfileCard({ profile, onMessage }: ProfileCardProps) {
             data-testid="fallback-icon-container"
             className={`w-12 h-12 bg-linear-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity ${photo_url ? 'hidden' : ''}`}
           >
-            <span className="text-xl">{getRoleIcon(role)}</span>
+            <span className="text-xl">👤</span>
           </div>
         </Link>
         <div className="flex-1">
           <Link href={`/profile/${id}`} className="hover:underline">
             <h4 className="font-medium text-gray-900">{first_name}</h4>
           </Link>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <span>{getRoleIcon(role)}</span>
-            <span className="capitalize">{role.replace('_', ' ')}</span>
-          </div>
         </div>
       </div>
 
