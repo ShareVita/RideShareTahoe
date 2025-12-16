@@ -68,7 +68,7 @@
     "resend": "^6.5.2",
     "striptags": "^3.2.0",
     "typescript": "^5.9.3",
-    "zod": "^4.1.8"
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@babel/core": "^7.28.5",
