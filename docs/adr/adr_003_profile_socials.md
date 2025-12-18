@@ -17,7 +17,7 @@ We will transition the reputation system to an **Authenticated Handshake** model
 1.  **Visibility Expansion**: Update the RLS policies for the `profile_socials` table. Visibility will no longer require a `trip_id`; instead, it will be granted to any `authenticated` user who is not `is_banned`.
 2.  **Privacy Controls (Opt-Out)**: Update the `profiles` and `profile_socials` schema to include a `is_social_public` boolean. This provides a "Safety Valve" for users who prefer to remain in a restricted utility-only mode.
 3.  **The "Handshake" Requirement**: To prevent passive lurking and data harvesting, social media links will only be visible to users who have **completed their own profiles** (e.g., uploaded a `profile_photo_url` and filled in a `bio`).
-4.  **Scraping Mitigation**: Implement strict rate-limiting on the `api/community/profiles` route to prevent bulk collection of social handles.
+4.  **Scraping Mitigation**: Implement rate-limiting on the `api/community/profiles` route to prevent bulk collection of social handles. As a default, enforce a limit of **60 requests per minute per authenticated user** and **30 requests per minute per IP for unauthenticated traffic**, with clients exceeding these limits being blocked from this route for **15 minutes**. These thresholds MUST be configurable via environment or application settings but SHOULD remain at or below these defaults in production.
 
 ## Consequences
 
