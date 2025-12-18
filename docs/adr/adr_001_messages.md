@@ -15,7 +15,7 @@ We will remove all transactional barriers from the messaging and conversation wo
 3.  **Mandatory Safety Mitigations**:
     - **Rate Limiting**: Implement server-side rate limiting on the `api/messages` route to prevent automated spam and bulk unsolicited outreach.
     - **User Blocking**: Introduce a `user_blocks` table to allow users to self-moderate and immediately terminate unwanted contact.
-    - **Reporting context**: Update the `reports` system to allow attaching `conversation_id` as evidence for moderation reviews.
+    - **Reporting context**: Extend the `reports` table schema with an optional `conversation_id` field (foreign key to `conversations.id`) so that individual reports can reference the specific conversation being reviewed.
 
 ## Consequences
 
