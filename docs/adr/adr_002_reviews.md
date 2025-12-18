@@ -1,4 +1,4 @@
-# ADR 002: Preservation of Transactional Review Gating
+# ADR 002: Preservation of Transactional Review System
 
 ## Context
 
