@@ -18,4 +18,4 @@ The review system will remain strictly **Transactional**.
 
 - **Positive**: Protects the platform’s high-trust star ratings; ensures that "Driver" and "Passenger" scores are based solely on verified travel history.
 - **Negative**: Creates a "shadow economy" where social-only interactions (e.g., meeting to plan a trip) are not rateable within the formal system.
-- **Mitigation**: The `ReportModal` will be the primary tool for flagging misconduct that occurs outside of a booked ride.
+- **Mitigation**: The `ReportModal` UI component (to be created or updated as needed) will be the primary tool for flagging misconduct that occurs outside of a booked ride and will integrate with the reporting changes defined in **ADR 001** (e.g., attaching `conversation_id` to new reports initiated from conversations).
