@@ -12,7 +12,7 @@ The review system will remain strictly **Transactional**.
 
 1.  **Schema Integrity**: The `reviews` table will retain the `NOT NULL` constraint on the `trip_id` (or `booking_id`) column.
 2.  **Verification Gate**: A review can only be submitted if it is linked to a valid, completed `trip_booking`.
-3.  **Safety Decoupling**: Because social interactions will now occur without a formal ride post via open messaging, user safety concerns (harassment/spam) must be handled via the **User Reporting** system (`reports` table) rather than the Review system.
+3.  **Safety Decoupling**: Because social interactions will now occur without a formal ride post via open messaging, user safety concerns (harassment/spam) must be handled via the **User Reporting** system (`reports` table) rather than the Review system. This ADR treats the User Reporting system and underlying `reports` table as required safety infrastructure; if they do not yet exist in a given deployment, they MUST be implemented or integrated as a prerequisite dependency.
 
 ## Consequences
 
