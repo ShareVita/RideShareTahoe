@@ -14,20 +14,20 @@ We will implement a **User-Level Exclusion System** using a dedicated `user_bloc
 
 1.  **Exclusion Table**: Create `public.user_blocks` to store `blocker_id` and `blocked_id` pairs.
 2.  **RLS Integration (Hard Exclusion)**:
-    * **Messages/Conversations**: Update RLS policies to deny `INSERT` or `SELECT` operations if a record exists in `user_blocks` between the two parties.
-    * **Social Profiles**: Update RLS on `profile_socials` to hide external links if the viewing user is blocked by the profile owner.
+    - **Messages/Conversations**: Update RLS policies to deny `INSERT` or `SELECT` operations if a record exists in `user_blocks` between the two parties.
+    - **Social Profiles**: Update RLS on `profile_socials` to hide external links if the viewing user is blocked by the profile owner.
 3.  **UI Implementation**:
-    * Add a "Block User" action to the `MessageModal.tsx` and the user profile view.
-    * Ensure the "Block" action is distinct from "Reporting".
+    - Add a "Block User" action to the `MessageModal.tsx` and the user profile view.
+    - Ensure the "Block" action is distinct from "Reporting".
 
 ### Business Logic Rules:
 
-* **Unilateral Action**: A block does not require administrative approval.
-* **Mutual Silencing**: A block is a "two-way mirror"; if User A blocks User B, neither can initiate contact with the other.
-* **Preservation of Existing Data**: Blocking does not delete past messages but prevents future communication and real-time visibility.
+- **Unilateral Action**: A block does not require administrative approval.
+- **Mutual Silencing**: A block is a "two-way mirror"; if User A blocks User B, neither can initiate contact with the other.
+- **Preservation of Existing Data**: Blocking does not delete past messages but prevents future communication and real-time visibility.
 
 ## Consequences
 
-* **Positive**: Provides immediate user agency; reduces the administrative load on the `ReportsTab` for interpersonal disputes.
-* **Negative**: Increases the complexity of RLS policies across the database; requires careful handling in "Ride Search" to ensure blocked users do not accidentally book rides together.
-* **Technical**: Every social/communication query now requires a sub-query or join against the `user_blocks` table, impacting read performance slightly.
+- **Positive**: Provides immediate user agency; reduces the administrative load on the `ReportsTab` for interpersonal disputes.
+- **Negative**: Increases the complexity of RLS policies across the database; requires careful handling in "Ride Search" to ensure blocked users do not accidentally book rides together.
+- **Technical**: Every social/communication query now requires a sub-query or join against the `user_blocks` table, impacting read performance slightly.
