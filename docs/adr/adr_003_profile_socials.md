@@ -23,4 +23,4 @@ We will transition the reputation system to an **Authenticated Handshake** model
 
 - **Positive**: Empowers users to perform their own social verification; reduces friction for establishing trust between members.
 - **Negative**: Increases the project's risk profile regarding data privacy and automated stalking.
-- **Engineering Requirement**: Requires the development of a new **Settings** interface in `ProfileForm.tsx` to manage opt-out preferences.
+- **Engineering Requirement**: Requires the development of a profile **Settings** interface that allows users to manage social visibility and opt-out preferences.
