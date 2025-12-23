@@ -11,7 +11,6 @@ import type { RidePostType } from '@/app/community/types';
 
 interface Profile {
   first_name: string;
-  role: string;
 }
 
 export default function WelcomePage() {
