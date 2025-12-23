@@ -29,7 +29,7 @@ export default function WelcomePage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from('profiles')
-        .select('first_name, role')
+        .select('first_name')
         .eq('id', user.id)
         .single();
 
