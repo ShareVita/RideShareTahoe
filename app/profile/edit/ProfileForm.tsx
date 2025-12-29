@@ -193,17 +193,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       return;
     }
 
-    const hasSocial =
-      formState.facebook_url ||
-      formState.instagram_url ||
-      formState.linkedin_url ||
-      formState.airbnb_url;
-
-    if (!hasSocial) {
-      setSubmitError('Please provide at least one social media link.');
-      return;
-    }
-
     updateProfile.mutate(buildPayload(), {
       onSuccess: () => {
         if (isFirstTimeUser) {

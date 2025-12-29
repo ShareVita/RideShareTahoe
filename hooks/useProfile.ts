@@ -245,20 +245,14 @@ export const useUpdateProfile = () => {
         }
       }
 
-      // 3. Update Socials
-      const hasSocialUpdates = Object.keys(socialData).some((key) =>
-        Object.hasOwn(profileData, key)
-      );
+      // 3. Update Socials (always upsert, even if all values are null - social links are optional)
+      const { error: socialError } = await supabase.from('profile_socials').upsert({
+        user_id: user.id,
+        ...socialData,
+      });
 
-      if (hasSocialUpdates) {
-        const { error: socialError } = await supabase.from('profile_socials').upsert({
-          user_id: user.id,
-          ...socialData,
-        });
-
-        if (socialError) {
-          console.error('Failed to update social links:', socialError);
-        }
+      if (socialError) {
+        console.error('Failed to update social links:', socialError);
       }
 
       // Return combined result (mocking it since we did multiple writes)
