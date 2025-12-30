@@ -13,12 +13,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Left Column - Brand Information */}
           <div className="text-center md:text-left">
-            <h3 className="text-2xl font-bold mb-4 text-white">RideTahoe</h3>
+            <h3 className="text-2xl font-bold mb-4 text-white">RideShareTahoe</h3>
             <p className="text-sm mb-4 text-slate-400">
               Connecting Bay Area drivers with Tahoe-bound riders. Split costs, make friends, and
               reduce traffic.
             </p>
-            <p className="text-sm text-slate-500">© 2025 RideTahoe. All rights reserved.</p>
+            <p className="text-sm text-slate-500">© 2025 RideShareTahoe. All rights reserved.</p>
           </div>
 
           {/* Middle Column - Quick Links */}
@@ -83,7 +83,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
             <div className="text-center md:text-left">
               <p className="text-slate-400 mb-2">
-                RideTahoe is a community platform. Users are responsible for their own safety and
+                ridesharetahoe is a community platform. Users are responsible for their own safety and
                 interactions.
               </p>
               <p className="text-xs text-slate-500">{LEGAL.getCurrentDisclosure()}</p>
