@@ -11,6 +11,7 @@ import UserReviews from '@/components/UserReviews';
 import ReviewModal from '@/components/ReviewModal';
 import ReportModal from '@/components/ReportModal';
 import MessageModal from '@/components/MessageModal';
+import BlockModal from '@/components/BlockModal';
 import VehicleDisplay from '@/components/vehicles/VehicleDisplay';
 
 interface Profile {
@@ -64,6 +65,9 @@ export default function PublicProfilePage() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [isUserBlocked, setIsUserBlocked] = useState(false);
+  const [checkingBlockStatus, setCheckingBlockStatus] = useState(true);
 
   const loadProfile = useCallback(async () => {
     if (!profileId) return;
@@ -129,9 +133,39 @@ export default function PublicProfilePage() {
     }
   }, [profileId]);
 
+  const checkBlockStatus = useCallback(async () => {
+    if (!profileId || !currentUser) {
+      setCheckingBlockStatus(false);
+      return;
+    }
+
+    try {
+      // Query the user_blocks table to see if there's a block relationship
+      const supabase = createClient();
+      const { data: blockData, error: blockError } = await supabase
+        .from('user_blocks')
+        .select('id')
+        .or(
+          `and(blocker_id.eq.${currentUser.id},blocked_id.eq.${profileId}),and(blocker_id.eq.${profileId},blocked_id.eq.${currentUser.id})`
+        )
+        .maybeSingle();
+
+      if (blockError) {
+        console.error('Error checking block status:', blockError);
+      }
+
+      setIsUserBlocked(!!blockData);
+    } catch (err) {
+      console.error('Error checking block status:', err);
+    } finally {
+      setCheckingBlockStatus(false);
+    }
+  }, [profileId, currentUser]);
+
   useEffect(() => {
     loadProfile();
     checkPendingReviews();
+    checkBlockStatus();
   }, [loadProfile, checkPendingReviews]);
 
   const profilePronouns = useMemo(() => {
@@ -284,6 +318,13 @@ export default function PublicProfilePage() {
                     className="ml-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     💬 Message
+                  </button>
+                  <button
+                    onClick={() => setIsBlockModalOpen(true)}
+                    disabled={checkingBlockStatus}
+                    className="ml-2 bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {isUserBlocked ? '🔓 Unblock' : '🚫 Block'}
                   </button>
                   <button
                     onClick={() => setIsReportModalOpen(true)}
@@ -450,6 +491,19 @@ export default function PublicProfilePage() {
         onClose={() => setIsMessageModalOpen(false)}
         recipient={profile ? { id: profile.id, first_name: profile.first_name } : null}
         ridePost={null}
+      />
+
+      {/* Block Modal */}
+      <BlockModal
+        isOpen={isBlockModalOpen}
+        onClose={() => setIsBlockModalOpen(false)}
+        targetUserId={profile.id}
+        targetUserName={`${profile.first_name} ${profile.last_name}`}
+        isCurrentlyBlocked={isUserBlocked}
+        onBlockStateChanged={() => {
+          setIsUserBlocked(!isUserBlocked);
+          setIsBlockModalOpen(false);
+        }}
       />
 
       {/* Report Modal */}
