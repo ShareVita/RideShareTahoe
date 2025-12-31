@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { Fragment } from 'react';
-import { createClient } from '@/libs/supabase/client';
 import { toast } from 'react-hot-toast';
 
 interface BlockModalProps {
@@ -41,7 +40,9 @@ export default function BlockModal({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || `Failed to ${isCurrentlyBlocked ? 'unblock' : 'block'} user`);
+        throw new Error(
+          error.error || `Failed to ${isCurrentlyBlocked ? 'unblock' : 'block'} user`
+        );
       }
 
       toast.success(
@@ -138,11 +139,7 @@ export default function BlockModal({
                         : 'bg-red-600 hover:bg-red-700'
                     }`}
                   >
-                    {isLoading
-                      ? 'Processing...'
-                      : isCurrentlyBlocked
-                        ? 'Unblock'
-                        : 'Block User'}
+                    {isLoading ? 'Processing...' : isCurrentlyBlocked ? 'Unblock' : 'Block User'}
                   </button>
                 </div>
               </DialogPanel>
