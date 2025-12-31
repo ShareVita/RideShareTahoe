@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
+import { useIsBlocked } from '@/hooks/useIsBlocked';
 
 interface PassengerPostCardProps {
   post: RidePostType;
@@ -28,9 +29,15 @@ export function PassengerPostCard({
 }: Readonly<PassengerPostCardProps>) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const isOwner = currentUserId === post.poster_id;
+  const { isBlocked } = useIsBlocked(post.owner?.id);
 
   const badgeStyles = 'bg-green-100 text-green-800';
   const badgeLabel = '👋 Passenger';
+
+  // Hide posts from blocked users (unless viewing own post)
+  if (!isOwner && isBlocked) {
+    return null;
+  }
 
   // Add direction info if round trip
   let directionLabel = '';
