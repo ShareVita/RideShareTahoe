@@ -22,18 +22,21 @@ export function useIsBlocked(otherUserId?: string) {
       try {
         const supabase = createClient();
 
-        // Check if there's a block relationship between current user and other user
-        const { data: blockData, error: blockError } = await supabase
-          .from('user_blocks')
-          .select('id')
-          .or(`and(blocker_id.eq.${otherUserId}),and(blocked_id.eq.${otherUserId})`)
-          .maybeSingle();
+        // Use DB-side RPC to ensure the auth.uid() context is respected
+        const { data, error } = await supabase.rpc('is_user_blocked', {
+          other_user_id: otherUserId,
+        });
 
-        if (blockError) {
-          console.error('Error checking block status:', blockError);
+        if (error) {
+          console.error('Error calling is_user_blocked RPC:', error);
           setIsBlocked(false);
+        } else if (typeof data === 'boolean') {
+          setIsBlocked(Boolean(data));
+        } else if (Array.isArray(data) && data.length > 0) {
+          // Some Supabase responses return arrays for scalar RPCs in certain setups
+          setIsBlocked(Boolean(data[0]));
         } else {
-          setIsBlocked(!!blockData);
+          setIsBlocked(Boolean(data));
         }
       } catch (err) {
         console.error('Error checking block status:', err);
