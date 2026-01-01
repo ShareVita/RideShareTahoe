@@ -1,3 +1,17 @@
+/**
+ * Simple in-memory rate limiter.
+ *
+ * LIMITATION: This uses an in-memory Map which does NOT persist across:
+ * - Serverless function cold starts
+ * - Multiple server instances (horizontal scaling)
+ * - Server restarts
+ *
+ * For production with multiple instances, consider using:
+ * - Upstash Redis (@upstash/ratelimit)
+ * - Redis with ioredis
+ * - Database-backed rate limiting
+ */
+
 interface RateLimitOptions {
   windowMs?: number;
   max?: number;

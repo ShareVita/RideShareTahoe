@@ -10,9 +10,12 @@ jest.mock('@/libs/supabase/auth', () => ({
 describe('POST /api/users/block', () => {
   beforeEach(() => jest.clearAllMocks());
 
+  const validUserId = '123e4567-e89b-12d3-a456-426614174000';
+  const validBlockedId = '123e4567-e89b-12d3-a456-426614174001';
+
   it('creates a block successfully', async () => {
-    const user = { id: 'user-a' };
-    const blockedId = 'user-b';
+    const user = { id: validUserId };
+    const blockedId = validBlockedId;
 
     const supabase = {
       from: jest.fn((table) => {
@@ -24,12 +27,10 @@ describe('POST /api/users/block', () => {
         }
 
         if (table === 'user_blocks') {
-          const single = jest
-            .fn()
-            .mockResolvedValue({
-              data: { id: 'block-1', blocker_id: user.id, blocked_id: blockedId },
-              error: null,
-            });
+          const single = jest.fn().mockResolvedValue({
+            data: { id: 'block-1', blocker_id: user.id, blocked_id: blockedId },
+            error: null,
+          });
           const select = jest.fn().mockReturnValue({ single });
           const insert = jest.fn().mockReturnValue({ select });
           return { insert };
@@ -51,8 +52,8 @@ describe('POST /api/users/block', () => {
   });
 
   it('returns 409 when block already exists', async () => {
-    const user = { id: 'user-a' };
-    const blockedId = 'user-b';
+    const user = { id: validUserId };
+    const blockedId = validBlockedId;
 
     const supabase = {
       from: jest.fn((table) => {
@@ -64,11 +65,9 @@ describe('POST /api/users/block', () => {
         }
 
         if (table === 'user_blocks') {
-          const select = jest
-            .fn()
-            .mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: null, error: { code: '23505' } }),
-            });
+          const select = jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: null, error: { code: '23505' } }),
+          });
           const insert = jest.fn().mockReturnValue({ select });
           return { insert };
         }

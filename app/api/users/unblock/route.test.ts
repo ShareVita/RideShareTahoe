@@ -10,9 +10,12 @@ jest.mock('@/libs/supabase/auth', () => ({
 describe('POST /api/users/unblock', () => {
   beforeEach(() => jest.clearAllMocks());
 
+  const validUserId = '123e4567-e89b-12d3-a456-426614174000';
+  const validBlockedId = '123e4567-e89b-12d3-a456-426614174001';
+
   it('removes an existing block', async () => {
-    const user = { id: 'user-a' };
-    const blockedId = 'user-b';
+    const user = { id: validUserId };
+    const blockedId = validBlockedId;
 
     const supabase = {
       from: jest.fn((table) => {
@@ -40,8 +43,8 @@ describe('POST /api/users/unblock', () => {
   });
 
   it('is idempotent when no block exists', async () => {
-    const user = { id: 'user-a' };
-    const blockedId = 'user-b';
+    const user = { id: validUserId };
+    const blockedId = validBlockedId;
 
     const supabase = {
       from: jest.fn((table) => {

@@ -5,6 +5,9 @@ import {
   ensureProfileComplete,
 } from '@/libs/supabase/auth';
 import { rateLimit } from '@/libs/rateLimit';
+import { isValidUUID } from '@/libs/validation';
+
+const MAX_MESSAGE_LENGTH = 5000;
 
 /**
  * Sends a new message between authenticated users.
@@ -46,28 +49,44 @@ export async function POST(request: NextRequest) {
     const { recipient_id, content, ride_post_id } = await request.json();
 
     if (!recipient_id || !content) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Validate UUID format to prevent injection
+    if (!isValidUUID(recipient_id)) {
+      return NextResponse.json({ error: 'Invalid recipient_id format' }, { status: 400 });
+    }
+
+    if (ride_post_id && !isValidUUID(ride_post_id)) {
+      return NextResponse.json({ error: 'Invalid ride_post_id format' }, { status: 400 });
+    }
+
+    // Validate content
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
+      return NextResponse.json({ error: 'Message content cannot be empty' }, { status: 400 });
+    }
+
+    if (trimmedContent.length > MAX_MESSAGE_LENGTH) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        {
-          status: 400,
-        }
+        { error: `Message content cannot exceed ${MAX_MESSAGE_LENGTH} characters` },
+        { status: 400 }
       );
     }
 
-    let query = supabase
+    // Find existing conversation
+    // Check both orderings: (user, recipient) or (recipient, user)
+    const { data: conversations } = await supabase
       .from('conversations')
       .select('*')
       .or(
         `and(participant1_id.eq.${user.id},participant2_id.eq.${recipient_id}),and(participant1_id.eq.${recipient_id},participant2_id.eq.${user.id})`
       );
 
-    if (ride_post_id) {
-      query = query.eq('ride_id', ride_post_id);
-    } else {
-      query = query.is('ride_id', null);
-    }
-
-    const { data: existingConversation } = await query.maybeSingle();
+    // Filter by ride_id in JS since we validated the UUIDs above
+    const existingConversation = conversations?.find((c) =>
+      ride_post_id ? c.ride_id === ride_post_id : c.ride_id === null
+    );
 
     let conversationId;
 
@@ -75,12 +94,16 @@ export async function POST(request: NextRequest) {
       conversationId = existingConversation.id;
 
       // Update the last_message_at timestamp
-      await supabase
+      const { error: updateError } = await supabase
         .from('conversations')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', conversationId);
+
+      if (updateError) {
+        console.error('Failed to update last_message_at:', updateError);
+      }
     } else {
-      // Create a new conversation
+      // Create a new conversation - handle potential race condition
       const { data: newConversation, error: newConvError } = await supabase
         .from('conversations')
         .insert({
@@ -91,8 +114,32 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (newConvError) throw newConvError;
-      conversationId = newConversation.id;
+      if (newConvError) {
+        // If unique constraint violation, another request created the conversation
+        // Try to fetch it again
+        if (newConvError.code === '23505') {
+          const { data: retryConversations } = await supabase
+            .from('conversations')
+            .select('*')
+            .or(
+              `and(participant1_id.eq.${user.id},participant2_id.eq.${recipient_id}),and(participant1_id.eq.${recipient_id},participant2_id.eq.${user.id})`
+            );
+
+          const retryConversation = retryConversations?.find((c) =>
+            ride_post_id ? c.ride_id === ride_post_id : c.ride_id === null
+          );
+
+          if (retryConversation) {
+            conversationId = retryConversation.id;
+          } else {
+            throw newConvError;
+          }
+        } else {
+          throw newConvError;
+        }
+      } else {
+        conversationId = newConversation.id;
+      }
     }
 
     // Send the message
@@ -104,7 +151,7 @@ export async function POST(request: NextRequest) {
         ride_id: ride_post_id || null,
         conversation_id: conversationId,
         subject: null,
-        content: content,
+        content: trimmedContent,
       })
       .select()
       .single();
@@ -121,7 +168,7 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             recipientId: recipient_id,
             senderId: user.id,
-            messagePreview: content.substring(0, 100),
+            messagePreview: trimmedContent.substring(0, 100),
             messageId: message.id,
             threadId: conversationId,
           }),

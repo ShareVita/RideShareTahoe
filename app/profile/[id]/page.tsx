@@ -375,7 +375,6 @@ export default function PublicProfilePage() {
           )}
 
           {/* Social Links */}
-          {/* Social Links */}
           {socials &&
             (socials.facebook_url ||
               socials.instagram_url ||

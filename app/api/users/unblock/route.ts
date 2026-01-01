@@ -1,7 +1,6 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { isValidUUID } from '@/libs/validation';
 
 /**
  * Unblock another user. Removes the two-way mirror block.
@@ -22,6 +21,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'blocked_id is required' }, { status: 400 });
     }
 
+    if (!isValidUUID(blocked_id)) {
+      return NextResponse.json({ error: 'Invalid blocked_id format' }, { status: 400 });
+    }
+
     // Delete the block record
     const { error: deleteError } = await supabase
       .from('user_blocks')
@@ -33,15 +36,9 @@ export async function POST(request: NextRequest) {
       throw deleteError;
     }
 
-    return NextResponse.json(
-      { success: true, message: 'User unblocked' },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, message: 'User unblocked' }, { status: 200 });
   } catch (error: unknown) {
     console.error('Error unblocking user:', error);
-    return NextResponse.json(
-      { error: 'Failed to unblock user' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to unblock user' }, { status: 500 });
   }
 }

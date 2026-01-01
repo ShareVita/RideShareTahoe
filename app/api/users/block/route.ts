@@ -1,7 +1,6 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { isValidUUID } from '@/libs/validation';
 
 /**
  * Block another user. Creates a two-way mirror block preventing messaging and profile viewing.
@@ -20,6 +19,10 @@ export async function POST(request: NextRequest) {
 
     if (!blocked_id || typeof blocked_id !== 'string') {
       return NextResponse.json({ error: 'blocked_id is required' }, { status: 400 });
+    }
+
+    if (!isValidUUID(blocked_id)) {
+      return NextResponse.json({ error: 'Invalid blocked_id format' }, { status: 400 });
     }
 
     if (blocked_id === user.id) {
@@ -55,15 +58,9 @@ export async function POST(request: NextRequest) {
       throw blockError;
     }
 
-    return NextResponse.json(
-      { success: true, block },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, block }, { status: 201 });
   } catch (error: unknown) {
     console.error('Error blocking user:', error);
-    return NextResponse.json(
-      { error: 'Failed to block user' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to block user' }, { status: 500 });
   }
 }
