@@ -1,6 +1,5 @@
 -- Migration: Enable Unrestricted Messaging
--- Date: 2025-12-30
--- 
+--
 -- This migration removes the "has_active_booking_with" requirement from messaging RLS policies
 -- to enable community members to message anyone, not just users with active bookings.
 -- 

@@ -1,5 +1,4 @@
 -- Migration: User Blocking System (ADR 004)
--- Date: 2025-12-30
 --
 -- This migration creates the user_blocks table for implementing a two-way mirror
 -- blocking system where blocked users cannot message, view profiles, or see social links.
@@ -59,6 +58,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp;
-
--- Trigger to update updated_at on user_blocks
-CREATE TRIGGER update_user_blocks_updated_at BEFORE UPDATE ON public.user_blocks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

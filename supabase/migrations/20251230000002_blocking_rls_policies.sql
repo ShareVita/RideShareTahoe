@@ -1,5 +1,4 @@
 -- Migration: RLS Policies for User Blocking
--- Date: 2025-12-30
 --
 -- This migration adds RLS policies to enforce blocking across profiles, 
 -- profile_socials, conversations, and messages tables using the two-way mirror logic.

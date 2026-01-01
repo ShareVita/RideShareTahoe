@@ -13,6 +13,7 @@ import ReportModal from '@/components/ReportModal';
 import MessageModal from '@/components/MessageModal';
 import BlockModal from '@/components/BlockModal';
 import VehicleDisplay from '@/components/vehicles/VehicleDisplay';
+import { useIsBlocked } from '@/hooks/useIsBlocked';
 
 interface Profile {
   id: string;
@@ -66,8 +67,7 @@ export default function PublicProfilePage() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
-  const [isUserBlocked, setIsUserBlocked] = useState(false);
-  const [checkingBlockStatus, setCheckingBlockStatus] = useState(true);
+  const { isBlocked: isUserBlocked, loading: checkingBlockStatus } = useIsBlocked(profileId);
 
   const loadProfile = useCallback(async () => {
     if (!profileId) return;
@@ -133,39 +133,9 @@ export default function PublicProfilePage() {
     }
   }, [profileId]);
 
-  const checkBlockStatus = useCallback(async () => {
-    if (!profileId || !currentUser) {
-      setCheckingBlockStatus(false);
-      return;
-    }
-
-    try {
-      // Query the user_blocks table to see if there's a block relationship
-      const supabase = createClient();
-      const { data: blockData, error: blockError } = await supabase
-        .from('user_blocks')
-        .select('id')
-        .or(
-          `and(blocker_id.eq.${currentUser.id},blocked_id.eq.${profileId}),and(blocker_id.eq.${profileId},blocked_id.eq.${currentUser.id})`
-        )
-        .maybeSingle();
-
-      if (blockError) {
-        console.error('Error checking block status:', blockError);
-      }
-
-      setIsUserBlocked(!!blockData);
-    } catch (err) {
-      console.error('Error checking block status:', err);
-    } finally {
-      setCheckingBlockStatus(false);
-    }
-  }, [profileId, currentUser]);
-
   useEffect(() => {
     loadProfile();
     checkPendingReviews();
-    checkBlockStatus();
   }, [loadProfile, checkPendingReviews]);
 
   const profilePronouns = useMemo(() => {
@@ -501,8 +471,8 @@ export default function PublicProfilePage() {
         targetUserName={`${profile.first_name} ${profile.last_name}`}
         isCurrentlyBlocked={isUserBlocked}
         onBlockStateChanged={() => {
-          setIsUserBlocked(!isUserBlocked);
           setIsBlockModalOpen(false);
+          globalThis.window.location.reload();
         }}
       />
 

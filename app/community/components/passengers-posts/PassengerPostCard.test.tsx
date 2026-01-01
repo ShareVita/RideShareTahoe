@@ -3,6 +3,10 @@ import { PassengerPostCard } from './PassengerPostCard';
 import type { RidePostType } from '../../types';
 
 // Mocks
+jest.mock('@/hooks/useIsBlocked', () => ({
+  useIsBlocked: () => ({ isBlocked: false, loading: false }),
+}));
+
 jest.mock('@/components/trips/InviteToRideModal', () => ({
   __esModule: true,
   default: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
