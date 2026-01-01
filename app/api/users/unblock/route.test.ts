@@ -17,18 +17,18 @@ describe('POST /api/users/unblock', () => {
     const user = { id: validUserId };
     const blockedId = validBlockedId;
 
-    const supabase = {
-      from: jest.fn((table) => {
-        if (table === 'user_blocks') {
-          const eq2 = jest.fn().mockResolvedValue({ data: { id: 'block-1' }, error: null });
-          const eq1 = jest.fn().mockReturnValue({ eq: eq2 });
-          const del = jest.fn().mockReturnValue({ eq: eq1 });
-          return { delete: del };
-        }
+    const mockFrom = jest.fn((table) => {
+      if (table === 'user_blocks') {
+        const eq2 = jest.fn().mockResolvedValue({ data: { id: 'block-1' }, error: null });
+        const eq1 = jest.fn().mockReturnValue({ eq: eq2 });
+        const del = jest.fn().mockReturnValue({ eq: eq1 });
+        return { delete: del };
+      }
 
-        return { delete: jest.fn() };
-      }),
-    } as unknown;
+      return { delete: jest.fn() };
+    });
+
+    const supabase = { from: mockFrom };
 
     (getAuthenticatedUser as jest.Mock).mockResolvedValue({ user, authError: null, supabase });
 
@@ -38,7 +38,7 @@ describe('POST /api/users/unblock', () => {
 
     const res = await POST(request);
 
-    expect(supabase.from).toHaveBeenCalledWith('user_blocks');
+    expect(mockFrom).toHaveBeenCalledWith('user_blocks');
     expect(res.status).toBe(200);
   });
 
