@@ -33,7 +33,7 @@ const PrivacyPolicy = () => {
           className="leading-relaxed whitespace-pre-wrap font-sans text-slate-700 dark:text-slate-300 text-sm"
           style={{ fontFamily: 'sans-serif' }}
         >
-          {`Last Updated: December 2, 2025
+          {`Last Updated: January 1, 2026
 
 Thank you for visiting RideShareTahoe ("we," "us," or "our"). This Privacy Policy outlines how we collect, use, and protect your personal and non-personal information when you use our website located at https://ridesharetahoe.com (the "Website").
 
@@ -109,16 +109,48 @@ You have the right to:
 - Opt out of certain communications
 - Export your data
 
-8. Updates to the Privacy Policy
+8. California Consumer Privacy Act (CCPA) Disclosures
+
+If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA):
+
+8.1 Categories of Personal Information Collected: In the preceding 12 months, we have collected the following categories of personal information: (a) Identifiers (name, email, phone number, IP address); (b) Personal information under California Civil Code Section 1798.80 (name, address, phone number); (c) Geolocation data (general location for matching purposes); (d) Internet or network activity (browsing history, interactions with our Website); (e) Professional or employment-related information (if voluntarily provided); (f) Inferences drawn from the above to create a profile.
+
+8.2 Categories of Sources: We collect personal information from: (a) you directly when you register or use our services; (b) automatically through cookies and similar technologies; (c) third-party authentication providers (e.g., Google Sign-In).
+
+8.3 Business Purpose for Collection: We collect personal information for the purposes described in Section 2 of this Privacy Policy, including facilitating rideshare connections, improving our services, and ensuring community safety.
+
+8.4 Sale of Personal Information: WE DO NOT SELL YOUR PERSONAL INFORMATION. We have not sold personal information in the preceding 12 months and do not intend to sell personal information in the future.
+
+8.5 Your CCPA Rights: As a California resident, you have the right to: (a) know what personal information we collect, use, disclose, and sell; (b) request deletion of your personal information; (c) opt-out of the sale of your personal information (though we do not sell your data); (d) non-discrimination for exercising your CCPA rights.
+
+8.6 Exercising Your Rights: To exercise your CCPA rights, contact us at ${LEGAL.contact.legal}. We will verify your identity before processing your request. You may designate an authorized agent to make a request on your behalf.
+
+8.7 Financial Incentives: We do not offer financial incentives for the collection or sale of personal information.
+
+9. Marketing Communications
+
+9.1 Types of Communications: We may send you: (a) transactional emails related to your account and trips; (b) marketing emails about community updates, features, and promotions; (c) SMS messages for trip notifications and, if you opt in, marketing messages.
+
+9.2 Your Choices: You may opt out of marketing communications at any time by: (a) clicking the "unsubscribe" link in any marketing email; (b) replying "STOP" to any marketing SMS; (c) updating your communication preferences in your account settings; (d) contacting us at ${LEGAL.contact.support}.
+
+9.3 Transactional Communications: Even if you opt out of marketing communications, we may still send you transactional messages related to your account, trips, and important service updates.
+
+9.4 SMS Consent: By providing your phone number and opting in to SMS notifications, you consent to receive text messages from RideShareTahoe. Message and data rates may apply. Message frequency varies. Text HELP for help or STOP to cancel.
+
+10. Updates to the Privacy Policy
 
 We may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. Any updates will be posted on this page, and we may notify you via email about significant changes.
 
-9. Data Controller
+11. Data Controller
 
 ${LEGAL.dataController}
 Contact: ${LEGAL.contact.legal}
 
-10. Contact Information
+12. Dispute Resolution
+
+Any disputes arising out of or relating to this Privacy Policy or the collection, use, or handling of your personal information shall be resolved in accordance with the dispute resolution provisions set forth in our Terms of Service at https://ridesharetahoe.com/tos, including the binding arbitration agreement and class action waiver contained therein.
+
+13. Contact Information
 
 If you have any questions, concerns, or requests related to this Privacy Policy, you can contact us at:
 
