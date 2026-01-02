@@ -59,6 +59,30 @@ const TEMPLATE_REGISTRY = {
     subject: (vars: TemplateVariables) =>
       `Trip confirmed: ${vars.meetingTitle || 'Ride'} on RideShareTahoe 🚗`,
   },
+  nurture_week1: {
+    html: 'follow-up-1week.html',
+    text: 'follow-up-1week.txt',
+    subject: () => `Still looking for a ride to Tahoe?`,
+  },
+  review_request: {
+    html: 'review-request.html',
+    text: 'review-request.txt',
+    subject: (vars: TemplateVariables) =>
+      `How was your ride with ${vars.otherUserName || 'your driver'}?`,
+  },
+  bulk_announcement: {
+    html: 'bulk-announcement.html',
+    text: 'bulk-announcement.txt',
+    subject: () => `News from RideShareTahoe`,
+  },
+  welcome_bulk: {
+    html: 'welcome-bulk.html',
+    text: 'welcome-bulk.txt',
+    subject: (vars: TemplateVariables) => {
+      const nameSuffix = vars.userName ? `, ${vars.userName}` : '';
+      return `Welcome to RideShareTahoe${nameSuffix}!`;
+    },
+  },
 };
 
 /**
@@ -123,9 +147,7 @@ export async function loadEmailTemplate(
     text = fs.readFileSync(textPath, 'utf8');
   } catch {
     // If text template doesn't exist, generate from HTML
-    text = striptags(html)
-      .replaceAll(/\s+/g, ' ')
-      .trim();
+    text = striptags(html).replaceAll(/\s+/g, ' ').trim();
   }
 
   // Add default variables
