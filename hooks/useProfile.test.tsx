@@ -9,7 +9,7 @@ import {
   useUpdateProfile,
   UserProfile,
   UserDog,
-  UpdatableProfileData,
+  UpdateProfileOptions,
 } from './useProfile'; // Corrected import from useProfile
 
 // #region Mock Dependencies
@@ -276,7 +276,7 @@ describe('Data Hooks', () => {
   // #region useUpdateProfile Tests
 
   describe('useUpdateProfile', () => {
-    const updatePayload: UpdatableProfileData = { first_name: 'Jane' };
+    const updatePayload: UpdateProfileOptions = { profileData: { first_name: 'Jane' } };
     const updatedProfile: UserProfile = { ...mockUser, first_name: 'Jane' } as UserProfile;
 
     let invalidateQueriesSpy: jest.SpyInstance;
@@ -307,7 +307,7 @@ describe('Data Hooks', () => {
         id: mockUser.id,
         // email is not passed in the update payload for this test case
         // email: mockUser.email,
-        ...updatePayload,
+        ...updatePayload.profileData,
       });
 
       // Check invalidation call

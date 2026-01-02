@@ -8,7 +8,8 @@ import { useUser } from '@/components/providers/SupabaseUserProvider';
 import {
   useUpdateProfile,
   useUserProfile,
-  type UpdatableProfileData,
+  useUserConsents,
+  type UpdateProfileOptions,
   type UserProfile,
 } from '@/hooks/useProfile';
 
@@ -19,6 +20,7 @@ jest.mock('@/components/providers/SupabaseUserProvider', () => ({
 jest.mock('@/hooks/useProfile', () => ({
   useUserProfile: jest.fn(),
   useUpdateProfile: jest.fn(),
+  useUserConsents: jest.fn(),
 }));
 
 const pushMock = jest.fn();
@@ -34,6 +36,7 @@ jest.mock('next/navigation', () => ({
 const useUserMock = useUser as jest.MockedFunction<typeof useUser>;
 const useUserProfileMock = useUserProfile as jest.MockedFunction<typeof useUserProfile>;
 const useUpdateProfileMock = useUpdateProfile as jest.MockedFunction<typeof useUpdateProfile>;
+const useUserConsentsMock = useUserConsents as jest.MockedFunction<typeof useUserConsents>;
 const mutateMock = jest.fn();
 
 const defaultProfile: UserProfile = {
@@ -92,8 +95,8 @@ const createProfileQuery = (
   }) as UseQueryResult<UserProfile | null, Error>;
 
 const createMutationResult = (
-  overrides: Partial<UseMutationResult<UserProfile, Error, UpdatableProfileData, unknown>> = {}
-): UseMutationResult<UserProfile, Error, UpdatableProfileData, unknown> =>
+  overrides: Partial<UseMutationResult<UserProfile, Error, UpdateProfileOptions, unknown>> = {}
+): UseMutationResult<UserProfile, Error, UpdateProfileOptions, unknown> =>
   ({
     mutate: mutateMock,
     mutateAsync: jest.fn(),
@@ -109,7 +112,24 @@ const createMutationResult = (
     context: overrides.context,
     isPaused: overrides.isPaused ?? false,
     ...overrides,
-  }) as UseMutationResult<UserProfile, Error, UpdatableProfileData, unknown>;
+  }) as UseMutationResult<UserProfile, Error, UpdateProfileOptions, unknown>;
+
+const createConsentsQuery = () =>
+  ({
+    data: [],
+    error: null,
+    isLoading: false,
+    isSuccess: true,
+    isError: false,
+    status: 'success',
+    fetchStatus: 'idle',
+    failureCount: 0,
+    isFetching: false,
+    isRefetching: false,
+    refetch: jest.fn(),
+    dataUpdatedAt: Date.now(),
+    errorUpdatedAt: Date.now(),
+  }) as unknown as ReturnType<typeof useUserConsents>;
 
 const setHooksToDefault = () => {
   useUserMock.mockReturnValue({
@@ -120,6 +140,7 @@ const setHooksToDefault = () => {
   });
   useUserProfileMock.mockReturnValue(createProfileQuery());
   useUpdateProfileMock.mockReturnValue(createMutationResult());
+  useUserConsentsMock.mockReturnValue(createConsentsQuery());
 };
 
 describe('ProfileEditPage', () => {
@@ -187,14 +208,20 @@ describe('ProfileEditPage', () => {
       target: { value: '96145' },
     });
 
+    // Check the terms checkbox (required for new users without existing consent)
+    fireEvent.click(screen.getByLabelText(/I agree to the/i));
+
     fireEvent.click(screen.getByRole('button', { name: /Save profile/i }));
 
     expect(mutateMock).toHaveBeenCalled();
     const [submittedPayload] = mutateMock.mock.calls[0];
     expect(submittedPayload).toEqual(
       expect.objectContaining({
-        first_name: 'Janet',
-        city: 'Tahoma',
+        profileData: expect.objectContaining({
+          first_name: 'Janet',
+          city: 'Tahoma',
+        }),
+        recordConsent: true,
       })
     );
   });
