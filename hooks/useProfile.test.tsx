@@ -28,15 +28,25 @@ const mockOrder = jest.fn();
 
 // Profile/Mutation Chain: .select().eq().single() OR .update().eq().select().single()
 // Capture chains for inspection
-interface MockChain {
+type ProfileChain = {
   select: jest.Mock;
   update: jest.Mock;
   upsert: jest.Mock;
-}
+};
 
-let capturedProfileChains: MockChain[] = [];
-let capturedPrivateInfoChains: MockChain[] = [];
-let capturedSocialChains: MockChain[] = [];
+type PrivateInfoChain = {
+  select: jest.Mock;
+  update: jest.Mock;
+};
+
+type SocialChain = {
+  select: jest.Mock;
+  upsert: jest.Mock;
+};
+
+let capturedProfileChains: ProfileChain[] = [];
+let capturedPrivateInfoChains: PrivateInfoChain[] = [];
+let capturedSocialChains: SocialChain[] = [];
 
 const createProfileChain = () => {
   // Define the final object that contains the mockSingle implementation
