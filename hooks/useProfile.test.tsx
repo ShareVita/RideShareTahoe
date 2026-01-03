@@ -35,6 +35,8 @@ interface MockChain {
 }
 
 let capturedProfileChains: MockChain[] = [];
+let capturedPrivateInfoChains: MockChain[] = [];
+let capturedSocialChains: MockChain[] = [];
 
 const createProfileChain = () => {
   // Define the final object that contains the mockSingle implementation
@@ -57,6 +59,36 @@ const createProfileChain = () => {
   return chain;
 };
 
+// Private Info Chain: .update().eq()
+const createPrivateInfoChain = () => {
+  const updateChain = {
+    eq: jest.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
+  const chain = {
+    select: jest
+      .fn()
+      .mockReturnValue({ eq: jest.fn().mockReturnValue({ maybeSingle: mockSingle }) }),
+    update: jest.fn().mockReturnValue(updateChain),
+  };
+
+  capturedPrivateInfoChains.push(chain);
+  return chain;
+};
+
+// Social Chain: .upsert()
+const createSocialChain = () => {
+  const chain = {
+    select: jest
+      .fn()
+      .mockReturnValue({ eq: jest.fn().mockReturnValue({ maybeSingle: mockSingle }) }),
+    upsert: jest.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
+  capturedSocialChains.push(chain);
+  return chain;
+};
+
 // Dogs Chain: .select().eq().order()
 const createDogsChain = () => {
   const orderChain = { order: mockOrder };
@@ -70,6 +102,8 @@ const createDogsChain = () => {
 // 3. Mock Supabase from function
 const mockFrom = jest.fn((table: string) => {
   if (table === 'profiles') return createProfileChain();
+  if (table === 'user_private_info') return createPrivateInfoChain();
+  if (table === 'profile_socials') return createSocialChain();
   if (table === 'dogs') return createDogsChain();
   return createProfileChain(); // Fallback
 });
@@ -102,6 +136,8 @@ describe('Data Hooks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedProfileChains = [];
+    capturedPrivateInfoChains = [];
+    capturedSocialChains = [];
     mockUseUser.mockReturnValue({ user: mockUser, loading: false });
     queryClient = new QueryClient({
       defaultOptions: {
@@ -133,20 +169,47 @@ describe('Data Hooks', () => {
     };
 
     it('should fetch profile data successfully', async () => {
-      mockSingle.mockResolvedValue({ data: mockProfile, error: null });
+      const privateInfo = {
+        street_address: '123 Main St',
+        zip_code: '94102',
+      };
+
+      const socials = {
+        instagram_url: 'https://instagram.com/john',
+        facebook_url: null,
+        linkedin_url: null,
+        airbnb_url: null,
+      };
+
+      const expectedMergedProfile = {
+        ...mockProfile,
+        ...privateInfo,
+        ...socials,
+      };
+
+      // 3 sequential maybeSingle() calls:
+      // 1) profiles, 2) user_private_info, 3) profile_socials
+      mockSingle
+        .mockResolvedValueOnce({ data: mockProfile, error: null })
+        .mockResolvedValueOnce({ data: privateInfo, error: null })
+        .mockResolvedValueOnce({ data: socials, error: null });
 
       const { result } = renderHookWithClient(useUserProfile);
 
-      // Successfully waits for the query to resolve
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
+      // Assert all 3 tables were queried
       expect(mockFrom).toHaveBeenCalledWith('profiles');
-      // Verify that the inner mock 'eq' was called
-      const profileChain = mockFrom.mock.results.find((r) => r.value.select)?.value;
-      if (profileChain) {
-        expect(profileChain.select().eq).toHaveBeenCalledWith('id', mockUser.id);
+      expect(mockFrom).toHaveBeenCalledWith('user_private_info');
+      expect(mockFrom).toHaveBeenCalledWith('profile_socials');
+
+      // Optional: verify profiles query eq
+      const profilesCall = mockFrom.mock.results.find((r) => r.value?.select)?.value;
+      if (profilesCall) {
+        expect(profilesCall.select().eq).toHaveBeenCalledWith('id', mockUser.id);
       }
-      expect(result.current.data).toEqual(mockProfile);
+
+      expect(result.current.data).toEqual(expectedMergedProfile);
     });
 
     it('should return null if user is not logged in', async () => {
@@ -242,10 +305,12 @@ describe('Data Hooks', () => {
 
       expect(mockFrom).toHaveBeenCalledWith('dogs');
 
+      // Dogs Chain: .select().eq().order()
       const dogsChain = mockFrom.mock.results.find((r) => r.value?.select().order)?.value;
       if (dogsChain) {
         expect(dogsChain.select().eq).toHaveBeenCalledWith('owner_id', mockUser.id);
       }
+
       expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false });
       expect(result.current.data).toEqual(mockDogs);
     });
@@ -276,21 +341,46 @@ describe('Data Hooks', () => {
   // #region useUpdateProfile Tests
 
   describe('useUpdateProfile', () => {
-    const updatePayload: UpdatableProfileData = { first_name: 'Jane' };
-    const updatedProfile: UserProfile = { ...mockUser, first_name: 'Jane' } as UserProfile;
+    const currentProfile: UserProfile = {
+      id: mockUser.id,
+      first_name: 'John',
+      last_name: 'Doe',
+      email: mockUser.email,
+      profile_photo_url: null,
+      display_lat: 37.7749,
+      display_lng: -122.4194,
+      street_address: '123 Main St',
+      city: 'San Francisco',
+      state: 'CA',
+      zip_code: '94102',
+      bio: 'Hello world',
+      pronouns: 'he/him',
+      facebook_url: 'https://facebook.com/john',
+      instagram_url: null,
+      linkedin_url: null,
+      airbnb_url: null,
+    };
 
     let invalidateQueriesSpy: jest.SpyInstance;
+    let getQueryDataSpy: jest.SpyInstance;
 
     beforeEach(() => {
       invalidateQueriesSpy = jest.spyOn(queryClient, 'invalidateQueries');
-      mockSingle.mockResolvedValue({ data: updatedProfile, error: null });
+      getQueryDataSpy = jest.spyOn(queryClient, 'getQueryData').mockReturnValue(currentProfile);
+      mockSingle.mockResolvedValue({ data: currentProfile, error: null });
     });
 
     afterEach(() => {
       invalidateQueriesSpy.mockRestore();
+      getQueryDataSpy.mockRestore();
     });
 
     it('should update profile successfully and invalidate queries', async () => {
+      const updatePayload: UpdatableProfileData = { first_name: 'Jane' };
+      const updatedProfile: UserProfile = { ...currentProfile, first_name: 'Jane' };
+
+      mockSingle.mockResolvedValue({ data: updatedProfile, error: null });
+
       const { result } = renderHookWithClient(useUpdateProfile);
 
       result.current.mutate(updatePayload);
@@ -305,9 +395,8 @@ describe('Data Hooks', () => {
       expect(upsertMockInstance).toBeDefined();
       expect(upsertMockInstance).toHaveBeenCalledWith({
         id: mockUser.id,
-        // email is not passed in the update payload for this test case
-        // email: mockUser.email,
-        ...updatePayload,
+        // Only the changed field should be included
+        first_name: 'Jane',
       });
 
       // Check invalidation call
@@ -315,10 +404,197 @@ describe('Data Hooks', () => {
       expect(result.current.data).toEqual(updatedProfile);
     });
 
+    it('should NOT update profiles table when no public fields change', async () => {
+      // Payload with same values as current profile
+      const updatePayload: UpdatableProfileData = {
+        first_name: 'John', // Same as current
+        last_name: 'Doe', // Same as current
+      };
+
+      const { result } = renderHookWithClient(useUpdateProfile);
+
+      result.current.mutate(updatePayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Verify no upsert was called for profiles table
+      const calledUpsertMocks = capturedProfileChains
+        .map((chain) => chain.upsert)
+        .filter((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(calledUpsertMocks.length).toBe(0);
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['profile', mockUser.id] });
+    });
+
+    it('should only update profiles table when public fields change', async () => {
+      const updatePayload: UpdatableProfileData = {
+        first_name: 'Jane',
+        street_address: '123 Main St', // Private field - same as current
+      };
+      const updatedProfile: UserProfile = { ...currentProfile, first_name: 'Jane' };
+
+      mockSingle.mockResolvedValue({ data: updatedProfile, error: null });
+
+      const { result } = renderHookWithClient(useUpdateProfile);
+
+      result.current.mutate(updatePayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Profiles table should be updated
+      const profilesUpsert = capturedProfileChains
+        .map((chain) => chain.upsert)
+        .find((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(profilesUpsert).toHaveBeenCalled();
+
+      // Private info should NOT be updated (same value)
+      const privateInfoUpdates = capturedPrivateInfoChains
+        .map((chain) => chain.update)
+        .filter((updateMock) => updateMock && updateMock.mock.calls.length > 0);
+
+      expect(privateInfoUpdates.length).toBe(0);
+    });
+
+    it('should only update user_private_info when private fields change', async () => {
+      const updatePayload: UpdatableProfileData = {
+        street_address: '456 Oak Ave', // Changed
+        first_name: 'John', // Same as current
+      };
+
+      const { result } = renderHookWithClient(useUpdateProfile);
+
+      result.current.mutate(updatePayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Private info should be updated
+      const privateInfoUpdate = capturedPrivateInfoChains
+        .map((chain) => chain.update)
+        .find((updateMock) => updateMock && updateMock.mock.calls.length > 0);
+
+      expect(privateInfoUpdate).toBeDefined();
+      expect(privateInfoUpdate).toHaveBeenCalled();
+
+      // Profiles table should NOT be updated (same values)
+      const profilesUpserts = capturedProfileChains
+        .map((chain) => chain.upsert)
+        .filter((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(profilesUpserts.length).toBe(0);
+    });
+
+    it('should only update profile_socials when social fields change', async () => {
+      const updatePayload: UpdatableProfileData = {
+        instagram_url: 'https://instagram.com/john', // Changed
+        facebook_url: 'https://facebook.com/john', // Same as current
+        first_name: 'John', // Same as current
+      };
+
+      const { result } = renderHookWithClient(useUpdateProfile);
+
+      result.current.mutate(updatePayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Social table should be updated
+      const socialUpsert = capturedSocialChains
+        .map((chain) => chain.upsert)
+        .find((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(socialUpsert).toBeDefined();
+      expect(socialUpsert).toHaveBeenCalledWith({
+        user_id: mockUser.id,
+        instagram_url: 'https://instagram.com/john', // Only changed field
+      });
+
+      // Profiles table should NOT be updated
+      const profilesUpserts = capturedProfileChains
+        .map((chain) => chain.upsert)
+        .filter((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(profilesUpserts.length).toBe(0);
+    });
+
+    it('should NOT update profile_socials when no social fields change', async () => {
+      const updatePayload: UpdatableProfileData = {
+        facebook_url: 'https://facebook.com/john', // Same as current
+        instagram_url: null, // Same as current
+      };
+
+      const { result } = renderHookWithClient(useUpdateProfile);
+
+      result.current.mutate(updatePayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Social table should NOT be updated
+      const socialUpserts = capturedSocialChains
+        .map((chain) => chain.upsert)
+        .filter((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(socialUpserts.length).toBe(0);
+    });
+
+    it('should handle null and undefined as equivalent when comparing', async () => {
+      // Current profile has instagram_url: null
+      const updatePayload: UpdatableProfileData = {
+        instagram_url: null, // Same as current (null)
+      };
+
+      const { result } = renderHookWithClient(useUpdateProfile);
+
+      result.current.mutate(updatePayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Social table should NOT be updated (null === null after normalization)
+      const socialUpserts = capturedSocialChains
+        .map((chain) => chain.upsert)
+        .filter((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(socialUpserts.length).toBe(0);
+    });
+
+    it('should update multiple tables when fields in each change', async () => {
+      const updatePayload: UpdatableProfileData = {
+        first_name: 'Jane', // Changed - profiles table
+        street_address: '456 Oak Ave', // Changed - private info table
+        instagram_url: 'https://instagram.com/jane', // Changed - socials table
+      };
+      const updatedProfile: UserProfile = { ...currentProfile, first_name: 'Jane' };
+
+      mockSingle.mockResolvedValue({ data: updatedProfile, error: null });
+
+      const { result } = renderHookWithClient(useUpdateProfile);
+
+      result.current.mutate(updatePayload);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // All three tables should be updated
+      const profilesUpsert = capturedProfileChains
+        .map((chain) => chain.upsert)
+        .find((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      const privateInfoUpdate = capturedPrivateInfoChains
+        .map((chain) => chain.update)
+        .find((updateMock) => updateMock && updateMock.mock.calls.length > 0);
+
+      const socialUpsert = capturedSocialChains
+        .map((chain) => chain.upsert)
+        .find((upsertMock) => upsertMock && upsertMock.mock.calls.length > 0);
+
+      expect(profilesUpsert).toBeDefined();
+      expect(privateInfoUpdate).toBeDefined();
+      expect(socialUpsert).toBeDefined();
+    });
+
     it('should throw error if user is not authenticated during mutation', async () => {
       mockUseUser.mockReturnValue({ user: null });
       const { result } = renderHookWithClient(useUpdateProfile);
 
+      const updatePayload: UpdatableProfileData = { first_name: 'Jane' };
       result.current.mutate(updatePayload);
 
       await waitFor(() => expect(result.current.isError).toBe(true));
@@ -340,6 +616,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
+      const updatePayload: UpdatableProfileData = { first_name: 'Jane' };
       result.current.mutate(updatePayload);
 
       await waitFor(() => expect(result.current.isError).toBe(true));

@@ -170,6 +170,9 @@ export const useUpdateProfile = () => {
     mutationFn: async (profileData) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Get current profile from cache for comparison
+      const currentProfile = queryClient.getQueryData<UserProfile>(['profile', user.id]);
+
       // Separate fields into groups:
       // 1. Socials
       const { facebook_url, instagram_url, linkedin_url, airbnb_url, other_social_url, ...rest } =
@@ -213,47 +216,102 @@ export const useUpdateProfile = () => {
         Object.entries(privateData).filter(([, value]) => value !== undefined)
       );
 
-      // 1. Update Public Profile
-      const { data: profileResult, error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          // email removed from profiles!
-          ...publicProfileData,
-        })
-        .select()
-        .single();
+      // Compare public profile fields to detect changes
+      const changedProfileFields = Object.entries(publicProfileData).filter(([key, newValue]) => {
+        // Skip if not being updated (undefined)
+        if (newValue === undefined) return false;
 
-      if (profileError) {
-        throw new Error(profileError.message || 'Failed to update public profile');
+        // Compare with current value
+        const currentValue = currentProfile?.[key as keyof UserProfile];
+
+        // Normalize null and undefined as equivalent
+        const normalizedNew = newValue ?? null;
+        const normalizedCurrent = currentValue ?? null;
+
+        return normalizedNew !== normalizedCurrent;
+      });
+
+      let profileResult = currentProfile;
+
+      // 1. Update Public Profile (ONLY if there are changes)
+      if (changedProfileFields.length > 0) {
+        const updatedProfileData = Object.fromEntries(changedProfileFields);
+
+        const { data, error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            // email removed from profiles!
+            ...updatedProfileData,
+          })
+          .select()
+          .single();
+
+        if (profileError) {
+          throw new Error(profileError.message || 'Failed to update public profile');
+        }
+
+        profileResult = data;
       }
 
-      // 2. Update Private Info
+      // 2. Update Private Info (ONLY if there are changes)
       if (Object.keys(cleanPrivateData).length > 0) {
-        const { error: privateError } = await supabase
-          .from('user_private_info')
-          .update({
-            // Use update, row should exist.
-            ...cleanPrivateData,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', user.id);
+        // Compare private fields to detect changes
+        const changedPrivateFields = Object.entries(cleanPrivateData).filter(([key, newValue]) => {
+          const currentValue = currentProfile?.[key as keyof UserProfile];
 
-        if (privateError) {
-          console.error('Failed to update private info:', privateError);
-          throw new Error(privateError.message || 'Failed to update private info');
+          // Normalize null and undefined as equivalent
+          const normalizedNew = newValue ?? null;
+          const normalizedCurrent = currentValue ?? null;
+
+          return normalizedNew !== normalizedCurrent;
+        });
+
+        // Only update if there are actual changes
+        if (changedPrivateFields.length > 0) {
+          const updatedPrivateData = Object.fromEntries(changedPrivateFields);
+
+          const { error: privateError } = await supabase
+            .from('user_private_info')
+            .update({
+              // Use update, row should exist.
+              ...updatedPrivateData,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id);
+
+          if (privateError) {
+            console.error('Failed to update private info:', privateError);
+            throw new Error(privateError.message || 'Failed to update private info');
+          }
         }
       }
 
-      // 3. Update Socials
-      const hasSocialUpdates = Object.keys(socialData).some((key) =>
-        Object.hasOwn(profileData, key)
-      );
+      // 3. Update Socials (ONLY if there are changes)
+      // Filter to only include fields that:
+      // a) Are defined in the update (not undefined)
+      // b) Are different from the current value
+      const changedSocialFields = Object.entries(socialData).filter(([key, newValue]) => {
+        // Skip if not being updated (undefined)
+        if (newValue === undefined) return false;
 
-      if (hasSocialUpdates) {
+        // Compare with current value
+        const currentValue = currentProfile?.[key as keyof UserProfile];
+
+        // Normalize null and undefined as equivalent (both mean "empty")
+        const normalizedNew = newValue ?? null;
+        const normalizedCurrent = currentValue ?? null;
+
+        return normalizedNew !== normalizedCurrent;
+      });
+
+      // Only perform database update if there are actual changes
+      if (changedSocialFields.length > 0) {
+        const updatedSocialData = Object.fromEntries(changedSocialFields);
+
         const { error: socialError } = await supabase.from('profile_socials').upsert({
           user_id: user.id,
-          ...socialData,
+          ...updatedSocialData,
         });
 
         if (socialError) {
@@ -262,10 +320,15 @@ export const useUpdateProfile = () => {
       }
 
       // Return combined result (mocking it since we did multiple writes)
+      // Filter out undefined values to avoid overwriting existing data
+      const cleanSocialData = Object.fromEntries(
+        Object.entries(socialData).filter(([, value]) => value !== undefined)
+      );
+
       return {
         ...profileResult,
         ...cleanPrivateData,
-        ...socialData,
+        ...cleanSocialData,
       } as UserProfile;
     },
     onSuccess: () => {
