@@ -1,4 +1,4 @@
-'use client';
+import Link from 'next/link';
 
 interface StoryCard {
   /** Story quote text. */
@@ -12,15 +12,16 @@ interface StoriesSectionProps {
   readonly heading: string;
   /** Stories to render. */
   readonly stories: readonly StoryCard[];
-  /** Secondary CTA text displayed below the grid. */
+  /** CTA displayed below the grid. */
   readonly cta?: {
     readonly label: string;
-    readonly onClick: () => void;
+    readonly href: string;
   };
 }
 
 /**
  * Renders a set of customer/community stories with a gradient background.
+ * SEO/UX: CTA is a real link (crawlable, accessible) styled as a button.
  */
 export default function StoriesSection({ heading, stories, cta }: StoriesSectionProps) {
   return (
@@ -58,17 +59,16 @@ export default function StoriesSection({ heading, stories, cta }: StoriesSection
           ))}
         </div>
 
-        {cta && (
+        {cta ? (
           <div className="text-center">
-            <button
-              type="button"
-              className="mt-8 bg-amber-400 text-slate-900 rounded-2xl px-10 py-4 font-bold shadow-2xl transition hover:scale-[1.02] hover:bg-amber-300 hover:shadow-amber-400/20"
-              onClick={cta.onClick}
+            <Link
+              href={cta.href}
+              className="mt-8 bg-amber-400 text-slate-900 rounded-2xl px-10 py-4 font-bold shadow-2xl transition hover:scale-[1.02] hover:bg-amber-300 hover:shadow-amber-400/20 inline-flex items-center justify-center"
             >
               {cta.label}
-            </button>
+            </Link>
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   );

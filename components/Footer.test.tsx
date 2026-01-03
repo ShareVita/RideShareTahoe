@@ -22,11 +22,11 @@ jest.mock('@/lib/legal', () => ({
 describe('Footer', () => {
   it('renders brand information', () => {
     render(<Footer />);
-    expect(screen.getByText('RideTahoe')).toBeInTheDocument();
+    expect(screen.getByText('RideShareTahoe')).toBeInTheDocument();
     expect(
       screen.getByText(/Connecting Bay Area drivers with Tahoe-bound riders/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/© 2025 RideTahoe. All rights reserved./i)).toBeInTheDocument();
+    expect(screen.getByText(/© 2025 RideShareTahoe. All rights reserved./i)).toBeInTheDocument();
   });
 
   it('renders quick links', () => {
