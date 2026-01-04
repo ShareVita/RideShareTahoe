@@ -35,9 +35,9 @@ const config: Config = {
   domainName: 'ridesharetahoe.com',
   resend: {
     // REQUIRED — Email 'From' field to be used when sending magic login links (no replies expected)
-    fromNoReply: `RideShareTahoe <noreply@send.ridesharetahoe.com>`,
+    fromNoReply: `RideShareTahoe <noreply@ridesharetahoe.com>`,
     // REQUIRED — Email 'From' field for emails that might get replies (forwarded to Gmail)
-    fromAdmin: `RideShareTahoe <admin@send.ridesharetahoe.com>`,
+    fromAdmin: `RideShareTahoe <admin@ridesharetahoe.com>`,
     // Email shown to customer if need support. Leave empty if not needed => if empty, set up Crisp above, otherwise you won't be able to offer customer support."
     supportEmail: 'support@ridesharetahoe.com',
   },

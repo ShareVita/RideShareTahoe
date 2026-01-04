@@ -5,10 +5,14 @@ import { EmailPayload, loadEmailTemplate, ResendSendResult } from './templates';
 export type EmailType =
   | 'welcome'
   | 'nurture_day3'
+  | 'nurture_week1'
   | 'meeting_reminder'
   | 'meeting_scheduled'
   | 'reengage'
-  | 'new_message';
+  | 'new_message'
+  | 'review_request'
+  | 'bulk_announcement'
+  | 'welcome_bulk';
 
 export interface SendEmailParams {
   userId: string;
