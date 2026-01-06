@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS user_consents (
   document_type TEXT NOT NULL CHECK (document_type IN ('tos', 'privacy_policy', 'community_guidelines')),
   document_version TEXT NOT NULL DEFAULT '1.0',
   accepted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  ip_address TEXT,
+  ip_address TEXT DEFAULT (current_setting('request.headers', true)::json->>'x-real-ip'),
   user_agent TEXT,
 
   -- Prevent duplicate consent records for same doc version
