@@ -58,4 +58,24 @@ describe('Footer', () => {
     expect(screen.getByText('Mock Legal Disclosure')).toBeInTheDocument();
     expect(screen.getByText('Made with ❤️ for snow lovers')).toBeInTheDocument();
   });
+
+  it('renders social media links', () => {
+    render(<Footer />);
+    expect(screen.getByLabelText('LinkedIn')).toHaveAttribute(
+      'href',
+      'https://www.linkedin.com/company/ridesharetahoe'
+    );
+    expect(screen.getByLabelText('Instagram')).toHaveAttribute(
+      'href',
+      'https://www.instagram.com/ridesharetahoe/'
+    );
+    expect(screen.getByLabelText('Facebook')).toHaveAttribute(
+      'href',
+      'https://www.facebook.com/people/Ridesharetahoe/61585689170017/'
+    );
+    expect(screen.getByLabelText('TikTok')).toHaveAttribute(
+      'href',
+      'https://www.tiktok.com/@ridesharetahoe'
+    );
+  });
 });
