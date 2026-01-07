@@ -4,10 +4,10 @@ import { useState } from 'react';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
 import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
-import PassengerPostDetailModal from '@/app/community/components/PassengerPostDetailModal';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
+import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface PassengerPostCardProps {
   post: RidePostType;
@@ -33,7 +33,7 @@ export function PassengerPostCard({
   deleting,
 }: Readonly<PassengerPostCardProps>) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
+  const [postDetail, setPostDetail] = useState(false);
   const isOwner = currentUserId === post.poster_id;
   const { isBlocked } = useIsBlocked(post.owner?.id);
 
@@ -129,7 +129,7 @@ export function PassengerPostCard({
       {/*Details button*/}
       <div>
         <button
-          onClick={() => setShowDetail(true)}
+          onClick={() => setPostDetail(true)}
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
           View Details &rarr;
@@ -230,9 +230,9 @@ export function PassengerPostCard({
         />
       )}
 
-      <PassengerPostDetailModal
-        isOpen={showDetail}
-        onClose={() => setShowDetail(false)}
+      <PostDetailModal
+        isOpen={postDetail}
+        onClose={() => setPostDetail(false)}
         post={post}
         currentUserId={currentUserId ?? ''}
         onMessage={onMessage}
