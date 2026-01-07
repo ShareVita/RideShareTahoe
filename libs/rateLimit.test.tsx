@@ -36,6 +36,7 @@ type RateLimitModule = {
   rateLimit: RateLimitFactory;
   authRateLimit: RequestHandler;
   apiRateLimit: RequestHandler;
+  __resetRateLimitMap?: () => void;
 };
 
 // --- 2. Variable Declarations (Explicitly Typed) ---
@@ -78,6 +79,11 @@ describe('rateLimit', () => {
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('./rateLimit') as RateLimitModule;
+
+    // Clear the rate limit map to ensure clean state
+    if (mod.__resetRateLimitMap) {
+      mod.__resetRateLimitMap();
+    }
 
     rateLimit = mod.rateLimit;
     authRateLimit = mod.authRateLimit;
