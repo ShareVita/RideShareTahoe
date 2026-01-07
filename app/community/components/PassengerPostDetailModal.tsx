@@ -7,6 +7,8 @@ import Image from 'next/image';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
 import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
+import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
+import { useUserProfile } from '@/hooks/useProfile';
 
 interface PassengerPostDetailModalProps {
   readonly isOpen: boolean;
@@ -40,6 +42,20 @@ export default function PassengerPostDetailModal({
 
   const badgeStyles = 'bg-green-100 text-green-800';
   const badgeLabel = '👋 Passenger';
+
+  const { data: profile } = useUserProfile();
+  const { showProfileCompletionPrompt, profileCompletionModal } = useProfileCompletionPrompt({
+    toastMessage: 'Please finish your profile before contacting other riders.',
+    closeRedirect: null,
+  });
+
+  const handleRestrictedAction = (action: () => void) => {
+    if (!profile?.first_name) {
+      showProfileCompletionPrompt();
+      return;
+    }
+    action();
+  };
 
   // Add direction info if round trip
   let directionLabel = '';
@@ -113,7 +129,7 @@ export default function PassengerPostDetailModal({
                         </span>
                       )}
 
-                      <span className="text-xsmd text-gray-500 dark:text-gray-400">
+                      <span className="text-md text-gray-500 dark:text-gray-400">
                         {new Date(post.departure_date).toLocaleDateString()}
                         {isCombinedRoundTrip &&
                           post.return_date &&
@@ -236,7 +252,10 @@ export default function PassengerPostDetailModal({
                       <>
                         {hasBooking && (
                           <button
-                            onClick={() => onMessage(post.owner!, post)}
+                            onClick={() =>
+                              handleRestrictedAction(() => onMessage(post.owner!, post))
+                            }
+                            // onClick={() => onMessage(post.owner!, post)}
                             className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
                           >
                             Message
@@ -244,7 +263,8 @@ export default function PassengerPostDetailModal({
                         )}
 
                         <button
-                          onClick={() => setIsInviteModalOpen(true)}
+                          onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
+                          // onClick={() => setIsInviteModalOpen(true)}
                           className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors flex-1"
                         >
                           Invite
@@ -263,6 +283,8 @@ export default function PassengerPostDetailModal({
                     user={{ id: currentUserId }}
                   />
                 )}
+
+                {profileCompletionModal}
               </div>
             </TransitionChild>
           </div>
