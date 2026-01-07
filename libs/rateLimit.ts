@@ -179,3 +179,8 @@ export async function checkSupabaseRateLimit(
     return { success: true };
   }
 }
+
+// Test helper to reset rate limit state between tests
+export const __resetRateLimitMap = () => {
+  rateLimitMap.clear();
+};
