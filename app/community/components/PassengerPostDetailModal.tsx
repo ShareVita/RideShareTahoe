@@ -27,6 +27,34 @@ interface PassengerPostDetailModalProps {
  *
  * @param props - The data to show and callbacks for messaging or hiding a post.
  */
+
+//helper function
+function formatDateLabel(value?: string | null) {
+  if (!value) return null;
+  const [datePart] = value.split('T');
+  if (!datePart) return null;
+  const [year, month, day] = datePart.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatTimeLabel(value?: string | null) {
+  if (!value) return null;
+  const [hoursPart, minutesPart] = value.split(':');
+  const parsedHours = Number(hoursPart);
+  if (Number.isNaN(parsedHours)) return null;
+  const minutes = minutesPart ? minutesPart.slice(0, 2) : '00';
+  const normalizedMinutes = minutes.padEnd(2, '0');
+  const hourIn12 = parsedHours % 12 === 0 ? 12 : parsedHours % 12;
+  const period = parsedHours >= 12 ? 'PM' : 'AM';
+  return `${hourIn12}:${normalizedMinutes} ${period}`;
+}
+
 export default function PassengerPostDetailModal({
   isOpen,
   onClose,
@@ -42,6 +70,8 @@ export default function PassengerPostDetailModal({
 
   const badgeStyles = 'bg-green-100 text-green-800';
   const badgeLabel = '👋 Passenger';
+  const departureDateLabel = formatDateLabel(post.departure_date);
+  const departureTimeLabel = formatTimeLabel(post.departure_time);
 
   const { data: profile } = useUserProfile();
   const { showProfileCompletionPrompt, profileCompletionModal } = useProfileCompletionPrompt({
@@ -130,7 +160,8 @@ export default function PassengerPostDetailModal({
                       )}
 
                       <span className="text-md text-gray-500 dark:text-gray-400">
-                        {new Date(post.departure_date).toLocaleDateString()}
+                        {departureDateLabel ?? 'Date TBD'}
+                        {departureTimeLabel && ` · ${departureTimeLabel}`}
                         {isCombinedRoundTrip &&
                           post.return_date &&
                           ` - ${new Date(post.return_date).toLocaleDateString()}`}
