@@ -88,3 +88,8 @@ export const strictRateLimit = rateLimit({
   max: 10, // 10 requests per minute
   message: 'Too many requests, please slow down.',
 });
+
+// Test helper to reset rate limit state between tests
+export const __resetRateLimitMap = () => {
+  rateLimitMap.clear();
+};
