@@ -52,25 +52,34 @@ function getDirectionConfig(post: RidePostType) {
   return { label, styles, isCombinedRoundTrip };
 }
 
-function getMetaTags(post: RidePostType) {
+interface MetaTag {
+  label: string;
+  value: string;
+}
+
+function getMetaTags(post: RidePostType): MetaTag[] {
   if (post.posting_type === 'driver') {
     return [
-      post.car_type ? `Vehicle: ${post.car_type}` : null,
-      post.driving_arrangement ? `Pickup: ${post.driving_arrangement}` : null,
-      post.music_preference ? `Music: ${post.music_preference}` : null,
-      post.conversation_preference ? `Conversation: ${post.conversation_preference}` : null,
-      post.description ? `Description: ${post.description}` : null,
-      post.special_instructions ? `Notes: ${post.special_instructions}` : null,
-    ].filter(Boolean);
+      post.car_type ? { label: 'Vehicle', value: post.car_type } : null,
+      post.driving_arrangement ? { label: 'Pickup', value: post.driving_arrangement } : null,
+      post.music_preference ? { label: 'Music', value: post.music_preference } : null,
+      post.conversation_preference
+        ? { label: 'Conversation', value: post.conversation_preference }
+        : null,
+      post.description ? { label: 'Description', value: post.description } : null,
+      post.special_instructions ? { label: 'Notes', value: post.special_instructions } : null,
+    ].filter((item): item is MetaTag => item !== null);
   }
 
   // Passenger posts
   return [
-    post.music_preference ? `Music: ${post.music_preference}` : null,
-    post.conversation_preference ? `Conversation: ${post.conversation_preference}` : null,
-    post.description ? `Description: ${post.description}` : null,
-    post.special_instructions ? `Notes: ${post.special_instructions}` : null,
-  ].filter(Boolean);
+    post.music_preference ? { label: 'Music', value: post.music_preference } : null,
+    post.conversation_preference
+      ? { label: 'Conversation', value: post.conversation_preference }
+      : null,
+    post.description ? { label: 'Description', value: post.description } : null,
+    post.special_instructions ? { label: 'Notes', value: post.special_instructions } : null,
+  ].filter((item): item is MetaTag => item !== null);
 }
 
 /**
@@ -153,7 +162,10 @@ export default function RidePostDetailModal({
                 {/* Header */}
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1 min-w-0 pr-4">
-                    <DialogTitle className="text-base sm:text-2xl font-semibold text-gray-900 dark:text-white">
+                    <DialogTitle
+                      className="text-base sm:text-2xl font-semibold text-gray-900 dark:text-white line-clamp-2"
+                      title={post.title || 'Untitled Ride'}
+                    >
                       {post.title || 'Untitled Ride'}
                     </DialogTitle>
 
@@ -239,7 +251,12 @@ export default function RidePostDetailModal({
                   {metaTags.length > 0 && (
                     <div className="mb-4 space-y-1 text-md text-gray-500 dark:text-gray-400">
                       {metaTags.map((meta) => (
-                        <p key={meta}>{meta}</p>
+                        <p key={meta.label}>
+                          <span className="font-semibold text-gray-700 dark:text-gray-300">
+                            {meta.label}:
+                          </span>{' '}
+                          {meta.value}
+                        </p>
                       ))}
                     </div>
                   )}
