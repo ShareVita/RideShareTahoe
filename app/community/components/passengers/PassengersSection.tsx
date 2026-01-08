@@ -11,6 +11,7 @@ import { SectionEmpty } from '../common/SectionEmpty';
 import { SectionError } from '../common/SectionError';
 import { PASSENGERS_PAGE_SIZE } from '../../constants';
 import type { RidePostType, ProfileType, LocationFilterType } from '../../types';
+import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface PassengersSectionProps {
   user: { id: string } | null;
@@ -38,6 +39,7 @@ export function PassengersSection({
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
 
   const [currentPage, setCurrentPage] = useState(initialPage);
 
@@ -119,6 +121,7 @@ export function PassengersSection({
               post={post}
               currentUserId={user?.id}
               onMessage={openMessageModal}
+              onViewDetails={() => setSelectedPost(post)}
             />
           ))}
         </div>
@@ -133,6 +136,16 @@ export function PassengersSection({
             setCurrentPage(newPage);
             tabRef.current?.scrollIntoView({ behavior: 'smooth' });
           }}
+        />
+      )}
+
+      {selectedPost && (
+        <PostDetailModal
+          isOpen={!!selectedPost}
+          onClose={() => setSelectedPost(null)}
+          post={selectedPost}
+          currentUserId={user?.id ?? ''}
+          onMessage={openMessageModal}
         />
       )}
     </div>

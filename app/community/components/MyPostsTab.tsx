@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { RidePostCard } from '@/app/community/components/rides-posts/RidePostCard';
 import type { RidePostType, ProfileType } from '../types';
+import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface MyRidesTabProps {
   myRides: RidePostType[];
@@ -20,6 +21,7 @@ export function MyPostsTab({
   deletePost,
   deletingPost,
 }: Readonly<MyRidesTabProps>) {
+  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
   // Group round trips together
   const groupedRides = useMemo(() => {
     const groups: { [key: string]: RidePostType[] } = {};
@@ -80,6 +82,9 @@ export function MyPostsTab({
               onMessage={openMessageModal}
               onDelete={deletePost}
               deleting={deletingPost === post.id}
+              onViewDetails={() => {
+                setSelectedPost(post);
+              }}
             />
           ))}
         </div>
@@ -99,6 +104,17 @@ export function MyPostsTab({
             Create New Post
           </Link>
         </div>
+      )}
+      {selectedPost && (
+        <PostDetailModal
+          isOpen={!!selectedPost}
+          onClose={() => setSelectedPost(null)}
+          post={selectedPost}
+          currentUserId={user?.id ?? ''}
+          onMessage={openMessageModal}
+          onDelete={deletePost}
+          deleting={deletingPost === selectedPost.id}
+        />
       )}
     </div>
   );

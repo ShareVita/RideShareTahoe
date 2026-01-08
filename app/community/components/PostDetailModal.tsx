@@ -294,7 +294,6 @@ export default function RidePostDetailModal({
 
                 {/* Actions */}
                 {isOwner ? (
-                  /* Owner can edit/delete regardless of post type */
                   <RidePostActions
                     post={post}
                     isOwner={isOwner}

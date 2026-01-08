@@ -64,6 +64,11 @@ describe('PassengerPostCard', () => {
     });
   });
 
+  (useUserProfile as jest.Mock).mockReturnValue({
+    data: { first_name: 'Test User' },
+    isLoading: false,
+  });
+
   it('renders post details', () => {
     render(
       <PassengerPostCard
@@ -71,6 +76,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -93,6 +99,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -112,6 +119,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -126,6 +134,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -141,6 +150,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -155,6 +165,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 

@@ -7,7 +7,6 @@ import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
-import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface PassengerPostCardProps {
   post: RidePostType;
@@ -17,6 +16,7 @@ interface PassengerPostCardProps {
   // eslint-disable-next-line no-unused-vars
   onDelete?: (postId: string) => void;
   deleting?: boolean;
+  onViewDetails: () => void;
 }
 
 /**
@@ -31,9 +31,9 @@ export function PassengerPostCard({
   onMessage,
   onDelete,
   deleting,
+  onViewDetails,
 }: Readonly<PassengerPostCardProps>) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [postDetail, setPostDetail] = useState(false);
   const isOwner = currentUserId === post.poster_id;
   const { isBlocked } = useIsBlocked(post.owner?.id);
 
@@ -128,7 +128,7 @@ export function PassengerPostCard({
       {/*Details button*/}
       <div>
         <button
-          onClick={() => setPostDetail(true)}
+          onClick={onViewDetails}
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
           View Details &rarr;
@@ -228,16 +228,6 @@ export function PassengerPostCard({
           user={{ id: currentUserId }}
         />
       )}
-
-      <PostDetailModal
-        isOpen={postDetail}
-        onClose={() => setPostDetail(false)}
-        post={post}
-        currentUserId={currentUserId ?? ''}
-        onMessage={onMessage}
-        onDelete={onDelete}
-        deleting={deleting}
-      />
 
       {profileCompletionModal}
     </div>

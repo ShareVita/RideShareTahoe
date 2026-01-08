@@ -9,7 +9,6 @@ import { RidePostActions } from './RidePostActions';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
-import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface RidePostCardProps {
   post: RidePostType;
@@ -19,6 +18,7 @@ interface RidePostCardProps {
   // eslint-disable-next-line no-unused-vars
   onDelete?: (postId: string) => void;
   deleting?: boolean;
+  onViewDetails: () => void;
 }
 
 // Helper functions to reduce component complexity
@@ -59,6 +59,7 @@ export function RidePostCard({
   onMessage,
   onDelete,
   deleting,
+  onViewDetails,
 }: Readonly<RidePostCardProps>) {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const isOwner = currentUserId === post.poster_id;
@@ -94,8 +95,6 @@ export function RidePostCard({
   const returnDateLabel = formatDateLabel(post.return_date);
   const returnTimeLabel = formatTimeLabel(post.return_time);
   const hasReturnInfo = isCombinedRoundTrip && !!returnTimeLabel;
-
-  const [postDetail, setPostDetail] = useState(false);
 
   const seatsAvailable = post.available_seats ?? post.total_seats ?? 0;
   const showBookingButton =
@@ -178,7 +177,7 @@ export function RidePostCard({
         {/*Details button*/}
         <div>
           <button
-            onClick={() => setPostDetail(true)}
+            onClick={onViewDetails}
             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             View Details &rarr;
@@ -229,16 +228,6 @@ export function RidePostCard({
         isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
         ride={post}
-      />
-
-      <PostDetailModal
-        isOpen={postDetail}
-        onClose={() => setPostDetail(false)}
-        post={post}
-        currentUserId={currentUserId ?? ''}
-        onMessage={onMessage}
-        onDelete={onDelete}
-        deleting={deleting}
       />
 
       {profileCompletionModal}

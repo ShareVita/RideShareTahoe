@@ -7,7 +7,8 @@ import { useUser } from '@/components/providers/SupabaseUserProvider';
 import { createClient } from '@/libs/supabase/client';
 import { fetchAllRides } from '@/libs/community/ridesData';
 import { RidePostCard } from '@/app/community/components/rides-posts/RidePostCard';
-import type { RidePostType } from '@/app/community/types';
+import type { RidePostType, ProfileType } from '@/app/community/types';
+import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface Profile {
   first_name: string;
@@ -20,6 +21,7 @@ export default function WelcomePage() {
   const [ridePosts, setRidePosts] = useState<RidePostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
+  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
 
   // 1. Wrap functions that use external state/router in useCallback to stabilize the dependency array
   const fetchCurrentProfile = useCallback(async () => {
@@ -52,6 +54,14 @@ export default function WelcomePage() {
       setLoading(false);
     }
   }, [user]);
+
+  const handleMessage = useCallback(
+    (recipient: ProfileType, post: RidePostType) => {
+      console.log('📨 handleMessage called', { recipient, post });
+      router.push(`/messages`);
+    },
+    [router]
+  );
 
   useEffect(() => {
     if (!user) {
@@ -96,9 +106,9 @@ export default function WelcomePage() {
                 key={post.id}
                 post={post}
                 currentUserId={user?.id}
-                onMessage={() => {
-                  // Handle message click - could open a message modal or navigate
-                  router.push(`/messages`);
+                onMessage={handleMessage}
+                onViewDetails={() => {
+                  setSelectedPost(post);
                 }}
               />
             ))}
@@ -176,6 +186,15 @@ export default function WelcomePage() {
           </div>
         )}
       </div>
+      {selectedPost && (
+        <PostDetailModal
+          isOpen={!!selectedPost}
+          onClose={() => setSelectedPost(null)}
+          post={selectedPost}
+          currentUserId={user?.id ?? ''}
+          onMessage={handleMessage}
+        />
+      )}
     </div>
   );
 }
