@@ -99,9 +99,16 @@ async function processCodeExchangeAndProfileUpdate(
     .eq('id', user.id)
     .single();
 
-  // 2. New User Check: based on whether a profile row already existed
-  const isNewUser: boolean = !existingProfile;
-  console.log(isNewUser ? '🆕 NEW USER DETECTED (no existing profile)' : '👤 EXISTING USER');
+  // 2. New User Check: based on when the auth user was created
+  // NOTE: A database trigger auto-creates a profile row on user creation,
+  // so we can't rely on profile existence. Instead, check if user was created recently.
+  const userCreatedAt = new Date(user.created_at);
+  const isNewUser = Date.now() - userCreatedAt.getTime() < 60000; // created within last minute
+  console.log(
+    isNewUser
+      ? `🆕 NEW USER DETECTED (created ${Math.round((Date.now() - userCreatedAt.getTime()) / 1000)}s ago)`
+      : '👤 EXISTING USER'
+  );
 
   // Fetch private info for checking completeness (phone)
   const { data: privateInfo } = await supabase
@@ -144,12 +151,21 @@ async function processCodeExchangeAndProfileUpdate(
   // 5. Welcome Email
   if (isNewUser) {
     try {
-      await fetch(`/api/emails/send-welcome`, {
+      const emailUrl = `${finalRedirectBaseUrl}/api/emails/send-welcome`;
+      const emailResponse = await fetch(emailUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       });
-      console.log('✅ Welcome email queued');
+      if (!emailResponse.ok) {
+        console.error(
+          '❌ Welcome email API returned error:',
+          emailResponse.status,
+          await emailResponse.text()
+        );
+      } else {
+        console.log('✅ Welcome email sent');
+      }
     } catch (emailError) {
       console.error('❌ Error sending welcome email:', emailError);
     }

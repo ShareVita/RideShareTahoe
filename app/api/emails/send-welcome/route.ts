@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       emailType: 'welcome',
       payload: {
         userName: user.first_name || '',
-        appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://ridetahoe.com',
+        appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://ridesharetahoe.com',
       },
     });
 
