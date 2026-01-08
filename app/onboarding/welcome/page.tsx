@@ -108,7 +108,8 @@ export default function WelcomePage() {
                 currentUserId={user?.id}
                 onMessage={handleMessage}
                 onViewDetails={() => {
-                  setSelectedPost(post);
+                  setSelectedPost(null);
+                  setTimeout(() => setSelectedPost(post), 0);
                 }}
               />
             ))}

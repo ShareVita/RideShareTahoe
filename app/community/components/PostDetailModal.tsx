@@ -12,44 +12,18 @@ import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
+import { getBadgeConfig, getDirectionConfig } from '@/lib/PostModalCongif';
 
 interface PostDetailModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly post: RidePostType;
-  currentUserId?: string;
+  readonly currentUserId: string;
   // eslint-disable-next-line no-unused-vars
   onMessage: (recipient: ProfileType, post: RidePostType) => void;
   // eslint-disable-next-line no-unused-vars
   onDelete?: (postId: string) => void;
   deleting?: boolean;
-}
-
-// Helper functions
-function getBadgeConfig(type: RidePostType['posting_type']) {
-  switch (type) {
-    case 'driver':
-      return { styles: 'bg-blue-100 text-blue-800', label: '🚗 Driver' };
-    case 'passenger':
-      return { styles: 'bg-green-100 text-green-800', label: '👋 Passenger' };
-    default:
-      return { styles: 'bg-purple-100 text-purple-800', label: '🤝 Flexible' };
-  }
-}
-
-function getDirectionConfig(post: RidePostType) {
-  const isCombinedRoundTrip = !!(post.is_round_trip && post.return_date);
-  let label = '';
-  let styles = 'bg-orange-100 text-orange-800';
-
-  if (post.is_round_trip && !isCombinedRoundTrip && post.trip_direction) {
-    label = post.trip_direction === 'departure' ? '🛫 Outbound' : '🔙 Return';
-  } else if (isCombinedRoundTrip) {
-    label = '🔄 Round';
-    styles = 'bg-indigo-100 text-indigo-800';
-  }
-
-  return { label, styles, isCombinedRoundTrip };
 }
 
 interface MetaTag {
@@ -85,7 +59,7 @@ function getMetaTags(post: RidePostType): MetaTag[] {
 /**
  * Unified modal for displaying ride post details (both driver and passenger posts)
  */
-export default function RidePostDetailModal({
+export default function PostDetailModal({
   isOpen,
   onClose,
   post,
@@ -144,7 +118,7 @@ export default function RidePostDetailModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/25 backdrop-blur-2xl" />
+          <div className="fixed inset-0 bg-black/25 backdrop-blur-md" />
         </TransitionChild>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -226,10 +200,21 @@ export default function RidePostDetailModal({
                   <div className="flex justify-center items-center ml-1">
                     <button
                       onClick={onClose}
-                      aria-label="Close"
+                      aria-label="Close post details"
                       className="flex items-center justify-center w-10 h-7 rounded-full text-red-500 hover:text-white hover:bg-red-600 transition text-xl font-bold"
                     >
-                      ✕
+                      <span className="sr-only">Close</span>
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 16 16"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path
+                          d="M3.22 3.22a.75.75 0 0 1 1.06 0L8 6.94l3.72-3.72a.75.75 0 1 1 1.06 1.06L9.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L8 9.06l-3.72 3.72a.75.75 0 1 1-1.06-1.06L6.94 8 3.22 4.28a.75.75 0 0 1 0-1.06Z"
+                          fill="currentColor"
+                        />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -352,31 +337,30 @@ export default function RidePostDetailModal({
                   </div>
                 )}
 
-                {/* Modals */}
-                {post.owner && currentUserId && (
-                  <>
-                    <InviteToRideModal
-                      isOpen={isInviteModalOpen}
-                      onClose={() => setIsInviteModalOpen(false)}
-                      passengerId={post.owner.id}
-                      passengerName={post.owner.first_name || 'Passenger'}
-                      user={{ id: currentUserId }}
-                    />
-
-                    <TripBookingModal
-                      isOpen={isBookingOpen}
-                      onClose={() => setIsBookingOpen(false)}
-                      ride={post}
-                    />
-                  </>
-                )}
-
                 {profileCompletionModal}
               </DialogPanel>
             </TransitionChild>
           </div>
         </div>
       </Dialog>
+      {/* Modals */}
+      {post.owner && currentUserId && (
+        <>
+          <InviteToRideModal
+            isOpen={isInviteModalOpen}
+            onClose={() => setIsInviteModalOpen(false)}
+            passengerId={post.owner.id}
+            passengerName={post.owner.first_name || 'Passenger'}
+            user={{ id: currentUserId }}
+          />
+
+          <TripBookingModal
+            isOpen={isBookingOpen}
+            onClose={() => setIsBookingOpen(false)}
+            ride={post}
+          />
+        </>
+      )}
     </Transition>
   );
 }

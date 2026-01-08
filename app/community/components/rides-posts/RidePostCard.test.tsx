@@ -150,4 +150,21 @@ describe('RidePostCard', () => {
     fireEvent.click(screen.getByTestId('del-btn'));
     expect(mockOnDelete).toHaveBeenCalledWith('post-1');
   });
+
+  it('calls onViewDetails when clicking View Details', () => {
+    const onViewDetails = jest.fn();
+
+    render(
+      <RidePostCard
+        post={mockPost}
+        currentUserId="u1"
+        onMessage={mockOnMessage}
+        onDelete={mockOnDelete}
+        onViewDetails={onViewDetails}
+      />
+    );
+
+    fireEvent.click(screen.getByText(/View Details/i));
+    expect(onViewDetails).toHaveBeenCalledTimes(1);
+  });
 });

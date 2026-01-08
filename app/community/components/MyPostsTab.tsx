@@ -83,7 +83,8 @@ export function MyPostsTab({
               onDelete={deletePost}
               deleting={deletingPost === post.id}
               onViewDetails={() => {
-                setSelectedPost(post);
+                setSelectedPost(null);
+                setTimeout(() => setSelectedPost(post), 0);
               }}
             />
           ))}
@@ -112,7 +113,10 @@ export function MyPostsTab({
           post={selectedPost}
           currentUserId={user?.id ?? ''}
           onMessage={openMessageModal}
-          onDelete={deletePost}
+          onDelete={async (postId) => {
+            await deletePost(postId);
+            setSelectedPost(null);
+          }}
           deleting={deletingPost === selectedPost.id}
         />
       )}

@@ -248,7 +248,8 @@ export function RidesTab({
             currentUserId={user?.id}
             onMessage={openMessageModal}
             onViewDetails={() => {
-              setSelectedPost(post);
+              setSelectedPost(null);
+              setTimeout(() => setSelectedPost(post), 0);
             }}
           />
         ))}
