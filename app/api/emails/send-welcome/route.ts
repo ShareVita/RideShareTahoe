@@ -17,16 +17,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get user data
-    const { data: user, error: userError } = await supabase
+    // Get user profile data
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('email, first_name, last_name')
+      .select('first_name, last_name')
       .eq('id', userId)
       .single();
 
-    if (userError || !user) {
+    // Get user email from private info table
+    const { data: privateInfo, error: privateError } = await supabase
+      .from('user_private_info')
+      .select('email')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || privateError || !profile || !privateInfo?.email) {
+      console.error('User data fetch error:', { profileError, privateError, profile, privateInfo });
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found or missing email' },
         {
           status: 404,
         }
@@ -43,10 +51,10 @@ export async function POST(request: NextRequest) {
     // Send welcome email (idempotent)
     await sendEmail({
       userId,
-      to: user.email,
+      to: privateInfo.email,
       emailType: 'welcome',
       payload: {
-        userName: user.first_name || '',
+        userName: profile.first_name || '',
         appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://ridesharetahoe.com',
       },
     });
