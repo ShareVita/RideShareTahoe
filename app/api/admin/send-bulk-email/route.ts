@@ -50,20 +50,13 @@ export async function POST(request: NextRequest) {
     isAdmin = true;
   } else if (supabase) {
     // Try to fetch user role from database
-    const { data, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    const { data, error } = await supabase.from('users').select('role').eq('id', user.id).single();
     if (!error && data && data.role === 'admin') {
       isAdmin = true;
     }
   }
   if (!isAdmin) {
-    return NextResponse.json(
-      { error: 'Forbidden: Admin access required' },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }
   try {
     // Apply rate limiting
@@ -116,12 +109,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all users with email addresses
+    // Get all users with email addresses (join profiles with user_private_info for email)
     const { data: users, error: usersError } = await supabase
       .from('profiles')
-      .select('id, email, first_name, last_name')
-      .not('email', 'is', null)
-      .not('email', 'eq', '');
+      .select('id, first_name, last_name, user_private_info(email)')
+      .not('user_private_info.email', 'is', null)
+      .not('user_private_info.email', 'eq', '');
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
@@ -162,6 +155,15 @@ export async function POST(request: NextRequest) {
       const batchPromises = batch.map(async (user) => {
         const maxRetries = 2;
         let lastError: Error | null = null;
+        // Get email from joined user_private_info (may be object or array depending on Supabase)
+        const privateInfo = Array.isArray(user.user_private_info)
+          ? user.user_private_info[0]
+          : user.user_private_info;
+        const userEmail = privateInfo?.email;
+
+        if (!userEmail) {
+          return { success: false, email: 'unknown', error: 'No email found for user' };
+        }
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
@@ -169,26 +171,26 @@ export async function POST(request: NextRequest) {
             const personalizedHtml = htmlContent
               .replaceAll('{{first_name}}', user.first_name || '')
               .replaceAll('{{last_name}}', user.last_name || '')
-              .replaceAll('{{email}}', user.email || '');
+              .replaceAll('{{email}}', userEmail);
 
             const personalizedText = textContent
               ? textContent
                   .replaceAll('{{first_name}}', user.first_name || '')
                   .replaceAll('{{last_name}}', user.last_name || '')
-                  .replaceAll('{{email}}', user.email || '')
+                  .replaceAll('{{email}}', userEmail)
               : undefined;
 
             await sendEmail({
-              to: user.email,
+              to: userEmail,
               subject,
               html: personalizedHtml,
               text: personalizedText,
             });
 
-            return { success: true, email: user.email };
+            return { success: true, email: userEmail };
           } catch (error: unknown) {
             lastError = error instanceof Error ? error : new Error(String(error));
-            console.error(`Attempt ${attempt + 1} failed for ${user.email}:`, lastError.message);
+            console.error(`Attempt ${attempt + 1} failed for ${userEmail}:`, lastError.message);
 
             // If this is not the last attempt, wait before retrying
             if (attempt < maxRetries) {
@@ -198,10 +200,10 @@ export async function POST(request: NextRequest) {
         }
 
         // All retries failed
-        console.error(`All retries failed for ${user.email}:`, lastError?.message);
+        console.error(`All retries failed for ${userEmail}:`, lastError?.message);
         return {
           success: false,
-          email: user.email,
+          email: userEmail,
           error: lastError?.message || 'Unknown error',
         };
       });

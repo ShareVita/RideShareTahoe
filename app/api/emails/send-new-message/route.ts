@@ -25,16 +25,23 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get recipient data
+    // Get recipient profile data
     const { data: recipient, error: recipientError } = await supabase
       .from('profiles')
-      .select('email, first_name, last_name')
+      .select('first_name, last_name')
       .eq('id', recipientId)
       .single();
 
-    if (recipientError || !recipient) {
+    // Get recipient email from private info
+    const { data: recipientPrivate, error: recipientPrivateError } = await supabase
+      .from('user_private_info')
+      .select('email')
+      .eq('id', recipientId)
+      .single();
+
+    if (recipientError || recipientPrivateError || !recipient || !recipientPrivate?.email) {
       return NextResponse.json(
-        { error: 'Recipient not found' },
+        { error: 'Recipient not found or missing email' },
         {
           status: 404,
         }
@@ -60,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Send new message notification
     await sendEmail({
       userId: recipientId,
-      to: recipient.email,
+      to: recipientPrivate.email,
       emailType: 'new_message',
       payload: {
         recipientName: recipient.first_name || '',
@@ -70,7 +77,7 @@ export async function POST(request: NextRequest) {
           messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
         messageTime: new Date().toLocaleString(),
         messageUrl: `${
-          process.env.NEXT_PUBLIC_APP_URL || 'https://ridetahoe.com'
+          process.env.NEXT_PUBLIC_APP_URL || 'https://ridesharetahoe.com'
         }/messages/${messageId}`,
         threadId: threadId || messageId,
       },

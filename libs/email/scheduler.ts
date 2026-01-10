@@ -69,23 +69,33 @@ export async function processScheduledEmails(): Promise<{
           continue;
         }
 
-        // Get user email
+        // Get user profile
         const { data: user, error: userError } = await supabase
           .from('profiles')
-          .select('email, first_name')
+          .select('first_name')
           .eq('id', scheduledEmail.user_id)
           .single();
 
-        if (userError || !user) {
-          console.error(`User not found for scheduled email ${scheduledEmail.id}:`, userError);
-          errors.push({ id: scheduledEmail.id, error: 'User not found' });
+        // Get user email from private info
+        const { data: userPrivate, error: userPrivateError } = await supabase
+          .from('user_private_info')
+          .select('email')
+          .eq('id', scheduledEmail.user_id)
+          .single();
+
+        if (userError || userPrivateError || !user || !userPrivate?.email) {
+          console.error(
+            `User not found for scheduled email ${scheduledEmail.id}:`,
+            userError || userPrivateError
+          );
+          errors.push({ id: scheduledEmail.id, error: 'User not found or missing email' });
           continue;
         }
 
         // Send the email
         await sendEmail({
           userId: scheduledEmail.user_id,
-          to: user.email,
+          to: userPrivate.email,
           emailType: scheduledEmail.email_type,
           payload: scheduledEmail.payload,
         });

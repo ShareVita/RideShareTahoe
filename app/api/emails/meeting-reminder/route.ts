@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
       .select(
         `
         *,
-        requester:profiles!meetings_requester_id_fkey(first_name, last_name, email),
-        recipient:profiles!meetings_recipient_id_fkey(first_name, last_name, email)
+        requester:profiles!meetings_requester_id_fkey(first_name, last_name),
+        recipient:profiles!meetings_recipient_id_fkey(first_name, last_name)
       `
       )
       .eq('id', meetingId)
@@ -39,16 +39,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user details
+    // Get user profile details
     const { data: user, error: userError } = await supabase
       .from('profiles')
-      .select('email, first_name, last_name')
+      .select('first_name, last_name')
       .eq('id', userId)
       .single();
 
-    if (userError || !user) {
+    // Get user email from private info
+    const { data: userPrivate, error: userPrivateError } = await supabase
+      .from('user_private_info')
+      .select('email')
+      .eq('id', userId)
+      .single();
+
+    if (userError || userPrivateError || !user || !userPrivate?.email) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found or missing email' },
         {
           status: 404,
         }
@@ -63,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Send meeting reminder
     await sendEmail({
       userId,
-      to: user.email,
+      to: userPrivate.email,
       emailType: 'meeting_reminder',
       payload: {
         userName: user.first_name || '',
@@ -73,7 +80,7 @@ export async function POST(request: NextRequest) {
         meetingTime: new Date(meeting.starts_at).toLocaleTimeString(),
         meetingLocation: meeting.location || 'Location TBD',
         meetingUrl: `${
-          process.env.NEXT_PUBLIC_APP_URL || 'https://ridetahoe.com'
+          process.env.NEXT_PUBLIC_APP_URL || 'https://ridesharetahoe.com'
         }/meetings/${meetingId}`,
         isRequester,
       },

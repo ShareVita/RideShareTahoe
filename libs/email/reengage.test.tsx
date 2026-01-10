@@ -31,21 +31,21 @@ jest.mock('@/libs/supabase/server', () => ({
 
 const inactiveUser1: MockData = {
   id: 2,
-  email: 'user1@test.com',
   first_name: 'Alice',
+  user_private_info: { email: 'user1@test.com' },
   user_activity: [{ at: '2025-10-20T00:00:00.000Z' }],
 };
 const activeUser: MockData = {
   id: 3,
-  email: 'user3@test.com',
   first_name: 'Charlie',
+  user_private_info: { email: 'user3@test.com' },
   user_activity: [{ at: new Date().toISOString() }],
 };
 
 type MockData = {
   id: number;
-  email?: string;
   first_name?: string;
+  user_private_info?: { email: string };
   user_activity?: { at: string }[];
 };
 

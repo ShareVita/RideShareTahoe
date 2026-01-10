@@ -125,9 +125,11 @@ describe('Scheduled Email Functions', () => {
       picked_at: null,
       created_at: '2025-11-01T08:00:00.000Z',
     };
-    const mockUser = {
-      email: 'test@example.com',
+    const mockUserProfile = {
       first_name: 'Test',
+    };
+    const mockUserPrivateInfo = {
+      email: 'test@example.com',
     };
 
     it('should return {0, []} if the table does not exist', async () => {
@@ -173,7 +175,9 @@ describe('Scheduled Email Functions', () => {
       mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
       mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
       mockSupabase.eq.mockResolvedValueOnce({ error: null });
-      mockSupabase.single.mockResolvedValueOnce({ data: mockUser, error: null });
+      // First single() call for profiles, second for user_private_info
+      mockSupabase.single.mockResolvedValueOnce({ data: mockUserProfile, error: null });
+      mockSupabase.single.mockResolvedValueOnce({ data: mockUserPrivateInfo, error: null });
 
       const result = await processScheduledEmails();
 
@@ -182,12 +186,13 @@ describe('Scheduled Email Functions', () => {
       expect(mockSupabase.eq).toHaveBeenCalledWith('id', mockEmail.id);
 
       expect(mockSupabase.from).toHaveBeenCalledWith('profiles');
+      expect(mockSupabase.from).toHaveBeenCalledWith('user_private_info');
       expect(mockSupabase.eq).toHaveBeenCalledWith('id', mockEmail.user_id);
       expect(mockSupabase.single).toHaveBeenCalled();
 
       expect(mockedSendEmail).toHaveBeenCalledWith({
         userId: mockEmail.user_id,
-        to: mockUser.email,
+        to: mockUserPrivateInfo.email,
         emailType: mockEmail.email_type,
         payload: mockEmail.payload,
       });
@@ -215,6 +220,7 @@ describe('Scheduled Email Functions', () => {
       mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
       mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
       mockSupabase.eq.mockResolvedValueOnce({ error: null });
+      // Profile query fails
       mockSupabase.single.mockResolvedValueOnce({
         data: null,
         error: { message: 'Not found' },
@@ -226,7 +232,7 @@ describe('Scheduled Email Functions', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toEqual({
         id: mockEmail.id,
-        error: 'User not found',
+        error: 'User not found or missing email',
       });
       expect(mockedSendEmail).not.toHaveBeenCalled();
     });
@@ -237,7 +243,9 @@ describe('Scheduled Email Functions', () => {
       mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
       mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
       mockSupabase.eq.mockResolvedValueOnce({ error: null });
-      mockSupabase.single.mockResolvedValueOnce({ data: mockUser, error: null });
+      // First single() call for profiles, second for user_private_info
+      mockSupabase.single.mockResolvedValueOnce({ data: mockUserProfile, error: null });
+      mockSupabase.single.mockResolvedValueOnce({ data: mockUserPrivateInfo, error: null });
 
       const result = await processScheduledEmails();
 
