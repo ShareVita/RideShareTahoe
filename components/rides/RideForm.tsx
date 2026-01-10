@@ -302,7 +302,7 @@ export default function RideForm({
               htmlFor="price_per_seat"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
-              Price per Seat ($)
+              Cost Share per Seat ($)
             </label>
             <input
               type="number"
@@ -314,6 +314,9 @@ export default function RideForm({
               step="1"
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              For gas, tolls, and parking only. Drivers may not profit.
+            </p>
           </div>
 
           <div>

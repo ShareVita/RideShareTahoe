@@ -168,9 +168,10 @@ export function RidePostCard({
             {post.posting_type === 'driver' && (
               <>
                 <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                  {post.price_per_seat ? `$${post.price_per_seat}` : 'Free'}
+                  {post.price_per_seat ? `$${post.price_per_seat}/seat` : 'Free'}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {post.price_per_seat ? 'cost share · ' : ''}
                   {post.available_seats ?? post.total_seats ?? 0} seats left
                 </span>
               </>

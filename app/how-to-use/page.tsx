@@ -162,7 +162,7 @@ export default function HowToUsePage() {
                         <li>Departure date and time</li>
                         <li>Start and end locations</li>
                         <li>Number of available seats</li>
-                        <li>Price per seat or cost sharing details</li>
+                        <li>Cost share per seat (for gas, tolls, parking)</li>
                         <li>Car details (type, AWD, ski rack)</li>
                         <li>Preferences (music, conversation, pets)</li>
                       </ul>
@@ -197,7 +197,7 @@ export default function HowToUsePage() {
                           <li>Select &quot;I&apos;m Driving&quot;</li>
                           <li>Enter your trip details (origin, destination, date, time)</li>
                           <li>Specify car details and available seats</li>
-                          <li>Set your pricing (per seat or split gas)</li>
+                          <li>Set your cost share (to split gas, tolls, parking)</li>
                           <li>
                             Add any special instructions (e.g., &quot;Meeting at Rockridge
                             BART&quot;)

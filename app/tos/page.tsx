@@ -61,7 +61,16 @@ RideShareTahoe is a community platform that connects drivers and passengers for 
 
 4.2 Accurate Information: Users must provide accurate information about themselves, their vehicles, and their trip details.
 
-4.3 Non-Commercial Use: The platform is for cost-sharing carpools, not for commercial taxi or ride-hailing services (like Uber/Lyft). Drivers may not profit from rides, only share costs.
+4.3 Non-Commercial Use and Cost-Sharing: RideShareTahoe facilitates traditional carpooling, which is legal under California law when structured as cost-sharing rather than commercial transportation. This platform is NOT a Transportation Network Company (TNC) like Uber or Lyft.
+
+4.4 Cost-Sharing Guidelines:
+- Drivers may only request contributions toward actual trip expenses: gas, tolls, and parking
+- Drivers may NOT profit from rides - cost shares must reflect a fair split of actual costs
+- Drivers should already be making the trip regardless of passengers
+- Suggested cost shares should approximate actual per-person expenses, not exceed them
+- Example: A $60 round-trip gas cost split among 3 passengers = ~$20 per seat
+
+4.5 Insurance Notice: RideShareTahoe does not provide insurance coverage. Most personal auto insurance policies permit carpooling with cost-sharing. However, policies may not cover commercial or for-hire transportation. By using this platform, drivers confirm they are engaging in cost-sharing carpooling, not commercial transportation. Users should review their own insurance policies.
 
 5. User Data and Privacy
 
