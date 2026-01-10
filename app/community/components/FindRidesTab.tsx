@@ -11,7 +11,7 @@ import { RidePostCard } from './rides-posts/RidePostCard';
 import { PaginationControls } from './PaginationControls';
 import { SectionEmpty } from './common/SectionEmpty';
 import { SectionError } from './common/SectionError';
-import { CommunityMembersList } from './members';
+import CommunityMembersList from './members/CommunityMembersList';
 import { RIDES_PAGE_SIZE } from '../constants';
 import type { RidePostType, CommunityUser, LocationFilterType, ProfileType } from '../types';
 

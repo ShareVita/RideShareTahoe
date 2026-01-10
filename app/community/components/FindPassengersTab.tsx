@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PassengersSection } from './passengers/PassengersSection';
-import { CommunityMembersList } from './members';
+import CommunityMembersList from './members/CommunityMembersList';
 import type { RidePostType, ProfileType } from '../types';
 import type { CommunitySupabaseClient } from '@/libs/community/ridesData';
 
