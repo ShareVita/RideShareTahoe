@@ -113,11 +113,12 @@ interface SupabaseRateLimitOptions {
 }
 
 // Type for Supabase RPC function - compatible with SupabaseClient.rpc()
-// eslint-disable-next-line no-unused-vars
+/* eslint-disable no-unused-vars */
 type SupabaseRpcFunction = (
   fn: string,
   params: Record<string, unknown>
 ) => PromiseLike<{ data: unknown; error: unknown }>;
+/* eslint-enable no-unused-vars */
 
 export async function checkSupabaseRateLimit(
   supabase: { rpc: SupabaseRpcFunction },
