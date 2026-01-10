@@ -4,10 +4,16 @@ import { createClient } from '@/libs/supabase/server';
 import { redirect } from 'next/navigation';
 
 export const metadata = getSEOTags({
-  title: 'RideShareTahoe - Community Rides to the Mountains',
+  title: 'Carpool to Tahoe | RideShareTahoe',
   description:
-    'Connect with drivers and passengers for trips between the Bay Area and Lake Tahoe. Share costs, reduce emissions, and build community.',
+    'Find or post a carpool to, from, or around Lake Tahoe. RideShareTahoe connects Bay Area riders headed to Palisades, Northstar, Heavenly, Kirkwood & more—share gas, cut traffic, and meet mountain friends.',
   canonicalUrlRelative: '/',
+  openGraph: {
+    title: 'Carpool to Tahoe | RideShareTahoe',
+    description:
+      'Community-run carpools to and from Tahoe—save money, reduce traffic, and meet mountain friends.',
+    image: '/og/home.jpg',
+  },
 });
 
 /**

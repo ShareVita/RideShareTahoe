@@ -8,9 +8,10 @@ jest.mock('./passengers/PassengersSection', () => ({
   PassengersSection: () => <div data-testid="passengers-section">Passengers Section</div>,
 }));
 
-jest.mock('./passengers/PassengersList', () => ({
-  __esModule: true,
-  default: () => <div data-testid="passengers-list">Passengers List</div>,
+jest.mock('./members', () => ({
+  CommunityMembersList: () => (
+    <div data-testid="community-members-list">Community Members List</div>
+  ),
 }));
 
 describe('FindPassengersTab', () => {
@@ -28,7 +29,6 @@ describe('FindPassengersTab', () => {
     );
 
     expect(screen.getByTestId('passengers-section')).toBeInTheDocument();
-    expect(screen.getByText('Passengers in the Community')).toBeInTheDocument();
-    expect(screen.getByTestId('passengers-list')).toBeInTheDocument();
+    expect(screen.getByTestId('community-members-list')).toBeInTheDocument();
   });
 });

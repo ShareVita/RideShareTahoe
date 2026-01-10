@@ -3,14 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/libs/supabase/client';
 import { formatLocation, formatPronouns } from '@/libs/utils';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import UserReviews from '@/components/UserReviews';
 import ReviewModal from '@/components/ReviewModal';
 import ReportModal from '@/components/ReportModal';
+import MessageModal from '@/components/MessageModal';
+import BlockModal from '@/components/BlockModal';
 import VehicleDisplay from '@/components/vehicles/VehicleDisplay';
+import { useIsBlocked } from '@/hooks/useIsBlocked';
 
 interface Profile {
   id: string;
@@ -50,6 +53,7 @@ interface PendingReview {
  */
 export default function PublicProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const profileId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { user: currentUser, isLoading: authLoading } = useProtectedRoute();
 
@@ -62,6 +66,13 @@ export default function PublicProfilePage() {
   const [pendingReviewForModal, setPendingReviewForModal] = useState<PendingReview | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const {
+    isBlocked: isUserBlocked,
+    loading: checkingBlockStatus,
+    refetch: refetchBlockStatus,
+  } = useIsBlocked(profileId);
 
   const loadProfile = useCallback(async () => {
     if (!profileId) return;
@@ -274,15 +285,40 @@ export default function PublicProfilePage() {
                 </button>
               )}
 
-              {/* Report Button */}
+              {/* Action Buttons for Other Users */}
               {currentUser.id !== profile.id && (
-                <button
-                  onClick={() => setIsReportModalOpen(true)}
-                  className="ml-2 text-red-600 hover:text-red-700 font-medium text-sm transition-colors"
-                  title="Report User"
-                >
-                  ⚠️ Report
-                </button>
+                <>
+                  {/* Only show Message button if not blocked */}
+                  {!isUserBlocked && (
+                    <button
+                      onClick={() => setIsMessageModalOpen(true)}
+                      className="ml-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      💬 Message
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setIsBlockModalOpen(true)}
+                    disabled={checkingBlockStatus}
+                    className={`ml-2 px-6 py-2 rounded-lg transition-colors disabled:opacity-50 ${
+                      isUserBlocked
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-amber-600 text-white hover:bg-amber-700'
+                    }`}
+                  >
+                    {isUserBlocked ? '🔓 Unblock' : '🚫 Block'}
+                  </button>
+                  {/* Only show Report button if not blocked */}
+                  {!isUserBlocked && (
+                    <button
+                      onClick={() => setIsReportModalOpen(true)}
+                      className="ml-2 text-red-600 hover:text-red-700 font-medium text-sm transition-colors"
+                      title="Report User"
+                    >
+                      ⚠️ Report
+                    </button>
+                  )}
+                </>
               )}
 
               {currentUser.id === profile.id && (
@@ -353,7 +389,6 @@ export default function PublicProfilePage() {
             </div>
           )}
 
-          {/* Social Links */}
           {/* Social Links */}
           {socials &&
             (socials.facebook_url ||
@@ -428,11 +463,39 @@ export default function PublicProfilePage() {
           onReviewSubmitted={() => {
             setShowReviewButton(false);
             setIsReviewModalOpen(false);
-            // Ideally refresh reviews list too
-            globalThis.window.location.reload();
+            // Refresh profile data to show updated reviews
+            loadProfile();
           }}
         />
       )}
+
+      {/* Message Modal */}
+      <MessageModal
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
+        recipient={profile ? { id: profile.id, first_name: profile.first_name } : null}
+        ridePost={null}
+      />
+
+      {/* Block Modal */}
+      <BlockModal
+        isOpen={isBlockModalOpen}
+        onClose={() => setIsBlockModalOpen(false)}
+        targetUserId={profile.id}
+        targetUserName={`${profile.first_name} ${profile.last_name}`}
+        isCurrentlyBlocked={isUserBlocked}
+        onBlockStateChanged={() => {
+          setIsBlockModalOpen(false);
+          // If blocking (not unblocking), redirect away since interaction is no longer possible
+          if (!isUserBlocked) {
+            router.push('/community');
+          } else {
+            // If unblocking, just refresh the block status and profile
+            refetchBlockStatus();
+            loadProfile();
+          }
+        }}
+      />
 
       {/* Report Modal */}
       <ReportModal

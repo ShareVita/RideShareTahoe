@@ -1,3 +1,17 @@
+/**
+ * Simple in-memory rate limiter.
+ *
+ * LIMITATION: This uses an in-memory Map which does NOT persist across:
+ * - Serverless function cold starts
+ * - Multiple server instances (horizontal scaling)
+ * - Server restarts
+ *
+ * For production with multiple instances, consider using:
+ * - Upstash Redis (@upstash/ratelimit)
+ * - Redis with ioredis
+ * - Database-backed rate limiting
+ */
+
 interface RateLimitOptions {
   windowMs?: number;
   max?: number;
@@ -88,6 +102,84 @@ export const strictRateLimit = rateLimit({
   max: 10, // 10 requests per minute
   message: 'Too many requests, please slow down.',
 });
+
+/**
+ * Database-backed rate limiter for serverless environments.
+ *
+ * Unlike the in-memory rate limiter, this persists across:
+ * - Serverless function cold starts
+ * - Multiple server instances (horizontal scaling)
+ * - Server restarts
+ *
+ * Uses Supabase RPC to atomically check and increment rate limits.
+ */
+
+interface SupabaseRateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  reset_at: string;
+}
+
+interface SupabaseRateLimitOptions {
+  maxRequests?: number;
+  windowSeconds?: number;
+  message?: string;
+}
+
+// Type for Supabase RPC function - compatible with SupabaseClient.rpc()
+/* eslint-disable no-unused-vars */
+type SupabaseRpcFunction = (
+  fn: string,
+  params: Record<string, unknown>
+) => PromiseLike<{ data: unknown; error: unknown }>;
+/* eslint-enable no-unused-vars */
+
+export async function checkSupabaseRateLimit(
+  supabase: { rpc: SupabaseRpcFunction },
+  key: string,
+  endpoint: string,
+  options: SupabaseRateLimitOptions = {}
+): Promise<{ success: boolean; error?: { message: string; retryAfter: number } }> {
+  const {
+    maxRequests = 20,
+    windowSeconds = 3600,
+    message = 'Too many requests. Please try again later.',
+  } = options;
+
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_key: key,
+      p_endpoint: endpoint,
+      p_max_requests: maxRequests,
+      p_window_seconds: windowSeconds,
+    } as Record<string, unknown>);
+
+    if (error) {
+      console.error('Rate limit check failed:', error);
+      // Fail open - allow request if rate limit check fails
+      return { success: true };
+    }
+
+    const result = data as SupabaseRateLimitResult;
+
+    if (!result.allowed) {
+      const retryAfter = Math.ceil((new Date(result.reset_at).getTime() - Date.now()) / 1000);
+      return {
+        success: false,
+        error: {
+          message,
+          retryAfter: Math.max(retryAfter, 1),
+        },
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Rate limit check error:', err);
+    // Fail open - allow request if rate limit check fails
+    return { success: true };
+  }
+}
 
 // Test helper to reset rate limit state between tests
 export const __resetRateLimitMap = () => {

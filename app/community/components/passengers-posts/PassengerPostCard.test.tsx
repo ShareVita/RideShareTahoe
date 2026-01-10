@@ -1,11 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PassengerPostCard } from './PassengerPostCard';
-import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
 import type { RidePostType } from '../../types';
 
 // Mocks
-jest.mock('@/hooks/useHasActiveBooking', () => ({
-  useHasActiveBooking: jest.fn(),
+jest.mock('@/hooks/useIsBlocked', () => ({
+  useIsBlocked: () => ({ isBlocked: false, loading: false }),
 }));
 
 jest.mock('@/components/trips/InviteToRideModal', () => ({
@@ -39,7 +38,6 @@ describe('PassengerPostCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useHasActiveBooking as jest.Mock).mockReturnValue({ hasBooking: false });
   });
 
   it('renders post details', () => {
@@ -108,12 +106,11 @@ describe('PassengerPostCard', () => {
     );
 
     expect(screen.getByText('Invite')).toBeInTheDocument();
-    expect(screen.queryByText('Message')).not.toBeInTheDocument(); // Only if hasBooking
+    expect(screen.getByText('Message')).toBeInTheDocument(); // Message always available
     expect(screen.getByText('View Profile')).toBeInTheDocument();
   });
 
-  it('renders viewer actions (with booking)', () => {
-    (useHasActiveBooking as jest.Mock).mockReturnValue({ hasBooking: true });
+  it('message button is always visible for non-owner', () => {
     render(
       <PassengerPostCard
         post={mockPost}
@@ -123,6 +120,7 @@ describe('PassengerPostCard', () => {
       />
     );
 
+    // Message button should be visible (messaging now unrestricted)
     expect(screen.getByText('Message')).toBeInTheDocument();
   });
 

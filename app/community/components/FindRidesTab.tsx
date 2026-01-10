@@ -11,6 +11,7 @@ import { RidePostCard } from './rides-posts/RidePostCard';
 import { PaginationControls } from './PaginationControls';
 import { SectionEmpty } from './common/SectionEmpty';
 import { SectionError } from './common/SectionError';
+import { CommunityMembersList } from './members';
 import { RIDES_PAGE_SIZE } from '../constants';
 import type { RidePostType, CommunityUser, LocationFilterType, ProfileType } from '../types';
 
@@ -21,6 +22,7 @@ interface RidesTabProps {
   pageSize?: number;
   // eslint-disable-next-line no-unused-vars
   openMessageModal: (recipient: ProfileType, ridePost: RidePostType) => void;
+  hideCommunityMembers?: boolean;
 }
 
 /**
@@ -33,6 +35,7 @@ export function RidesTab({
   initialPage = 1,
   pageSize = RIDES_PAGE_SIZE,
   openMessageModal,
+  hideCommunityMembers = false,
 }: Readonly<RidesTabProps>) {
   const tabRef = useRef<HTMLDivElement>(null);
   const [rides, setRides] = useState<RidePostType[]>([]);
@@ -152,79 +155,95 @@ export function RidesTab({
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  if (loading) {
+  const renderRidesSection = () => {
+    if (loading) {
+      return (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50">Find a Ride</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((id) => (
+              <div
+                key={id}
+                className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 animate-pulse"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-24" />
+                  <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-16" />
+                </div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded" />
+                  <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-5/6" />
+                  <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-4/6" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return <SectionError title="Find a Ride" message={error} onRetry={() => setCurrentPage(1)} />;
+    }
+
+    if (rides.length === 0) {
+      return (
+        <SectionEmpty
+          title="Find a Ride"
+          message="No Rides Found"
+          subMessage="Be the first to post a ride to Tahoe!"
+          icon="🚗"
+          actionLabel="+ Post a Ride"
+          actionLink="/rides/post"
+        />
+      );
+    }
+
     return (
-      <div className="space-y-6 mb-12">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50">Find a Ride</h2>
+      <div ref={tabRef} className="space-y-6">
+        {/* Location Filters */}
+        <LocationFilters
+          onDepartureFilterChange={setDepartureFilter}
+          onDestinationFilterChange={setDestinationFilter}
+          ridesFoundLabel={ridesFoundLabel}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((id) => (
-            <div
-              key={id}
-              className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 animate-pulse"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-24" />
-                <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-16" />
-              </div>
-              <div className="space-y-3">
-                <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded" />
-                <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-5/6" />
-                <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-4/6" />
-              </div>
-            </div>
+          {groupedRides.map((ride) => (
+            <RidePostCard
+              key={ride.id}
+              post={ride}
+              currentUserId={user?.id}
+              onMessage={openMessageModal}
+            />
           ))}
         </div>
+
+        {/* Pagination Controls */}
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          hasMore={hasMore}
+          onPageChange={(newPage) => {
+            setCurrentPage(newPage);
+            tabRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
       </div>
     );
-  }
-
-  if (error) {
-    return <SectionError title="Find a Ride" message={error} onRetry={() => setCurrentPage(1)} />;
-  }
-
-  if (rides.length === 0) {
-    return (
-      <SectionEmpty
-        title="Find a Ride"
-        message="No Rides Found"
-        subMessage="Be the first to post a ride to Tahoe!"
-        icon="🚗"
-        actionLabel="+ Post a Ride"
-        actionLink="/rides/post"
-      />
-    );
-  }
+  };
 
   return (
-    <div ref={tabRef} className="space-y-6 mb-12">
-      {/* Location Filters */}
-      <LocationFilters
-        onDepartureFilterChange={setDepartureFilter}
-        onDestinationFilterChange={setDestinationFilter}
-        ridesFoundLabel={ridesFoundLabel}
-      />
+    <div className="space-y-12">
+      {/* Section 1: Driver Ride Posts */}
+      <section>{renderRidesSection()}</section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {groupedRides.map((ride) => (
-          <RidePostCard
-            key={ride.id}
-            post={ride}
-            currentUserId={user?.id}
-            onMessage={openMessageModal}
-          />
-        ))}
-      </div>
-
-      {/* Pagination Controls */}
-      <PaginationControls
-        currentPage={currentPage}
-        totalPages={totalPages}
-        hasMore={hasMore}
-        onPageChange={(newPage) => {
-          setCurrentPage(newPage);
-          tabRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
+      {/* Section 2: Community Members (if not hidden) */}
+      {!hideCommunityMembers && (
+        <section>
+          <CommunityMembersList supabase={supabase} />
+        </section>
+      )}
     </div>
   );
 }

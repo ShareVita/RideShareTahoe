@@ -1,18 +1,12 @@
 import { useRouter } from 'next/navigation';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RidePostCard } from './RidePostCard';
-import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
 import { useUserProfile } from '@/hooks/useProfile';
 import type { RidePostType, ProfileType } from '../../types';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
-}));
-
-// Mock dependencies
-jest.mock('@/hooks/useHasActiveBooking', () => ({
-  useHasActiveBooking: jest.fn(),
 }));
 
 jest.mock('@/hooks/useProfile', () => ({
@@ -72,7 +66,6 @@ describe('RidePostCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useHasActiveBooking as jest.Mock).mockReturnValue({ hasBooking: false });
     (useUserProfile as jest.Mock).mockReturnValue({
       data: { first_name: 'Test User' },
       isLoading: false,

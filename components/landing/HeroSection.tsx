@@ -1,9 +1,8 @@
-'use client';
-
 import Image from 'next/image';
+import Link from 'next/link';
 
 /**
- * Renders the landing hero with carousel and CTA controls for RideShareTahoe.
+ * Landing hero section for the homepage.
  */
 export default function HeroSection() {
   return (
@@ -12,7 +11,7 @@ export default function HeroSection() {
       <div className="absolute inset-0 z-0">
         <Image
           src="/hero-bg.png"
-          alt="Lake Tahoe Landscape"
+          alt="Winter view over Lake Tahoe mountains"
           fill
           className="object-cover"
           priority
@@ -33,15 +32,43 @@ export default function HeroSection() {
             </p>
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-black leading-tight tracking-tight font-display drop-shadow-xl">
+          {/* SEO anchor headline (single H1 on homepage) */}
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold leading-tight tracking-tight font-display text-white/95 drop-shadow-lg">
+            Carpool to Lake Tahoe — Free to use, Community-Run
+          </h1>
+
+          {/* Brand vibe headline */}
+          <h2 className="text-5xl sm:text-6xl md:text-7xl font-black leading-tight tracking-tight font-display drop-shadow-xl">
             <span className="block text-white drop-shadow-lg pb-2">Share a Ride.</span>
             <span className="block text-sky-300 drop-shadow-lg pb-2">Start a Crew.</span>
             <span className="block text-emerald-300 drop-shadow-lg pb-2">Save the Mountains.</span>
-          </h1>
+          </h2>
 
           <p className="text-xl md:text-2xl text-slate-200 max-w-3xl mx-auto leading-relaxed font-light drop-shadow-md">
-            Your community-driven carpool hub for cheaper trips, new friends, and fewer cars
-            clogging the mountain.
+            Find or post rides between the Bay Area, Reno, and Tahoe. Split gas, cut traffic, and
+            meet mountain friends — with carpools heading to Palisades, Northstar, Heavenly,
+            Kirkwood, and more.
+          </p>
+
+          {/* CTAs */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/community"
+              className="bg-white text-slate-950 rounded-2xl px-10 py-3 font-semibold shadow-2xl transition hover:scale-[1.02] inline-flex items-center justify-center"
+            >
+              Find a Ride
+            </Link>
+
+            <Link
+              href="/rides/post"
+              className="rounded-2xl px-10 py-3 font-semibold shadow-xl transition hover:scale-[1.02] inline-flex items-center justify-center border border-white/30 text-white bg-white/10 hover:bg-white/15 backdrop-blur-md"
+            >
+              Post a Ride
+            </Link>
+          </div>
+
+          <p className="text-sm text-slate-300/90 max-w-3xl mx-auto">
+            No ads. No algorithms. Just neighbors helping neighbors get to the mountains.
           </p>
         </div>
       </div>

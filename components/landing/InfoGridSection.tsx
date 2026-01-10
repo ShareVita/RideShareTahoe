@@ -1,6 +1,5 @@
-'use client';
-
-import type { MouseEventHandler, ReactNode } from 'react';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 
 interface InfoGridItem {
   /** Icon or emoji that visually represents the card. */
@@ -21,7 +20,7 @@ interface InfoGridSectionProps {
   /** Optional CTA that lives below the grid. */
   readonly cta?: {
     readonly label: string;
-    readonly onClick: MouseEventHandler<HTMLButtonElement>;
+    readonly href: string;
   };
   /** Tailwind background classes for the section wrapper. */
   readonly backgroundClass?: string;
@@ -33,12 +32,13 @@ interface InfoGridSectionProps {
   readonly descriptionClassName?: string;
   /** Optional class name for the summary description. */
   readonly summaryClassName?: string;
-  /** Optional class name for the CTA button. */
+  /** Optional class name for the CTA button/link. */
   readonly ctaClassName?: string;
 }
 
 /**
  * Renders a responsive grid of info cards with an optional CTA.
+ * SEO/UX: CTA is a real link (crawlable, accessible) styled like your button.
  */
 export default function InfoGridSection({
   title,
@@ -64,7 +64,7 @@ export default function InfoGridSection({
       <div className="max-w-6xl mx-auto px-6 lg:px-8 space-y-12">
         <div className="text-center space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold font-display tracking-tight">{title}</h2>
-          {description && <p className={summaryClass}>{description}</p>}
+          {description ? <p className={summaryClass}>{description}</p> : null}
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
@@ -81,20 +81,19 @@ export default function InfoGridSection({
           ))}
         </div>
 
-        {cta && (
+        {cta ? (
           <div className="text-center pt-4">
-            <button
-              type="button"
+            <Link
+              href={cta.href}
               className={
                 ctaClassName ??
-                'bg-slate-900 text-white rounded-2xl px-10 py-4 font-bold shadow-2xl transition hover:scale-[1.02] hover:shadow-slate-900/20'
+                'bg-slate-900 text-white rounded-2xl px-10 py-4 font-bold shadow-2xl transition hover:scale-[1.02] hover:shadow-slate-900/20 inline-flex items-center justify-center'
               }
-              onClick={cta.onClick}
             >
               {cta.label}
-            </button>
+            </Link>
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   );

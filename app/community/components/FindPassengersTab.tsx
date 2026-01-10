@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PassengersSection } from './passengers/PassengersSection';
-import PassengersList from './passengers/PassengersList';
+import { CommunityMembersList } from './members';
 import type { RidePostType, ProfileType } from '../types';
 import type { CommunitySupabaseClient } from '@/libs/community/ridesData';
 
@@ -13,11 +13,12 @@ interface PassengersTabProps {
   openMessageModal: (recipient: ProfileType, ridePost: RidePostType) => void;
   initialPage?: number;
   pageSize?: number;
+  hideCommunityMembers?: boolean;
 }
 
 /**
  * FindPassengersTab component orchestrates the display of passenger ride requests
- * and passenger profiles in the community.
+ * and community member profiles.
  */
 export default function FindPassengersTab({
   user,
@@ -25,6 +26,7 @@ export default function FindPassengersTab({
   openMessageModal,
   initialPage,
   pageSize,
+  hideCommunityMembers = false,
 }: Readonly<PassengersTabProps>) {
   return (
     <div className="space-y-12">
@@ -39,16 +41,12 @@ export default function FindPassengersTab({
         />
       </section>
 
-      {/* Section 2: Passenger Profiles */}
-      <section>
-        <div className="flex items-center mb-6">
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-50 flex items-center">
-            <span className="mr-2">👋</span>
-            <span>Passengers in the Community</span>
-          </h3>
-        </div>
-        <PassengersList supabase={supabase} />
-      </section>
+      {/* Section 2: Community Members (if not hidden) */}
+      {!hideCommunityMembers && (
+        <section>
+          <CommunityMembersList supabase={supabase} />
+        </section>
+      )}
     </div>
   );
 }
