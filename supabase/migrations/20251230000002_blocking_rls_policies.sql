@@ -1,11 +1,6 @@
--- Migration: RLS Policies for User Blocking
---
--- This migration adds RLS policies to enforce blocking across profiles, 
--- profile_socials, conversations, and messages tables using the two-way mirror logic.
-
 -- Note: The is_user_blocked() function must exist (created in 20251230000001_user_blocks.sql)
 
--- 1. Prevent blocked users from viewing each other's profiles
+-- Prevent blocked users from viewing each other's profiles
 -- Drop the permissive "Public profiles" policy and replace with stricter version
 DROP POLICY "Public profiles are viewable by everyone" ON profiles;
 

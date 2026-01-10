@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/libs/supabase/client';
 import { useBlockedUsersContext } from '@/contexts/BlockedUsersContext';
 
@@ -20,8 +20,7 @@ export function useIsBlocked(otherUserId?: string) {
   const [isBlockedState, setIsBlockedState] = useState(false);
   const [loadingState, setLoadingState] = useState(true);
 
-  // Memoize the Supabase client to prevent re-creation on every render
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = createClient();
 
   const checkBlockStatusViaRpc = useCallback(async () => {
     if (!otherUserId) {
