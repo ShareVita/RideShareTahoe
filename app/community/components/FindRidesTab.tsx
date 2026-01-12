@@ -211,12 +211,16 @@ export function RidesTab({
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groupedRides.map((ride) => (
+          {groupedRides.map((post) => (
             <RidePostCard
-              key={ride.id}
-              post={ride}
+              key={post.id}
+              post={post}
               currentUserId={user?.id}
               onMessage={openMessageModal}
+              onViewDetails={() => {
+                setSelectedPost(null);
+                setTimeout(() => setSelectedPost(post), 0);
+              }}
             />
           ))}
         </div>
@@ -231,6 +235,16 @@ export function RidesTab({
             tabRef.current?.scrollIntoView({ behavior: 'smooth' });
           }}
         />
+
+        {selectedPost && (
+          <PostDetailModal
+            isOpen={!!selectedPost}
+            onClose={() => setSelectedPost(null)}
+            post={selectedPost}
+            currentUserId={user?.id ?? ''}
+            onMessage={openMessageModal}
+          />
+        )}
       </div>
     );
   };

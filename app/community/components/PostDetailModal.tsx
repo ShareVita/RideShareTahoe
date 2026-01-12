@@ -289,7 +289,6 @@ export default function PostDetailModal({
                     deleting={deleting}
                     onOpenBooking={() => handleRestrictedAction(() => setIsBookingOpen(true))}
                     showBookingButton={false}
-                    hasActiveBooking={hasBooking}
                   />
                 ) : isDriver ? (
                   /* Non-owner viewing driver post */
@@ -303,7 +302,6 @@ export default function PostDetailModal({
                     deleting={deleting}
                     onOpenBooking={() => handleRestrictedAction(() => setIsBookingOpen(true))}
                     showBookingButton={!!showBookingButton}
-                    hasActiveBooking={hasBooking}
                   />
                 ) : (
                   /* Non-owner viewing passenger post */
