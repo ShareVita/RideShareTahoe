@@ -11,18 +11,6 @@ Object.defineProperty(globalThis, 'crypto', {
 });
 
 describe('DatePicker', () => {
-  let dateNowSpy: jest.SpyInstance<number, []>;
-
-  beforeAll(() => {
-    // Mock Date.now to a fixed timestamp so date-dependent tests are deterministic
-    dateNowSpy = jest
-      .spyOn(Date, 'now')
-      .mockImplementation(() => new Date('2025-12-15T12:00:00Z').getTime());
-  });
-
-  afterAll(() => {
-    dateNowSpy.mockRestore();
-  });
   beforeEach(() => {
     // Provide a consistent value for randomUUID
     let callCount = 0;
@@ -42,8 +30,8 @@ describe('DatePicker', () => {
     render(<DatePicker selectedDate={''} onDateSelect={() => {}} />);
     const button = screen.getByRole('button');
     fireEvent.click(button);
-    // Ensure a calendar header (month + year) is present
-    expect(screen.getByText(/\d{4}/)).toBeInTheDocument();
+    const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+    expect(screen.getByText(new RegExp(currentMonthName))).toBeInTheDocument(); // Calendar header
   });
 
   it('calls onDateSelect with the correct format when a date is clicked', () => {
@@ -71,27 +59,34 @@ describe('DatePicker', () => {
   it('navigates to the next and previous months', () => {
     render(<DatePicker selectedDate={''} onDateSelect={() => {}} />);
     fireEvent.click(screen.getByRole('button')); // Open calendar
-    // Get the header text and ensure navigation changes it
-    const headerBefore = screen.getByText(/\w+ \d{4}/).textContent;
+
+    // Get current month name
+    const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+    expect(screen.getByText(new RegExp(currentMonthName))).toBeInTheDocument();
 
     const navigationButtons = screen.getAllByRole('button');
     const prevButton = navigationButtons[1];
     const nextButton = navigationButtons[2];
 
-    // Go to next month — header should change
+    // Go to next month
     fireEvent.click(nextButton);
-    const headerAfterNext = screen.getByText(/\w+ \d{4}/).textContent;
-    expect(headerAfterNext).not.toEqual(headerBefore);
+    const nextMonthName = new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleString(
+      'default',
+      { month: 'long' }
+    );
+    expect(screen.getByText(new RegExp(nextMonthName))).toBeInTheDocument();
 
-    // Go back to previous month (from next month) — header should match original
+    // Go back to previous month (from next month)
     fireEvent.click(prevButton);
-    const headerAfterBack = screen.getByText(/\w+ \d{4}/).textContent;
-    expect(headerAfterBack).toEqual(headerBefore);
+    expect(screen.getByText(new RegExp(currentMonthName))).toBeInTheDocument();
 
-    // Go to previous month (from current month) — header should change again
+    // Go to previous month (from current month)
     fireEvent.click(prevButton);
-    const headerAfterPrev = screen.getByText(/\w+ \d{4}/).textContent;
-    expect(headerAfterPrev).not.toEqual(headerBefore);
+    const prevMonthName = new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString(
+      'default',
+      { month: 'long' }
+    );
+    expect(screen.getByText(new RegExp(prevMonthName))).toBeInTheDocument();
   });
 
   it('disables dates before minDate', () => {
@@ -130,13 +125,14 @@ describe('DatePicker', () => {
       </div>
     );
 
-    // Open calendar and assert header present
+    // Open calendar
     fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText(/\d{4}/)).toBeInTheDocument();
+    const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+    expect(screen.getByText(new RegExp(currentMonthName))).toBeInTheDocument();
 
-    // Click outside and ensure calendar closed
+    // Click outside
     fireEvent.mouseDown(screen.getByTestId('outside'));
-    expect(screen.queryByText(/\d{4}/)).not.toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(currentMonthName))).not.toBeInTheDocument();
   });
 
   it('selects today when "Select Today" is clicked', () => {

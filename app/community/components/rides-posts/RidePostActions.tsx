@@ -13,6 +13,7 @@ interface RidePostActionsProps {
   deleting?: boolean;
   onOpenBooking: () => void;
   showBookingButton: boolean;
+  hasActiveBooking: boolean;
 }
 
 export function RidePostActions({
@@ -23,6 +24,7 @@ export function RidePostActions({
   deleting,
   onOpenBooking,
   showBookingButton,
+  hasActiveBooking,
 }: Readonly<RidePostActionsProps>) {
   return (
     <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
@@ -57,7 +59,7 @@ export function RidePostActions({
         </>
       ) : (
         <>
-          {post.owner && (
+          {post.owner && hasActiveBooking && (
             <button
               onClick={() => post.owner && onMessage(post.owner, post)}
               className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"

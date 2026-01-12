@@ -1,13 +1,17 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import HeroSection from '@/components/landing/HeroSection';
 import InfoGridSection from '@/components/landing/InfoGridSection';
 import StoriesSection from '@/components/landing/StoriesSection';
 import ClosingCta from '@/components/landing/ClosingCta';
 
 export default function LandingPage() {
+  const router = useRouter();
+
   return (
     <main className="min-h-screen bg-white dark:bg-slate-950">
       <HeroSection />
-
       <InfoGridSection
         title="Why RideShareTahoe?"
         description="We are more than just a carpool app. We are a community dedicated to making Tahoe accessible and sustainable."
@@ -36,10 +40,9 @@ export default function LandingPage() {
         ]}
         cta={{
           label: 'Learn More',
-          href: '/how-to-use',
+          onClick: () => router.push('/how-to-use'),
         }}
       />
-
       <StoriesSection
         heading="Community Stories"
         stories={[
@@ -61,20 +64,15 @@ export default function LandingPage() {
         ]}
         cta={{
           label: 'Our Story',
-          href: '/our-story',
+          onClick: () => router.push('/our-story'),
         }}
       />
-
       <ClosingCta
         title="Ready to hit the slopes?"
-        subtitle="Find a ride, post a ride, and make Tahoe trips easier all season."
+        subtitle="Join thousands of Bay Area skiers and snowboarders today."
         primary={{
-          label: 'Find a Ride',
-          href: '/community',
-        }}
-        secondary={{
-          label: 'Post a Ride',
-          href: '/rides/post',
+          label: 'Join Now',
+          onClick: () => router.push('/community'),
         }}
       />
     </main>
