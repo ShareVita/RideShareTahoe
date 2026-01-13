@@ -125,8 +125,8 @@ export default function MessagesPage() {
     return `${otherParticipant.first_name} ${otherParticipant.last_name}`;
   }, [otherParticipant]);
 
-  const hasActiveOrPendingTrip = bookingRequests.length > 0;
-
+const hasActiveOrPendingTrip = true; // Allow messaging without booking
+  
   const loadConversations = useCallback(async () => {
     if (!user) {
       return;
@@ -741,11 +741,7 @@ export default function MessagesPage() {
                 <textarea
                   rows={2}
                   className="flex-1 min-h-[120px] rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  placeholder={
-                    hasActiveOrPendingTrip
-                      ? 'Type your message...'
-                      : 'Messages are disabled until you share a trip.'
-                  }
+                  placeholder="Type your message..."
                   value={messageInput}
                   onChange={(event) => setMessageInput(event.target.value)}
                   disabled={!hasActiveOrPendingTrip}
@@ -758,11 +754,7 @@ export default function MessagesPage() {
                   Send
                 </button>
               </form>
-              {!hasActiveOrPendingTrip && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Messages remain paused when you no longer have an active or pending ride request.
-                </p>
-              )}
+            
             </>
           ) : (
             <div className="flex flex-col items-center justify-center space-y-3 py-12">
