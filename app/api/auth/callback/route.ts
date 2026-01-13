@@ -16,6 +16,22 @@ interface Profile {
 }
 
 /**
+ * Get the application URL for server-side requests.
+ * Uses APP_URL or VERCEL_URL for server-side fetch (not NEXT_PUBLIC_* which is for client).
+ */
+function getAppUrl(): string {
+  // For server-side requests, prefer APP_URL, then VERCEL_URL, then fallback
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    // VERCEL_URL doesn't include protocol
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return 'https://ridesharetahoe.com';
+}
+
+/**
  * Determines the final destination URL based on user status and profile completeness.
  * Appends a cache-busting parameter to ensure client-side session freshness.
  */
@@ -57,6 +73,24 @@ function determineRedirectPath(
 }
 
 /**
+ * Check if welcome email was already sent to this user (idempotent check).
+ * Uses email_events table instead of time-based checks for reliability.
+ */
+async function hasWelcomeEmailBeenSent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<boolean> {
+  const { data: welcomeEmailRecord } = await supabase
+    .from('email_events')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('email_type', 'welcome')
+    .maybeSingle();
+
+  return !!welcomeEmailRecord;
+}
+
+/**
  * Executes the core OAuth logic: code exchange, profile synchronization, emails, and final routing.
  */
 async function processCodeExchangeAndProfileUpdate(
@@ -81,4 +115,133 @@ async function processCodeExchangeAndProfileUpdate(
 
   if (!data.session || !data.user) {
     console.error('No session or user created after code exchange');
-    return N
+    return NextResponse.redirect(new URL('/login?error=no_session', requestUrl.origin));
+  }
+
+  const user: User = data.user;
+  const finalRedirectBaseUrl: string = requestUrl.origin;
+
+  // 3. Profile Fetch and Data Merge
+  const userMetadata: UserMetadata = user.user_metadata || {};
+  const googleGivenName: string | undefined = userMetadata.given_name || userMetadata.first_name;
+  const googleFamilyName: string | undefined = userMetadata.family_name || userMetadata.last_name;
+  const googlePicture: string | undefined = userMetadata.picture || userMetadata.avatar_url;
+
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select<string, Profile>('*')
+    .eq('id', user.id)
+    .single();
+
+  // 2. New User Check: Use idempotent database check instead of profile existence
+  // (Profile may be auto-created by database trigger, so we check email_events instead)
+  const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabase, user.id);
+  const isNewUser: boolean = !welcomeAlreadySent;
+  console.log(isNewUser ? '🆕 NEW USER DETECTED (no welcome email sent yet)' : '👤 EXISTING USER');
+
+  // Fetch private info for checking completeness (phone)
+  const { data: privateInfo } = await supabase
+    .from('user_private_info')
+    .select('phone_number')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  // Determine completeness using mixed data
+  const hasPhonePrivate = !!(
+    privateInfo?.phone_number && privateInfo.phone_number.trim().length > 0
+  );
+
+  // Build the upsert payload. Include `id` to allow insert-if-missing
+  const upsertData: Partial<Profile> & { id: string } = {
+    id: user.id,
+    first_name: googleGivenName || existingProfile?.first_name || null,
+    last_name: googleFamilyName || existingProfile?.last_name || null,
+    profile_photo_url: googlePicture || existingProfile?.profile_photo_url || null,
+  };
+
+  // 4. Profile Upsert (insert if missing, update if exists)
+  const { data: updatedProfile, error: profileError } = await supabase
+    .from('profiles')
+    .upsert(upsertData, { onConflict: 'id' })
+    .select()
+    .single<Profile>();
+
+  if (profileError) {
+    console.error('❌ Profile upsert error:', profileError);
+  } else {
+    console.log('✅ Profile upserted with Google data');
+  }
+
+  if (!updatedProfile) {
+    console.error('Profile upsert failed to return data.');
+    return NextResponse.redirect(new URL('/login?error=profile_update_failed', requestUrl.origin));
+  }
+
+  // 5. Welcome Email (only for new users who haven't received one yet)
+  if (isNewUser) {
+    try {
+      // Use APP_URL or VERCEL_URL for server-side fetch (not NEXT_PUBLIC_* which is for client)
+      const appUrl = getAppUrl();
+      const emailResponse = await fetch(`${appUrl}/api/emails/send-welcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorText = await emailResponse.text();
+        console.error('❌ Welcome email API returned error:', emailResponse.status, errorText);
+      } else {
+        console.log('✅ Welcome email sent successfully');
+      }
+    } catch (emailError) {
+      // Don't block the auth flow if email fails - log and continue
+      console.error('❌ Error sending welcome email:', emailError);
+    }
+  }
+
+  // 6. Routing
+  const redirectPath = determineRedirectPath(
+    finalRedirectBaseUrl,
+    updatedProfile,
+    isNewUser,
+    hasPhonePrivate
+  );
+
+  // Use NextResponse.redirect() which sets the status and Location header.
+  return NextResponse.redirect(redirectPath);
+}
+
+/**
+ * Handles the OAuth callback from the authentication provider.
+ * Exchanges the code for a session and sets up the user profile.
+ */
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const requestUrl = new URL(req.url);
+  const code: string | null = requestUrl.searchParams.get('code');
+  const error: string | null = requestUrl.searchParams.get('error');
+  const errorDescription: string | null = requestUrl.searchParams.get('error_description');
+
+  // 1. Handle OAuth Errors (Guard Clause)
+  if (error) {
+    console.error('OAuth error:', error, errorDescription);
+    return NextResponse.redirect(
+      new URL('/login?error=' + encodeURIComponent(error), requestUrl.origin)
+    );
+  }
+
+  // 2. Process Authentication Code
+  if (code) {
+    try {
+      return await processCodeExchangeAndProfileUpdate(requestUrl, code);
+    } catch (error) {
+      // Catch unexpected errors
+      console.error('Unexpected error during session exchange:', error);
+      return NextResponse.redirect(new URL('/login?error=unexpected_error', requestUrl.origin));
+    }
+  }
+
+  // 3. Fallback: No Code Present
+  console.log('⚠️ No code present - Redirecting to login');
+  return NextResponse.redirect(new URL('/login', requestUrl.origin));
+}
