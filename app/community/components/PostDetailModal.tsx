@@ -8,7 +8,6 @@ import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
 import TripBookingModal from '@/components/trips/TripBookingModal';
 import { RidePostActions } from '@/app/community/components/rides-posts/RidePostActions';
-import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
@@ -77,7 +76,6 @@ export default function PostDetailModal({
   const sanitizedEndLocation = sanitizeLocation(post.end_location);
   const isOwner = currentUserId === post.poster_id;
   const isDriver = post.posting_type === 'driver';
-  const { hasBooking } = useHasActiveBooking(currentUserId, post.owner?.id);
   const { data: profile } = useUserProfile();
   const { showProfileCompletionPrompt, profileCompletionModal } = useProfileCompletionPrompt({
     toastMessage: 'Please finish your profile before contacting other riders.',
@@ -319,16 +317,14 @@ export default function PostDetailModal({
                       </Link>
                     )}
 
-                    {hasBooking && (
-                      <button
-                        onClick={() =>
-                          handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
-                        }
-                        className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
-                      >
-                        Message
-                      </button>
-                    )}
+                    <button
+                      onClick={() =>
+                        handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
+                      }
+                      className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
+                    >
+                      Message
+                    </button>
 
                     <button
                       onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
