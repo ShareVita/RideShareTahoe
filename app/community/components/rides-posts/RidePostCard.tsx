@@ -158,7 +158,7 @@ export function RidePostCard({
           <button
             onClick={onViewDetails}
             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-            aria-label="View ride details"
+            aria-label={`View full ride details for trip from ${post.start_location} to ${post.end_location}`}
           >
             View Details &rarr;
           </button>
