@@ -130,6 +130,7 @@ export function PassengerPostCard({
         <button
           onClick={onViewDetails}
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          aria-label="View ride details"
         >
           View Details &rarr;
         </button>
