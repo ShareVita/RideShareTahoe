@@ -17,7 +17,12 @@ export default defineConfig([
       parserOptions: {
         extraFileExtensions: ['.local'],
         projectService: {
-          allowDefaultProject: ['eslint.config.mts', 'next-sitemap.config.js', '.env.test.local', 'jest.config.js'],
+          allowDefaultProject: [
+            'eslint.config.mts',
+            'next-sitemap.config.js',
+            '.env.test.local',
+            'jest.config.js',
+          ],
         },
       },
     },

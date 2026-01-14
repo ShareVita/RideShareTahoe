@@ -125,8 +125,8 @@ export default function MessagesPage() {
     return `${otherParticipant.first_name} ${otherParticipant.last_name}`;
   }, [otherParticipant]);
 
-const hasActiveOrPendingTrip = true; // Allow messaging without booking
-  
+  const hasActiveOrPendingTrip = true; // Allow messaging without booking
+
   const loadConversations = useCallback(async () => {
     if (!user) {
       return;
@@ -754,7 +754,6 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
                   Send
                 </button>
               </form>
-            
             </>
           ) : (
             <div className="flex flex-col items-center justify-center space-y-3 py-12">
