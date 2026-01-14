@@ -500,12 +500,14 @@ export default function PublicProfilePage() {
       )}
 
       {/* Report Modal */}
-      <ReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        reportedUserId={profile.id}
-        reportedUserName={`${profile.first_name} ${profile.last_name}`}
-      />
+      {profile && (
+        <ReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          reportedUserId={profile.id}
+          reportedUserName={`${profile.first_name} ${profile.last_name}`}
+        />
+      )}
     </div>
   );
 }

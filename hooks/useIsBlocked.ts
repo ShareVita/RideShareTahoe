@@ -52,7 +52,8 @@ export function useIsBlocked(otherUserId?: string) {
     } finally {
       setLoadingState(false);
     }
-  }, [otherUserId, supabase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable, no need to recreate callback
+  }, [otherUserId]);
 
   useEffect(() => {
     // Only make RPC call if context is not available
