@@ -478,32 +478,36 @@ export default function PublicProfilePage() {
       />
 
       {/* Block Modal */}
-      <BlockModal
-        isOpen={isBlockModalOpen}
-        onClose={() => setIsBlockModalOpen(false)}
-        targetUserId={profile.id}
-        targetUserName={`${profile.first_name} ${profile.last_name}`}
-        isCurrentlyBlocked={isUserBlocked}
-        onBlockStateChanged={() => {
-          setIsBlockModalOpen(false);
-          // If blocking (not unblocking), redirect away since interaction is no longer possible
-          if (!isUserBlocked) {
-            router.push('/community');
-          } else {
-            // If unblocking, just refresh the block status and profile
-            refetchBlockStatus();
-            loadProfile();
-          }
-        }}
-      />
+      {profile && (
+        <BlockModal
+          isOpen={isBlockModalOpen}
+          onClose={() => setIsBlockModalOpen(false)}
+          targetUserId={profile.id}
+          targetUserName={`${profile.first_name} ${profile.last_name}`}
+          isCurrentlyBlocked={isUserBlocked}
+          onBlockStateChanged={() => {
+            setIsBlockModalOpen(false);
+            // If blocking (not unblocking), redirect away since interaction is no longer possible
+            if (!isUserBlocked) {
+              router.push('/community');
+            } else {
+              // If unblocking, just refresh the block status and profile
+              refetchBlockStatus();
+              loadProfile();
+            }
+          }}
+        />
+      )}
 
       {/* Report Modal */}
-      <ReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        reportedUserId={profile.id}
-        reportedUserName={`${profile.first_name} ${profile.last_name}`}
-      />
+      {profile && (
+        <ReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          reportedUserId={profile.id}
+          reportedUserName={`${profile.first_name} ${profile.last_name}`}
+        />
+      )}
     </div>
   );
 }

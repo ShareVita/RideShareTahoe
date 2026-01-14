@@ -59,9 +59,51 @@ export interface UserDog {
  */
 export type UpdatableProfileData = Partial<Omit<UserProfile, 'id' | 'email'>>;
 
+/**
+ * Represents a user consent record from the database.
+ */
+export interface UserConsent {
+  id: string;
+  user_id: string;
+  document_type: 'tos' | 'privacy_policy' | 'community_guidelines';
+  document_version: string;
+  accepted_at: string;
+}
+
 // #endregion Interfaces
 
 // #region Hooks
+
+/**
+ * Fetches the user's consent records to check if they've agreed to legal documents.
+ *
+ * @returns A query result containing the user's consent records.
+ */
+export const useUserConsents = () => {
+  const { user } = useUser();
+  const supabase = createClient();
+
+  return useQuery<UserConsent[], Error>({
+    queryKey: ['consents', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('user_consents')
+        .select('id, user_id, document_type, document_version, accepted_at')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Failed to fetch consents:', error);
+        return [];
+      }
+
+      return (data as UserConsent[]) ?? [];
+    },
+    enabled: !!user,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
 
 /**
  * Fetches the signed-in user's profile from Supabase.
@@ -156,7 +198,16 @@ export const useUserDogs = () => {
 };
 
 /**
+ * Options for the profile update mutation.
+ */
+export interface UpdateProfileOptions {
+  profileData: UpdatableProfileData;
+  recordConsent?: boolean;
+}
+
+/**
  * Updates the user's profile with the provided fields and refreshes the cache.
+ * Optionally records user consent to legal documents.
  *
  * @returns A mutation result that resolves to the updated profile.
  * @throws {Error} When Supabase rejects the update request or user is not authenticated.
@@ -166,8 +217,8 @@ export const useUpdateProfile = () => {
   const { user } = useUser();
   const supabase = createClient();
 
-  return useMutation<UserProfile, Error, UpdatableProfileData>({
-    mutationFn: async (profileData) => {
+  return useMutation<UserProfile, Error, UpdateProfileOptions>({
+    mutationFn: async ({ profileData, recordConsent }) => {
       if (!user) throw new Error('User not authenticated');
 
       // Get current profile from cache for comparison
@@ -319,6 +370,24 @@ export const useUpdateProfile = () => {
         }
       }
 
+      // 4. Record consent if requested
+      if (recordConsent) {
+        const documentTypes = ['tos', 'privacy_policy', 'community_guidelines'] as const;
+        const consents = documentTypes.map((docType) => ({
+          user_id: user.id,
+          document_type: docType,
+          document_version: '1.0',
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        }));
+
+        const { error: consentError } = await supabase.from('user_consents').insert(consents);
+
+        if (consentError) {
+          console.error('Failed to record consent:', consentError);
+          // Don't throw - profile update succeeded, consent is secondary
+        }
+      }
+
       // Return combined result (mocking it since we did multiple writes)
       // Filter out undefined values to avoid overwriting existing data
       const cleanSocialData = Object.fromEntries(
@@ -333,6 +402,7 @@ export const useUpdateProfile = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['consents', user?.id] });
     },
   });
 };

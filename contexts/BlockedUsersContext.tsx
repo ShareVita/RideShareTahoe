@@ -22,8 +22,7 @@ export function BlockedUsersProvider({ children }: { children: React.ReactNode }
   const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  // Memoize the Supabase client
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = createClient();
 
   const fetchBlockedUsers = useCallback(async () => {
     setLoading(true);

@@ -2,7 +2,7 @@
 
 import React, { FormEvent, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUpdateProfile, type UpdatableProfileData } from '@/hooks/useProfile';
+import { useUpdateProfile, useUserConsents, type UpdatableProfileData } from '@/hooks/useProfile';
 import { geocodeLocation } from '@/libs/geocoding';
 import PhotoUpload from '@/components/ui/PhotoUpload';
 
@@ -51,6 +51,16 @@ interface ProfileFormProps {
 export default function ProfileForm({ initialData }: ProfileFormProps) {
   const router = useRouter();
   const updateProfile = useUpdateProfile();
+  const { data: consents } = useUserConsents();
+
+  // Check if user has already agreed to all legal documents
+  const hasExistingConsent = useMemo(() => {
+    if (!consents) return false;
+    const documentTypes = ['tos', 'privacy_policy', 'community_guidelines'];
+    return documentTypes.every((type) => consents.some((c) => c.document_type === type));
+  }, [consents]);
+
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Detect if this is a first-time profile creation
   const isFirstTimeUser = useMemo(
@@ -193,17 +203,42 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       return;
     }
 
-    updateProfile.mutate(buildPayload(), {
-      onSuccess: () => {
-        if (isFirstTimeUser) {
-          // Redirect first-time users to onboarding welcome page
-          router.push('/onboarding/welcome');
-        } else {
-          // Redirect existing users to community page
-          router.push('/community');
-        }
+    const hasSocial =
+      formState.facebook_url ||
+      formState.instagram_url ||
+      formState.linkedin_url ||
+      formState.airbnb_url;
+
+    if (!hasSocial) {
+      setSubmitError('Please provide at least one social media link.');
+      return;
+    }
+
+    // Consent validation: required if user hasn't already agreed
+    if (!hasExistingConsent && !agreedToTerms) {
+      setSubmitError(
+        'You must agree to the Terms of Service, Privacy Policy, and Community Guidelines.'
+      );
+      return;
+    }
+
+    updateProfile.mutate(
+      {
+        profileData: buildPayload(),
+        recordConsent: !hasExistingConsent && agreedToTerms,
       },
-    });
+      {
+        onSuccess: () => {
+          if (isFirstTimeUser) {
+            // Redirect first-time users to onboarding welcome page
+            router.push('/onboarding/welcome');
+          } else {
+            // Redirect existing users to community page
+            router.push('/community');
+          }
+        },
+      }
+    );
   };
 
   const getValidationMessageClass = () => {
@@ -386,6 +421,50 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           ))}
         </div>
       </section>
+
+      {/* Terms Agreement Checkbox */}
+      <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+        <input
+          type="checkbox"
+          id="terms-agreement"
+          checked={hasExistingConsent || agreedToTerms}
+          disabled={hasExistingConsent}
+          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 disabled:opacity-60"
+        />
+        <label
+          htmlFor="terms-agreement"
+          className={`text-sm ${hasExistingConsent ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}
+        >
+          I agree to the{' '}
+          <a
+            href="/tos"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Terms of Service
+          </a>
+          ,{' '}
+          <a
+            href="/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Privacy Policy
+          </a>
+          , and{' '}
+          <a
+            href="/community-guidelines"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Community Guidelines
+          </a>
+        </label>
+      </div>
 
       <div className="flex flex-col gap-3">
         {submitError && (

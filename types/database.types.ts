@@ -288,6 +288,36 @@ export interface Database {
           },
         ];
       };
+      user_consents: {
+        Row: {
+          id: string;
+          user_id: string;
+          document_type: 'tos' | 'privacy_policy' | 'community_guidelines';
+          document_version: string;
+          accepted_at: string;
+          ip_address: string | null;
+          user_agent: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          document_type: 'tos' | 'privacy_policy' | 'community_guidelines';
+          document_version?: string;
+          accepted_at?: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          document_type?: 'tos' | 'privacy_policy' | 'community_guidelines';
+          document_version?: string;
+          accepted_at?: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       // eslint-disable-next-line no-unused-vars
