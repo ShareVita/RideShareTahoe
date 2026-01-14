@@ -28,8 +28,114 @@ jobs:
           npx supabase db push --include-all
           echo "Supabase schema and seeds pushed"
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:ci
+
+  integration-test:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+      - run: npm ci
+      - uses: supabase/setup-cli@ebf138c2969b58c7cd05dad865ca3e6e85d722ff
+        with:
+          version: 'latest'
+
+      - name: Start Local Supabase and Set Environment Variables
+        id: supabase_env_setup
+        run: |
+          supabase start 2>&1 | tee supabase.log
+
+          MAX_ATTEMPTS=20
+          SLEEP_TIME=3
+          ATTEMPT=0
+
+          while ! supabase status > /dev/null 2>&1 && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            echo "Attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS: Services not ready. Waiting ${SLEEP_TIME}s..."
+            sleep $SLEEP_TIME
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+            echo "Error: Supabase services failed to start within the timeout."
+            exit 1
+          fi
+
+          supabase status
+
+          SUPABASE_ENV_FILE="supabase.status.env"
+          supabase status -o env > "$SUPABASE_ENV_FILE"
+
+          extract_env_value() {
+            local line
+            line=$(grep -im1 "$1" "$SUPABASE_ENV_FILE" || true)
+            if [ -z "$line" ]; then
+              return
+            fi
+            echo "$line" | sed -E 's/^[^:=]*[:=]\s*"?([^"\r\n]+)"?.*/\1/' | tr -d '\r'
+          }
+
+          API_URL=$(extract_env_value "SUPABASE_URL")
+          if [ -z "$API_URL" ]; then
+            API_URL=$(extract_env_value "API_URL")
+          fi
+          ANON_KEY=$(extract_env_value "PUBLISHABLE_KEY")
+          SERVICE_KEY=$(extract_env_value "SERVICE_ROLE_KEY")
+
+          if [ -z "$API_URL" ] || [ -z "$ANON_KEY" ] || [ -z "$SERVICE_KEY" ]; then
+            echo "Error: Failed to extract Supabase environment variables."
+            exit 1
+          fi
+
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> $GITHUB_ENV
+
+      - name: Verify Mapped Application Environment Variables
+        run: |
+          echo "--- Verifying Mapped Application Env Vars Loaded ---"
+
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            echo "Error: NEXT_PUBLIC_SUPABASE_URL is missing or empty."
+            exit 1
+          else
+            echo "NEXT_PUBLIC_SUPABASE_URL is set."
+          fi
+
+          if [ -z "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Error: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is missing or empty."
+            exit 1
+          else
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is set."
+          fi
+
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Error: SUPABASE_SERVICE_ROLE_KEY is missing or empty."
+            exit 1
+          else
+            echo "SUPABASE_SERVICE_ROLE_KEY is set."
+          fi
+          echo "----------------------------------------------------"
+
+      - name: Run Integration Tests
+        run: npm run test:integration
+        env:
+          RUN_INTEGRATION_TESTS: true
+    
   build:
-    needs: [supabase-db-push]
+    needs: [supabase-db-push, test, integration-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -39,3 +145,4 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+
