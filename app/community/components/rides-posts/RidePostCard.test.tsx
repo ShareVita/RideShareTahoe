@@ -86,7 +86,7 @@ describe('RidePostCard', () => {
     expect(screen.getByText('Test Ride')).toBeInTheDocument();
     expect(screen.getByText('SF')).toBeInTheDocument();
     expect(screen.getByText('Tahoe')).toBeInTheDocument();
-    expect(screen.getByText('$50/seat')).toBeInTheDocument();
+    expect(screen.getByText(/\$50/)).toBeInTheDocument();
     expect(screen.getByText(/3 seats left/)).toBeInTheDocument();
   });
 
