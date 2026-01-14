@@ -393,7 +393,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -423,7 +423,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -447,7 +447,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -474,7 +474,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -503,7 +503,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -534,7 +534,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -554,7 +554,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -578,7 +578,7 @@ describe('Data Hooks', () => {
 
       const { result } = renderHookWithClient(useUpdateProfile);
 
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -605,7 +605,7 @@ describe('Data Hooks', () => {
       const { result } = renderHookWithClient(useUpdateProfile);
 
       const updatePayload: UpdatableProfileData = { first_name: 'Jane' };
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
@@ -627,7 +627,7 @@ describe('Data Hooks', () => {
       const { result } = renderHookWithClient(useUpdateProfile);
 
       const updatePayload: UpdatableProfileData = { first_name: 'Jane' };
-      result.current.mutate(updatePayload);
+      result.current.mutate({ profileData: updatePayload });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
 
