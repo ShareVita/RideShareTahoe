@@ -29,5 +29,5 @@ To satisfy the "Handshake" requirement and view the social links of other member
 ## Consequences
 
 - **Positive**: Empowers users to perform their own social verification; ensures that those viewing sensitive social data have also shared their own.
-- **Negative**: Increases the project's risk profile regarding data privacy; requires ongoing maintenance of the geocoding/verification layer.
+- **Negative**: Increases the project's risk profile regarding data privacy; requires ongoing maintenance of the geocoding/verification layer. Profile checks are still false gates where uses can enter entirely fake but plausible details that require no external verification.
 - **Technical Integrity**: Ensures the `CompleteProfilePage` redirection logic is tied to a "Verified" state rather than just the presence of a name.
