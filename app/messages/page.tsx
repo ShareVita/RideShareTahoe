@@ -721,7 +721,7 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
                               : 'self-start bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100'
                           }`}
                       >
-                        <p className="wrap-break-words">{message.content}</p>
+                        <p className="break-words">{message.content}</p>
                         <p className="mt-2 text-xs text-white/70 dark:text-gray-400">
                           {new Date(message.created_at).toLocaleTimeString([], {
                             hour: 'numeric',
