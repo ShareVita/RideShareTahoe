@@ -17,22 +17,6 @@ interface Profile {
 }
 
 /**
- * Get the application URL for server-side requests.
- * Uses APP_URL or VERCEL_URL for server-side fetch (not NEXT_PUBLIC_* which is for client).
- */
-function getAppUrl(): string {
-  // For server-side requests, prefer APP_URL, then VERCEL_URL, then fallback
-  if (process.env.APP_URL) {
-    return process.env.APP_URL;
-  }
-  if (process.env.VERCEL_URL) {
-    // VERCEL_URL doesn't include protocol
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return 'https://ridesharetahoe.com';
-}
-
-/**
  * Determines the final destination URL based on user status and profile completeness.
  * Appends a cache-busting parameter to ensure client-side session freshness.
  */
