@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/libs/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
+import { getAppUrl, sanitizeForLog } from '@/libs/email';
 
 // Define types locally for safety (mirroring database schema)
 interface Profile {
@@ -137,7 +138,11 @@ async function processCodeExchangeAndProfileUpdate(
   // (Profile may be auto-created by database trigger, so we check email_events instead)
   const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabase, user.id);
   const isNewUser: boolean = !welcomeAlreadySent;
-  console.log(isNewUser ? '🆕 NEW USER DETECTED (no welcome email sent yet)' : '👤 EXISTING USER');
+  console.log(
+    isNewUser
+      ? `🆕 NEW USER DETECTED (no welcome email sent yet) - ${sanitizeForLog(user.id)}`
+      : `👤 EXISTING USER - ${sanitizeForLog(user.id)}`
+  );
 
   // Fetch private info for checking completeness (phone)
   const { data: privateInfo } = await supabase
@@ -180,7 +185,6 @@ async function processCodeExchangeAndProfileUpdate(
   // 5. Welcome Email (only for new users who haven't received one yet)
   if (isNewUser) {
     try {
-      // Use APP_URL or VERCEL_URL for server-side fetch (not NEXT_PUBLIC_* which is for client)
       const appUrl = getAppUrl();
       const emailResponse = await fetch(`${appUrl}/api/emails/send-welcome`, {
         method: 'POST',
@@ -190,9 +194,11 @@ async function processCodeExchangeAndProfileUpdate(
 
       if (!emailResponse.ok) {
         const errorText = await emailResponse.text();
-        console.error('❌ Welcome email API returned error:', emailResponse.status, errorText);
+        console.error(
+          `❌ Welcome email API error: ${emailResponse.status} - ${sanitizeForLog(errorText)}`
+        );
       } else {
-        console.log('✅ Welcome email sent successfully');
+        console.log(`✅ Welcome email sent for user ${sanitizeForLog(user.id)}`);
       }
     } catch (emailError) {
       // Don't block the auth flow if email fails - log and continue

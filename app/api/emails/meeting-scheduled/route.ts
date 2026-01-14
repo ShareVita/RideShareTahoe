@@ -1,4 +1,4 @@
-import { sendEmail } from '@/libs/email';
+import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get meeting details
+    // Get meeting details (without email - email is in user_private_info)
     const { data: meeting, error: meetingError } = await supabase
       .from('meetings')
       .select(
@@ -39,21 +39,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user profile details
-    const { data: user, error: userError } = await supabase
-      .from('profiles')
-      .select('first_name, last_name')
-      .eq('id', userId)
-      .single();
+    // Get user details with email from user_private_info
+    const user = await getUserWithEmail(supabase, userId);
 
-    // Get user email from private info
-    const { data: userPrivate, error: userPrivateError } = await supabase
-      .from('user_private_info')
-      .select('email')
-      .eq('id', userId)
-      .single();
-
-    if (userError || userPrivateError || !user || !userPrivate?.email) {
+    if (!user || !user.email) {
       return NextResponse.json(
         { error: 'User not found or missing email' },
         {
@@ -70,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Send meeting scheduled confirmation
     await sendEmail({
       userId,
-      to: userPrivate.email,
+      to: user.email,
       emailType: 'meeting_scheduled',
       payload: {
         userName: user.first_name || '',
@@ -79,9 +68,7 @@ export async function POST(request: NextRequest) {
         meetingDate: new Date(meeting.starts_at).toLocaleDateString(),
         meetingTime: new Date(meeting.starts_at).toLocaleTimeString(),
         meetingLocation: meeting.location || 'Location TBD',
-        meetingUrl: `${
-          process.env.NEXT_PUBLIC_APP_URL || 'https://ridesharetahoe.com'
-        }/meetings/${meetingId}`,
+        meetingUrl: `${getAppUrl()}/meetings/${meetingId}`,
         isRequester,
       },
     });

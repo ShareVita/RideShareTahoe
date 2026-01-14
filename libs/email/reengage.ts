@@ -56,6 +56,17 @@ export async function processReengageEmails(): Promise<ReengageResult> {
 
     // Process each inactive user
     for (const user of inactiveUsers) {
+      // Extract email from user_private_info join
+      const privateInfo = Array.isArray(user.user_private_info)
+        ? user.user_private_info[0]
+        : user.user_private_info;
+      const userEmail = privateInfo?.email;
+
+      if (!userEmail) {
+        skipped++;
+        continue;
+      }
+
       try {
         // Get email from joined user_private_info
         const privateInfo = Array.isArray(user.user_private_info)
@@ -148,7 +159,7 @@ export async function getReengageCandidates(): Promise<
 > {
   const supabase = await createClient();
 
-  // Get users with their last login activity
+  // Get users with their last login activity (email from user_private_info)
   const { data: users, error } = await supabase
     .from('profiles')
     .select(
@@ -173,6 +184,15 @@ export async function getReengageCandidates(): Promise<
   const userMap = new Map();
   for (const user of users) {
     if (!userMap.has(user.id)) {
+      // Extract email from user_private_info join
+      const privateInfo = Array.isArray(user.user_private_info)
+        ? user.user_private_info[0]
+        : user.user_private_info;
+      const userEmail = privateInfo?.email;
+
+      // Skip users without email
+      if (!userEmail) continue;
+
       // user.user_activity is an array from the join, get the most recent
       const mostRecentActivity = Array.isArray(user.user_activity)
         ? user.user_activity[0]

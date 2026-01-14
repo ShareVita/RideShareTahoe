@@ -69,33 +69,24 @@ export async function processScheduledEmails(): Promise<{
           continue;
         }
 
-        // Get user profile
-        const { data: user, error: userError } = await supabase
-          .from('profiles')
-          .select('first_name')
-          .eq('id', scheduledEmail.user_id)
-          .single();
+        // Get user email from user_private_info (parallel queries for efficiency)
+        const [{ data: profile }, { data: privateInfo }] = await Promise.all([
+          supabase.from('profiles').select('first_name').eq('id', scheduledEmail.user_id).single(),
+          supabase.from('user_private_info').select('email').eq('id', scheduledEmail.user_id).single(),
+        ]);
 
-        // Get user email from private info
-        const { data: userPrivate, error: userPrivateError } = await supabase
-          .from('user_private_info')
-          .select('email')
-          .eq('id', scheduledEmail.user_id)
-          .single();
-
-        if (userError || userPrivateError || !user || !userPrivate?.email) {
-          console.error(
-            `User not found for scheduled email ${scheduledEmail.id}:`,
-            userError || userPrivateError
-          );
+        if (!profile || !privateInfo?.email) {
+          console.error(`User not found for scheduled email ${scheduledEmail.id}`);
           errors.push({ id: scheduledEmail.id, error: 'User not found or missing email' });
           continue;
         }
 
+        const user = { first_name: profile.first_name, email: privateInfo.email };
+
         // Send the email
         await sendEmail({
           userId: scheduledEmail.user_id,
-          to: userPrivate.email,
+          to: user.email,
           emailType: scheduledEmail.email_type,
           payload: scheduledEmail.payload,
         });

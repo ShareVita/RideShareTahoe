@@ -109,10 +109,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all users with email addresses (join profiles with user_private_info for email)
+    // Get all users with email addresses (email is in user_private_info)
     const { data: users, error: usersError } = await supabase
       .from('profiles')
       .select('id, first_name, last_name, user_private_info(email)')
+      .eq('is_banned', false)
       .not('user_private_info.email', 'is', null)
       .not('user_private_info.email', 'eq', '');
 
@@ -126,29 +127,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!users || users.length === 0) {
+    // Filter users with valid emails and transform the data
+    const usersWithEmails = (users || [])
+      .map((user) => {
+        // Handle Supabase's JOIN response format (can be array or object)
+        const privateInfo = Array.isArray(user.user_private_info)
+          ? user.user_private_info[0]
+          : user.user_private_info;
+        const email = privateInfo?.email;
+        if (!email) return null;
+        return {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email,
+        };
+      })
+      .filter((user): user is NonNullable<typeof user> => user !== null);
+
+    if (usersWithEmails.length === 0) {
       return NextResponse.json(
-        { error: 'No users found' },
+        { error: 'No users with email addresses found' },
         {
           status: 404,
         }
       );
     }
 
-    console.log(`Found ${users.length} users to email`);
+    console.log(`Found ${usersWithEmails.length} users to email`);
 
     // Process users in batches
     const results: BulkEmailResult = {
-      totalUsers: users.length,
+      totalUsers: usersWithEmails.length,
       successful: 0,
       failed: 0,
       errors: [],
     };
 
-    for (let i = 0; i < users.length; i += batchSize) {
-      const batch = users.slice(i, i + batchSize);
+    for (let i = 0; i < usersWithEmails.length; i += batchSize) {
+      const batch = usersWithEmails.slice(i, i + batchSize);
       console.log(
-        `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(users.length / batchSize)}`
+        `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(usersWithEmails.length / batchSize)}`
       );
 
       // Process batch in parallel with retry logic
@@ -214,7 +233,7 @@ export async function POST(request: NextRequest) {
       updateResultsWithBatch(results, batchResults);
 
       // Add delay between batches to respect rate limits
-      if (i + batchSize < users.length) {
+      if (i + batchSize < usersWithEmails.length) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }

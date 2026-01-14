@@ -1,4 +1,10 @@
-import { recordUserActivity, scheduleNurtureEmail, sendEmail } from '@/libs/email';
+import {
+  getAppUrl,
+  getUserWithEmail,
+  recordUserActivity,
+  scheduleNurtureEmail,
+  sendEmail,
+} from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -34,22 +40,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get user profile data
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('first_name, last_name')
-      .eq('id', userId)
-      .single();
+    // Get user data with email from user_private_info
+    const user = await getUserWithEmail(supabase, userId);
 
-    // Get user email from private info table (email is NOT in profiles table)
-    const { data: privateInfo, error: privateError } = await supabase
-      .from('user_private_info')
-      .select('email')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || privateError || !profile || !privateInfo?.email) {
-      console.error('User data fetch error:', { profileError, privateError, profile, privateInfo });
+    if (!user || !user.email) {
       return NextResponse.json(
         { error: 'User not found or missing email' },
         {
@@ -68,12 +62,11 @@ export async function POST(request: NextRequest) {
     // Send welcome email (the sendEmail function should record to email_events)
     await sendEmail({
       userId,
-      to: privateInfo.email,
+      to: user.email,
       emailType: 'welcome',
       payload: {
-        userName: profile.first_name || '',
-        // NEXT_PUBLIC_APP_URL is fine here - it's for display in email, not server-side fetch
-        appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://ridesharetahoe.com',
+        userName: user.first_name || '',
+        appUrl: getAppUrl(),
       },
     });
 
