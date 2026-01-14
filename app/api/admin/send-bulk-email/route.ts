@@ -174,15 +174,8 @@ export async function POST(request: NextRequest) {
       const batchPromises = batch.map(async (user) => {
         const maxRetries = 2;
         let lastError: Error | null = null;
-        // Get email from joined user_private_info (may be object or array depending on Supabase)
-        const privateInfo = Array.isArray(user.user_private_info)
-          ? user.user_private_info[0]
-          : user.user_private_info;
-        const userEmail = privateInfo?.email;
-
-        if (!userEmail) {
-          return { success: false, email: 'unknown', error: 'No email found for user' };
-        }
+        // Email was already extracted during the usersWithEmails transformation
+        const userEmail = user.email;
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
