@@ -16,5 +16,14 @@
   },
   "[yaml]": {
     "editor.defaultFormatter": "prettier.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "prettier.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "prettier.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "prettier.prettier-vscode"
   }
 }
