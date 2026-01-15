@@ -145,9 +145,10 @@ describe('POST /api/trips/invitations', () => {
         }
 
         if (tableName === 'profiles') {
-          const maybeSingle = jest
-            .fn()
-            .mockResolvedValue({ data: { first_name: 'Driver', last_name: 'Unlimited' }, error: null });
+          const maybeSingle = jest.fn().mockResolvedValue({
+            data: { first_name: 'Driver', last_name: 'Unlimited' },
+            error: null,
+          });
           const eq = jest.fn().mockReturnValue({ maybeSingle });
           return { select: jest.fn().mockReturnValue({ eq }) };
         }

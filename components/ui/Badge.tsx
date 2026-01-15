@@ -21,7 +21,12 @@ const variantClasses = {
  * @param props.variant - Visual tone to apply (default `blue`).
  * @param props.className - Additional classes forwarded to the wrapper.
  */
-export default function Badge({ children, variant = 'blue', className, ...props }: Readonly<BadgeProps>) {
+export default function Badge({
+  children,
+  variant = 'blue',
+  className,
+  ...props
+}: Readonly<BadgeProps>) {
   return (
     <span
       {...props}

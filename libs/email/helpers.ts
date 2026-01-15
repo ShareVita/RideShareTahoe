@@ -40,16 +40,8 @@ export async function getUserWithEmail(
   userId: string
 ): Promise<UserWithEmail | null> {
   const [profileResult, privateInfoResult] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('user_private_info')
-      .select('email')
-      .eq('id', userId)
-      .single(),
+    supabase.from('profiles').select('id, first_name, last_name').eq('id', userId).single(),
+    supabase.from('user_private_info').select('email').eq('id', userId).single(),
   ]);
 
   if (profileResult.error || !profileResult.data) {
