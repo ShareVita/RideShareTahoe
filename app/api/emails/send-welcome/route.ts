@@ -2,6 +2,7 @@ import {
   getAppUrl,
   getUserWithEmail,
   recordUserActivity,
+  sanitizeForLog,
   scheduleNurtureEmail,
   sendEmail,
 } from '@/libs/email';
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existingWelcomeEmail) {
-      console.log(`Welcome email already sent to user ${userId}, skipping`);
+      console.log(`Welcome email already sent to user ${sanitizeForLog(userId)}, skipping`);
       return NextResponse.json({
         success: true,
         message: 'Welcome email already sent (skipped duplicate)',
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     // Schedule nurture email for 3 days later
     await scheduleNurtureEmail(userId);
 
-    console.log(`✅ Welcome email sent to user ${userId}`);
+    console.log(`✅ Welcome email sent to user ${sanitizeForLog(userId)}`);
 
     return NextResponse.json({
       success: true,
