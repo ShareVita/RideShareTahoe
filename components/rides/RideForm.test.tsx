@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 jest.setTimeout(10000);
 
 // Mock dependencies
-jest.mock('@/libs/supabase/client', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
 

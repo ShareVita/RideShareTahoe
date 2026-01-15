@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/libs/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 /**
  * Hook to check if the current user has an active booking with another user.
@@ -18,6 +18,8 @@ export function useHasActiveBooking(
       setIsLoading(false);
       return;
     }
+
+    const supabase = createClient();
 
     const checkBooking = async () => {
       setIsLoading(true);

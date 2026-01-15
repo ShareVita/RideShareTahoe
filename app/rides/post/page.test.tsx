@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import type { RidePostType } from '@/app/community/types';
 import CreateRidePage from './page';
@@ -16,7 +16,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('@/hooks/useProtectedRoute');
-jest.mock('@/libs/supabase/client');
+jest.mock('@/lib/supabase/client');
 
 const mockRidePost: Partial<RidePostType> = {
   posting_type: 'driver',

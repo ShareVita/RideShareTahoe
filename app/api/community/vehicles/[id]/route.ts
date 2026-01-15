@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { vehicleSchema } from '@/libs/validations/vehicle';
-import { getAuthenticatedUser } from '@/libs/supabase/auth';
+import { getAuthenticatedUser } from '@/lib/supabase/auth';
 import { z } from 'zod';
 
 /**

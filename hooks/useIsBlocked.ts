@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { useBlockedUsersContext } from '@/contexts/BlockedUsersContext';
 
 /**
@@ -52,7 +52,7 @@ export function useIsBlocked(otherUserId?: string) {
     } finally {
       setLoadingState(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable, no need to recreate callback
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable, no need to recreate callback
   }, [otherUserId]);
 
   useEffect(() => {

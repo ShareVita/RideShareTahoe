@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
 

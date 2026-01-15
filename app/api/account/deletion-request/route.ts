@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
 import { PostgrestError } from '@supabase/supabase-js';
 
 /**

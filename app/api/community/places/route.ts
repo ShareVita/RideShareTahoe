@@ -3,7 +3,7 @@ import {
   createUnauthorizedResponse,
   ensureProfileComplete,
   getAuthenticatedUser,
-} from '@/libs/supabase/auth';
+} from '@/lib/supabase/auth';
 
 export async function GET(request: NextRequest) {
   try {

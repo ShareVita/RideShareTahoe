@@ -2,14 +2,14 @@ import type { NextRequest } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { POST } from './route';
-import { getAuthenticatedUser, ensureProfileComplete } from '@/libs/supabase/auth';
-import { sendConversationMessage } from '@/libs/supabase/conversations';
+import { getAuthenticatedUser, ensureProfileComplete } from '@/lib/supabase/auth';
+import { sendConversationMessage } from '@/lib/supabase/conversations';
 
-jest.mock('@/libs/supabase/conversations', () => ({
+jest.mock('@/lib/supabase/conversations', () => ({
   sendConversationMessage: jest.fn(),
 }));
 
-jest.mock('@/libs/supabase/auth', () => ({
+jest.mock('@/lib/supabase/auth', () => ({
   getAuthenticatedUser: jest.fn(),
   createUnauthorizedResponse: jest.fn(),
   ensureProfileComplete: jest.fn(),
@@ -147,7 +147,10 @@ describe('POST /api/trips/invitations', () => {
         if (tableName === 'profiles') {
           const maybeSingle = jest
             .fn()
-            .mockResolvedValue({ data: { first_name: 'Driver', last_name: 'Unlimited' }, error: null });
+            .mockResolvedValue({
+              data: { first_name: 'Driver', last_name: 'Unlimited' },
+              error: null,
+            });
           const eq = jest.fn().mockReturnValue({ maybeSingle });
           return { select: jest.fn().mockReturnValue({ eq }) };
         }

@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ReviewBanner from './ReviewBanner';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 // Mock Supabase client
-jest.mock('@/libs/supabase/client', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
 

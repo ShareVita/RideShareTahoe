@@ -4,7 +4,7 @@ import { fetchMyRides } from '@/libs/community/ridesData';
 import { toast } from 'react-hot-toast';
 
 // Mock dependencies
-jest.mock('@/libs/supabase/client', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
 
@@ -20,7 +20,7 @@ jest.mock('react-hot-toast', () => ({
 }));
 
 // Import the mocked createClient after mocking
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 const mockUser = { id: 'driver1' };
 // Use future dates to ensure rides pass the date filter in the component

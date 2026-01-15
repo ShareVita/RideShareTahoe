@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import { createClient } from '@/libs/supabase/client';
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import MessageModal from '@/components/MessageModal';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useCommunityRides } from '@/app/community/hooks/useCommunityRides';
@@ -22,8 +22,8 @@ import { BlockedUsersProvider } from '@/contexts/BlockedUsersContext';
  * Handles initial data fetching and network status monitoring.
  */
 export default function CommunityPage() {
+  const supabase = createClient();
   const { user, isLoading: authLoading } = useProtectedRoute();
-  const supabase = useMemo(() => createClient(), []);
   const { dataLoading, myRides, setMyRides } = useCommunityRides(supabase, user);
   const { messageModal, openMessageModal, closeMessageModal } = useMessageModal();
   const { deletePost, deletingPost } = useRideActions(supabase, user, setMyRides);

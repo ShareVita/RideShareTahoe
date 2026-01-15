@@ -1,11 +1,11 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 
-jest.mock('@/libs/supabase/client', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
 
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { useIsBlocked } from './useIsBlocked';
 
 function TestComponent({ otherUserId }: { otherUserId?: string }) {

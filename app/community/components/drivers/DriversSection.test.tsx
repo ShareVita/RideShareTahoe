@@ -1,12 +1,12 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { DriversTab } from './DriversSection';
 import { fetchDrivers } from '@/libs/community/driversData';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 import type { ProfileType } from '../../types';
 
 // Mocks
-jest.mock('@/libs/supabase/client', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
 

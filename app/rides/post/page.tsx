@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import RideForm from '@/components/rides/RideForm';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import type { RidePostType, Vehicle } from '@/app/community/types';

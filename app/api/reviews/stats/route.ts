@@ -1,4 +1,4 @@
-import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**

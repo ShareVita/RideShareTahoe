@@ -3,7 +3,7 @@ import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
   ensureProfileComplete,
-} from '@/libs/supabase/auth';
+} from '@/lib/supabase/auth';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
 

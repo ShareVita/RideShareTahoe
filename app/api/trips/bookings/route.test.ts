@@ -2,14 +2,14 @@ import type { NextRequest } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { POST } from './route';
-import { sendConversationMessage } from '@/libs/supabase/conversations';
-import { getAuthenticatedUser, ensureProfileComplete } from '@/libs/supabase/auth';
+import { sendConversationMessage } from '@/lib/supabase/conversations';
+import { getAuthenticatedUser, ensureProfileComplete } from '@/lib/supabase/auth';
 
-jest.mock('@/libs/supabase/conversations', () => ({
+jest.mock('@/lib/supabase/conversations', () => ({
   sendConversationMessage: jest.fn(),
 }));
 
-jest.mock('@/libs/supabase/auth', () => ({
+jest.mock('@/lib/supabase/auth', () => ({
   getAuthenticatedUser: jest.fn(),
   createUnauthorizedResponse: jest.fn(),
   ensureProfileComplete: jest.fn(),

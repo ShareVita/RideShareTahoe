@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { fetchAllRides } from '@/libs/community/ridesData';
 import { RidePostCard } from '@/app/community/components/rides-posts/RidePostCard';
 import type { RidePostType } from '@/app/community/types';

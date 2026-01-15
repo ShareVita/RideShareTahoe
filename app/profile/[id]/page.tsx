@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { formatLocation, formatPronouns } from '@/libs/utils';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import UserReviews from '@/components/UserReviews';

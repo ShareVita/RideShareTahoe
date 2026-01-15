@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
 import { getAppUrl, sanitizeForLog } from '@/libs/email';
 

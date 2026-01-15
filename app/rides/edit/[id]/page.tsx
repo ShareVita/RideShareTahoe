@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import RideForm from '@/components/rides/RideForm';
 import { fetchRideById, updateRide } from '@/libs/community/ridesData';
 import { useUser } from '@/components/providers/SupabaseUserProvider';

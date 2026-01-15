@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from './index'; // Assuming './index' exports the initialized Supabase client instance
+import { createClient } from './client';
 import { AuthError, Session, Subscription, User } from '@supabase/supabase-js';
 // #endregion Imports
 
@@ -33,6 +33,7 @@ interface SupabaseAuthHookReturn extends UserHookReturn {
  * @returns {UserHookReturn}
  */
 export function useUser(): UserHookReturn {
+  const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -66,7 +67,7 @@ export function useUser(): UserHookReturn {
 
     return () => subscription.unsubscribe();
     // #endregion Auth State Change Subscription
-  }, []);
+  }, [supabase.auth]);
 
   return { user, loading };
 }
@@ -77,6 +78,7 @@ export function useUser(): UserHookReturn {
  * @returns {SupabaseAuthHookReturn}
  */
 export function useSupabaseAuth(): SupabaseAuthHookReturn {
+  const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -105,7 +107,7 @@ export function useSupabaseAuth(): SupabaseAuthHookReturn {
 
     return () => subscription.unsubscribe();
     // #endregion Auth State Change Subscription
-  }, []);
+  }, [supabase.auth]);
 
   /**
    * @async

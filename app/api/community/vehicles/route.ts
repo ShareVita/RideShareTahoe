@@ -5,7 +5,7 @@ import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
   ensureProfileComplete,
-} from '@/libs/supabase/auth';
+} from '@/lib/supabase/auth';
 
 /**
  * Retrieves all vehicles owned by the authenticated user.

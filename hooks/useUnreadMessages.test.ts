@@ -1,11 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useUnreadMessages } from './useUnreadMessages';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 // Mock dependencies
 jest.mock('@/components/providers/SupabaseUserProvider');
-jest.mock('@/libs/supabase/client');
+jest.mock('@/lib/supabase/client');
 
 describe('useUnreadMessages', () => {
   const mockUseUser = useUser as jest.Mock;

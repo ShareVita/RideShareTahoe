@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 import config from '@/config';
 import { useSearchParams, useRouter } from 'next/navigation';

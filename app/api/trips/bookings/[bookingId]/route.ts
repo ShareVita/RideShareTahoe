@@ -4,8 +4,8 @@ import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
   ensureProfileComplete,
-} from '@/libs/supabase/auth';
-import { sendConversationMessage } from '@/libs/supabase/conversations';
+} from '@/lib/supabase/auth';
+import { sendConversationMessage } from '@/lib/supabase/conversations';
 import { z } from 'zod';
 import type { Database } from '@/types/database.types';
 

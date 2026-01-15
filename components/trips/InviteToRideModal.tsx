@@ -2,7 +2,7 @@
 
 import { Fragment, useState, useEffect } from 'react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { fetchMyRides } from '@/libs/community/ridesData';
 import type { RidePostType, CommunityUser } from '@/app/community/types';
 import { toast } from 'react-hot-toast';

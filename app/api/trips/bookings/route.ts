@@ -3,11 +3,11 @@ import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
   ensureProfileComplete,
-} from '@/libs/supabase/auth';
+} from '@/lib/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTripBookingSchema } from '@/libs/validations/trips';
 import { z } from 'zod';
-import { sendConversationMessage } from '@/libs/supabase/conversations';
+import { sendConversationMessage } from '@/lib/supabase/conversations';
 
 /**
  * Creates a new trip booking request.

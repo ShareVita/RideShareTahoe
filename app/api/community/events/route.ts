@@ -3,7 +3,7 @@ import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
   ensureProfileComplete,
-} from '@/libs/supabase/auth';
+} from '@/lib/supabase/auth';
 
 /**
  * Retrieves a list of upcoming community events.

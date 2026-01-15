@@ -1,4 +1,4 @@
-import type { createClient } from '@/libs/supabase/client';
+import type { createClient } from '@/lib/supabase/client';
 import type { ProfileType } from '@/app/community/types';
 
 export type CommunitySupabaseClient = ReturnType<typeof createClient>;

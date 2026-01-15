@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { POST } from './route';
-import { getAuthenticatedUser } from '@/libs/supabase/auth';
+import { getAuthenticatedUser } from '@/lib/supabase/auth';
 
-jest.mock('@/libs/supabase/auth', () => ({
+jest.mock('@/lib/supabase/auth', () => ({
   getAuthenticatedUser: jest.fn(),
   createUnauthorizedResponse: jest.fn(),
 }));

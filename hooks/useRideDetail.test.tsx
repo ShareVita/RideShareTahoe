@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useRideDetail } from './useRideDetail';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import type { RidePostType } from '@/app/community/types';
 import type { User } from '@supabase/supabase-js';
 
-jest.mock('@/libs/supabase/client', () => ({
+jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
 

@@ -1,6 +1,6 @@
 import { getSEOTags } from '@/libs/seo';
 import LandingPage from '@/components/landing/LandingPage';
-import { createClient } from '@/libs/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 export const metadata = getSEOTags({

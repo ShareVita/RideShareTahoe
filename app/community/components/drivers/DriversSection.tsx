@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createClient } from '@/libs/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { fetchDrivers, type FetchDriversResponse } from '@/libs/community/driversData';
 import { DriverCard } from './DriverCard';
 import { PaginationControls } from '../PaginationControls';

@@ -2,7 +2,7 @@ import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
   ensureProfileComplete,
-} from '@/libs/supabase/auth';
+} from '@/lib/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**

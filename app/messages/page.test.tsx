@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { supabase } from '@/libs/supabase';
+import { createClient } from '@/lib/supabase/client';
 // Import the hook so we can cast the mock
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import MessagesPage from './page';
@@ -21,8 +21,8 @@ jest.mock('@/libs/validation', () => ({
   }),
 }));
 
-jest.mock('@/libs/supabase', () => ({
-  supabase: {
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn(() => ({
     from: jest.fn(() => ({
       select: jest.fn(() => ({
         or: jest.fn(() => ({
@@ -39,7 +39,7 @@ jest.mock('@/libs/supabase', () => ({
       })),
     })),
     removeChannel: jest.fn(),
-  },
+  })),
 }));
 
 type MockUpdateResult = { error: null };
@@ -55,7 +55,8 @@ const createUpdateChain = (): MockUpdateChain => {
 
 // Cast the mocked hooks
 const mockedUseProtectedRoute = useProtectedRoute as jest.Mock;
-const mockedFrom = supabase.from as jest.Mock;
+const mockedCreateClient = createClient as jest.Mock;
+let clientStub: { from: jest.Mock; channel: jest.Mock; removeChannel: jest.Mock };
 
 describe('MessagesPage', () => {
   beforeEach(() => {
@@ -70,7 +71,20 @@ describe('MessagesPage', () => {
       or: mockOrImpl,
       limit: jest.fn().mockResolvedValue({ data: [], error: null }),
     });
-    mockedFrom.mockReturnValue({
+    // Create a shared client stub so `createClient()` returns the same object
+    clientStub = {
+      from: jest.fn(),
+      channel: jest.fn(() => ({
+        on: jest.fn(() => ({
+          subscribe: jest.fn(() => ({ unsubscribe: jest.fn() })),
+        })),
+      })),
+      removeChannel: jest.fn(),
+    };
+
+    mockedCreateClient.mockReturnValue(clientStub);
+
+    clientStub.from.mockReturnValue({
       select: mockSelectImpl,
       update: jest.fn(() => createUpdateChain()),
     });
@@ -210,7 +224,7 @@ describe('MessagesPage', () => {
     const bookingOr = jest.fn().mockReturnValue({ in: bookingIn });
     const bookingSelect = jest.fn().mockReturnValue({ or: bookingOr });
 
-    mockedFrom.mockImplementation((tableName: string) => {
+    clientStub.from.mockImplementation((tableName: string) => {
       if (tableName === 'conversations') {
         return { select: convoSelect, update: jest.fn(() => createUpdateChain()) };
       }

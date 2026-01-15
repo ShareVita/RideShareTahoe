@@ -3,9 +3,9 @@ import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
   ensureProfileComplete,
-} from '@/libs/supabase/auth';
+} from '@/lib/supabase/auth';
 import { z } from 'zod';
-import { sendConversationMessage } from '@/libs/supabase/conversations';
+import { sendConversationMessage } from '@/lib/supabase/conversations';
 
 const invitationSchema = z.object({
   ride_id: z.uuid(),

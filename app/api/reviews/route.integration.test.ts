@@ -17,10 +17,10 @@ import { Database } from '@/types/database.types';
 import { POST, GET } from './route';
 import { GET as GET_PENDING } from './pending/route';
 import { NextRequest } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 // Mock the server client
-jest.mock('@/libs/supabase/server', () => ({
+jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
 }));
 
