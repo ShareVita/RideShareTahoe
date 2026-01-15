@@ -6,6 +6,7 @@ import {
 } from '@/libs/supabase/auth';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
+import { getAppUrl } from '@/libs/email';
 
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -178,9 +179,7 @@ export async function POST(request: NextRequest) {
 
     // Send email notification to recipient using centralized email system
     try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/emails/send-new-message`,
-        {
+      await fetch(`${getAppUrl()}/api/emails/send-new-message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
