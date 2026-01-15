@@ -180,17 +180,19 @@ export async function POST(request: NextRequest) {
     // Send email notification to recipient using centralized email system
     try {
       await fetch(`${getAppUrl()}/api/emails/send-new-message`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipientId: recipient_id,
-            senderId: user.id,
-            messagePreview: trimmedContent.substring(0, 100),
-            messageId: message.id,
-            threadId: conversationId,
-          }),
-        }
-      );
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': process.env.INTERNAL_API_KEY || '',
+        },
+        body: JSON.stringify({
+          recipientId: recipient_id,
+          senderId: user.id,
+          messagePreview: trimmedContent.substring(0, 100),
+          messageId: message.id,
+          threadId: conversationId,
+        }),
+      });
     } catch (emailError: unknown) {
       console.error('Error sending message notification email:', emailError);
       // Don't fail the message creation if email fails

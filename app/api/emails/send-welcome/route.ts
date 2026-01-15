@@ -10,6 +10,12 @@ import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
+  // Verify internal API key to prevent external abuse
+  const apiKey = request.headers.get('x-internal-api-key');
+  if (apiKey !== process.env.INTERNAL_API_KEY) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const { userId } = await request.json();
 
