@@ -1,4 +1,4 @@
-import { sendEmail } from '@/libs/email';
+import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -17,14 +17,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get meeting details
+    // Get meeting details (without email - email is in user_private_info)
     const { data: meeting, error: meetingError } = await supabase
       .from('meetings')
       .select(
         `
         *,
-        requester:profiles!meetings_requester_id_fkey(first_name, last_name, email),
-        recipient:profiles!meetings_recipient_id_fkey(first_name, last_name, email)
+        requester:profiles!meetings_requester_id_fkey(first_name, last_name),
+        recipient:profiles!meetings_recipient_id_fkey(first_name, last_name)
       `
       )
       .eq('id', meetingId)
@@ -39,16 +39,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user details
-    const { data: user, error: userError } = await supabase
-      .from('profiles')
-      .select('email, first_name, last_name')
-      .eq('id', userId)
-      .single();
+    // Get user details with email from user_private_info
+    const user = await getUserWithEmail(supabase, userId);
 
-    if (userError || !user) {
+    if (!user || !user.email) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found or missing email' },
         {
           status: 404,
         }
@@ -72,9 +68,7 @@ export async function POST(request: NextRequest) {
         meetingDate: new Date(meeting.starts_at).toLocaleDateString(),
         meetingTime: new Date(meeting.starts_at).toLocaleTimeString(),
         meetingLocation: meeting.location || 'Location TBD',
-        meetingUrl: `${
-          process.env.NEXT_PUBLIC_APP_URL || 'https://ridetahoe.com'
-        }/meetings/${meetingId}`,
+        meetingUrl: `${getAppUrl()}/meetings/${meetingId}`,
         isRequester,
       },
     });

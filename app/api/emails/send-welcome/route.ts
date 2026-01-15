@@ -1,4 +1,10 @@
-import { recordUserActivity, scheduleNurtureEmail, sendEmail } from '@/libs/email';
+import {
+  getAppUrl,
+  getUserWithEmail,
+  recordUserActivity,
+  scheduleNurtureEmail,
+  sendEmail,
+} from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -17,16 +23,29 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get user data
-    const { data: user, error: userError } = await supabase
-      .from('profiles')
-      .select('email, first_name, last_name')
-      .eq('id', userId)
-      .single();
+    // Check if welcome email was already sent (idempotent check)
+    const { data: existingWelcomeEmail } = await supabase
+      .from('email_events')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('email_type', 'welcome')
+      .maybeSingle();
 
-    if (userError || !user) {
+    if (existingWelcomeEmail) {
+      console.log(`Welcome email already sent to user ${userId}, skipping`);
+      return NextResponse.json({
+        success: true,
+        message: 'Welcome email already sent (skipped duplicate)',
+        skipped: true,
+      });
+    }
+
+    // Get user data with email from user_private_info
+    const user = await getUserWithEmail(supabase, userId);
+
+    if (!user || !user.email) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found or missing email' },
         {
           status: 404,
         }
@@ -40,19 +59,21 @@ export async function POST(request: NextRequest) {
       metadata: { source: 'welcome_email_trigger' },
     });
 
-    // Send welcome email (idempotent)
+    // Send welcome email (the sendEmail function should record to email_events)
     await sendEmail({
       userId,
       to: user.email,
       emailType: 'welcome',
       payload: {
         userName: user.first_name || '',
-        appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://ridetahoe.com',
+        appUrl: getAppUrl(),
       },
     });
 
     // Schedule nurture email for 3 days later
     await scheduleNurtureEmail(userId);
+
+    console.log(`✅ Welcome email sent to user ${userId}`);
 
     return NextResponse.json({
       success: true,

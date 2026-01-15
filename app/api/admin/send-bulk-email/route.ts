@@ -50,20 +50,13 @@ export async function POST(request: NextRequest) {
     isAdmin = true;
   } else if (supabase) {
     // Try to fetch user role from database
-    const { data, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    const { data, error } = await supabase.from('users').select('role').eq('id', user.id).single();
     if (!error && data && data.role === 'admin') {
       isAdmin = true;
     }
   }
   if (!isAdmin) {
-    return NextResponse.json(
-      { error: 'Forbidden: Admin access required' },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }
   try {
     // Apply rate limiting
@@ -116,12 +109,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all users with email addresses
+    // Get all users with email addresses (email is in user_private_info)
     const { data: users, error: usersError } = await supabase
       .from('profiles')
-      .select('id, email, first_name, last_name')
-      .not('email', 'is', null)
-      .not('email', 'eq', '');
+      .select('id, first_name, last_name, user_private_info(email)')
+      .eq('is_banned', false)
+      .not('user_private_info.email', 'is', null)
+      .not('user_private_info.email', 'eq', '');
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
@@ -133,35 +127,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!users || users.length === 0) {
+    // Filter users with valid emails and transform the data
+    const usersWithEmails = (users || [])
+      .map((user) => {
+        // Handle Supabase's JOIN response format (can be array or object)
+        const privateInfo = Array.isArray(user.user_private_info)
+          ? user.user_private_info[0]
+          : user.user_private_info;
+        const email = privateInfo?.email;
+        if (!email) return null;
+        return {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email,
+        };
+      })
+      .filter((user): user is NonNullable<typeof user> => user !== null);
+
+    if (usersWithEmails.length === 0) {
       return NextResponse.json(
-        { error: 'No users found' },
+        { error: 'No users with email addresses found' },
         {
           status: 404,
         }
       );
     }
 
-    console.log(`Found ${users.length} users to email`);
+    console.log(`Found ${usersWithEmails.length} users to email`);
 
     // Process users in batches
     const results: BulkEmailResult = {
-      totalUsers: users.length,
+      totalUsers: usersWithEmails.length,
       successful: 0,
       failed: 0,
       errors: [],
     };
 
-    for (let i = 0; i < users.length; i += batchSize) {
-      const batch = users.slice(i, i + batchSize);
+    for (let i = 0; i < usersWithEmails.length; i += batchSize) {
+      const batch = usersWithEmails.slice(i, i + batchSize);
       console.log(
-        `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(users.length / batchSize)}`
+        `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(usersWithEmails.length / batchSize)}`
       );
 
       // Process batch in parallel with retry logic
       const batchPromises = batch.map(async (user) => {
         const maxRetries = 2;
         let lastError: Error | null = null;
+        // Email was already extracted during the usersWithEmails transformation
+        const userEmail = user.email;
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
@@ -169,26 +183,26 @@ export async function POST(request: NextRequest) {
             const personalizedHtml = htmlContent
               .replaceAll('{{first_name}}', user.first_name || '')
               .replaceAll('{{last_name}}', user.last_name || '')
-              .replaceAll('{{email}}', user.email || '');
+              .replaceAll('{{email}}', userEmail);
 
             const personalizedText = textContent
               ? textContent
                   .replaceAll('{{first_name}}', user.first_name || '')
                   .replaceAll('{{last_name}}', user.last_name || '')
-                  .replaceAll('{{email}}', user.email || '')
+                  .replaceAll('{{email}}', userEmail)
               : undefined;
 
             await sendEmail({
-              to: user.email,
+              to: userEmail,
               subject,
               html: personalizedHtml,
               text: personalizedText,
             });
 
-            return { success: true, email: user.email };
+            return { success: true, email: userEmail };
           } catch (error: unknown) {
             lastError = error instanceof Error ? error : new Error(String(error));
-            console.error(`Attempt ${attempt + 1} failed for ${user.email}:`, lastError.message);
+            console.error(`Attempt ${attempt + 1} failed for ${userEmail}:`, lastError.message);
 
             // If this is not the last attempt, wait before retrying
             if (attempt < maxRetries) {
@@ -198,10 +212,10 @@ export async function POST(request: NextRequest) {
         }
 
         // All retries failed
-        console.error(`All retries failed for ${user.email}:`, lastError?.message);
+        console.error(`All retries failed for ${userEmail}:`, lastError?.message);
         return {
           success: false,
-          email: user.email,
+          email: userEmail,
           error: lastError?.message || 'Unknown error',
         };
       });
@@ -212,7 +226,7 @@ export async function POST(request: NextRequest) {
       updateResultsWithBatch(results, batchResults);
 
       // Add delay between batches to respect rate limits
-      if (i + batchSize < users.length) {
+      if (i + batchSize < usersWithEmails.length) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }

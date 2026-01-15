@@ -1,14 +1,4 @@
--- Migration: Enable Unrestricted Messaging
---
--- This migration removes the "has_active_booking_with" requirement from messaging RLS policies
--- to enable community members to message anyone, not just users with active bookings.
--- 
--- Changes:
--- 1. Conversations: Allow authenticated users to create conversations without booking requirement
--- 2. Messages: Allow authenticated users to send messages without booking requirement
--- 3. Profile Socials: Allow all authenticated users to view social links
-
--- 1. Update conversations policy: Remove active booking requirement
+-- Update conversations policy: Remove active booking requirement
 DROP POLICY "Users can create conversations with active booking" ON conversations;
 
 CREATE POLICY "Users can create conversations" ON conversations

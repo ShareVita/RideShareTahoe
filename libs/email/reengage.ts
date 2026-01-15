@@ -33,14 +33,15 @@ export async function processReengageEmails(): Promise<ReengageResult> {
       .from('profiles')
       .select(
         `
-        id, email, first_name, last_name, created_at,
+        id, first_name, last_name, created_at,
+        user_private_info(email),
         user_activity!inner(at)
       `
       )
       .lt('user_activity.at', sevenDaysAgo.toISOString())
       .eq('user_activity.event', 'login')
-      .not('email', 'is', null)
-      .not('email', 'eq', '');
+      .not('user_private_info.email', 'is', null)
+      .not('user_private_info.email', 'eq', '');
 
     if (usersError) {
       throw new Error(`Failed to fetch inactive users: ${usersError.message}`);
@@ -55,6 +56,18 @@ export async function processReengageEmails(): Promise<ReengageResult> {
 
     // Process each inactive user
     for (const user of inactiveUsers) {
+      // Extract email from user_private_info join
+      const privateInfo = Array.isArray(user.user_private_info)
+        ? user.user_private_info[0]
+        : user.user_private_info;
+      const userEmail = privateInfo?.email;
+
+      if (!userEmail) {
+        console.log(`Skipping user ${user.id} - no email found`);
+        skipped++;
+        continue;
+      }
+
       try {
         // Check if user should receive re-engagement email
         const shouldSend = await shouldSendReengageEmail(user.id);
@@ -68,16 +81,16 @@ export async function processReengageEmails(): Promise<ReengageResult> {
         // Send re-engagement email
         await sendEmail({
           userId: user.id,
-          to: user.email,
+          to: userEmail,
           emailType: 'reengage',
           payload: {
             userName: user.first_name || '',
-            userEmail: user.email,
+            userEmail: userEmail,
           },
         });
 
         sent++;
-        console.log(`Sent re-engagement email to ${user.email}`);
+        console.log(`Sent re-engagement email to ${userEmail}`);
       } catch (error) {
         console.error(`Error processing re-engagement for user ${user.id}:`, error);
         errors.push({
@@ -135,18 +148,19 @@ export async function getReengageCandidates(): Promise<
 > {
   const supabase = await createClient();
 
-  // Get users with their last login activity
+  // Get users with their last login activity (email from user_private_info)
   const { data: users, error } = await supabase
     .from('profiles')
     .select(
       `
-      id, email, first_name, last_name,
+      id, first_name, last_name,
+      user_private_info(email),
       user_activity!inner(at)
     `
     )
     .eq('user_activity.event', 'login')
-    .not('email', 'is', null)
-    .not('email', 'eq', '')
+    .not('user_private_info.email', 'is', null)
+    .not('user_private_info.email', 'eq', '')
     .order('user_activity.at', { ascending: false });
 
   if (error) {
@@ -159,6 +173,15 @@ export async function getReengageCandidates(): Promise<
   const userMap = new Map();
   for (const user of users) {
     if (!userMap.has(user.id)) {
+      // Extract email from user_private_info join
+      const privateInfo = Array.isArray(user.user_private_info)
+        ? user.user_private_info[0]
+        : user.user_private_info;
+      const userEmail = privateInfo?.email;
+
+      // Skip users without email
+      if (!userEmail) continue;
+
       // user.user_activity is an array from the join, get the most recent
       const mostRecentActivity = Array.isArray(user.user_activity)
         ? user.user_activity[0]
@@ -166,7 +189,7 @@ export async function getReengageCandidates(): Promise<
 
       userMap.set(user.id, {
         id: user.id,
-        email: user.email,
+        email: userEmail,
         first_name: user.first_name,
         last_name: user.last_name,
         last_login: mostRecentActivity?.at,

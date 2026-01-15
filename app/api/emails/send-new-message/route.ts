@@ -1,4 +1,4 @@
-import { sendEmail } from '@/libs/email';
+import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -25,23 +25,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Get recipient data
-    const { data: recipient, error: recipientError } = await supabase
-      .from('profiles')
-      .select('email, first_name, last_name')
-      .eq('id', recipientId)
-      .single();
+    // Get recipient data with email from user_private_info
+    const recipient = await getUserWithEmail(supabase, recipientId);
 
-    if (recipientError || !recipient) {
+    if (!recipient || !recipient.email) {
       return NextResponse.json(
-        { error: 'Recipient not found' },
+        { error: 'Recipient not found or missing email' },
         {
           status: 404,
         }
       );
     }
 
-    // Get sender data
+    // Get sender data (email not needed for sender)
     const { data: sender, error: senderError } = await supabase
       .from('profiles')
       .select('first_name, last_name')
@@ -69,9 +65,7 @@ export async function POST(request: NextRequest) {
         messagePreview:
           messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
         messageTime: new Date().toLocaleString(),
-        messageUrl: `${
-          process.env.NEXT_PUBLIC_APP_URL || 'https://ridetahoe.com'
-        }/messages/${messageId}`,
+        messageUrl: `${getAppUrl()}/messages/${messageId}`,
         threadId: threadId || messageId,
       },
     });

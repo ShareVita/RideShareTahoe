@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all pending deletion requests with user info
+    // Get all pending deletion requests with user info (email from user_private_info)
     const { data: deletionRequests, error } = await supabase
       .from('account_deletion_requests')
       .select(
@@ -108,9 +108,9 @@ export async function GET(request: NextRequest) {
         *,
         user:profiles!account_deletion_requests_user_id_fkey (
           id,
-          email,
           first_name,
-          last_name
+          last_name,
+          user_private_info (email)
         )
       `
       )
@@ -170,18 +170,18 @@ async function processDeletionRequest(
       })
       .eq('id', deletionRequest.id);
 
-    // Get user's email before deletion for tracking
-    const { data: userProfile } = await supabase
-      .from('profiles')
+    // Get user's email before deletion for tracking (email is in user_private_info)
+    const { data: userPrivateInfo } = await supabase
+      .from('user_private_info')
       .select('email')
       .eq('id', deletionRequest.user_id)
       .single();
 
     // Record the email as deleted to prevent recreation
-    if (userProfile?.email) {
+    if (userPrivateInfo?.email) {
       await supabase.from('deleted_emails').upsert(
         {
-          email: userProfile.email.toLowerCase().trim(),
+          email: userPrivateInfo.email.toLowerCase().trim(),
           original_user_id: deletionRequest.user_id,
           deletion_reason: deletionRequest.reason,
         },

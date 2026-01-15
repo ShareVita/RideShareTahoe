@@ -8,12 +8,9 @@ export interface Database {
           id: string;
           first_name: string | null;
           last_name: string | null;
-
-          email: string | null;
           profile_photo_url: string | null;
           city: string | null;
           state: string | null;
-          phone_number: string | null;
           bio: string | null;
           car_details: Json | null;
           community_support_badge: string | null;
@@ -30,12 +27,9 @@ export interface Database {
           id: string;
           first_name?: string | null;
           last_name?: string | null;
-
-          email?: string | null;
           profile_photo_url?: string | null;
           city?: string | null;
           state?: string | null;
-          phone_number?: string | null;
           bio?: string | null;
           car_details?: Json | null;
           community_support_badge?: string | null;
@@ -52,12 +46,9 @@ export interface Database {
           id?: string;
           first_name?: string | null;
           last_name?: string | null;
-
-          email?: string | null;
           profile_photo_url?: string | null;
           city?: string | null;
           state?: string | null;
-          phone_number?: string | null;
           bio?: string | null;
           car_details?: Json | null;
           community_support_badge?: string | null;
@@ -296,6 +287,36 @@ export interface Database {
             referencedColumns: ['id'];
           },
         ];
+      };
+      user_consents: {
+        Row: {
+          id: string;
+          user_id: string;
+          document_type: 'tos' | 'privacy_policy' | 'community_guidelines';
+          document_version: string;
+          accepted_at: string;
+          ip_address: string | null;
+          user_agent: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          document_type: 'tos' | 'privacy_policy' | 'community_guidelines';
+          document_version?: string;
+          accepted_at?: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          document_type?: 'tos' | 'privacy_policy' | 'community_guidelines';
+          document_version?: string;
+          accepted_at?: string;
+          ip_address?: string | null;
+          user_agent?: string | null;
+        };
+        Relationships: [];
       };
     };
     Views: {

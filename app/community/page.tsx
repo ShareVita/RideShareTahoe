@@ -12,7 +12,7 @@ import { useRideActions } from '@/app/community/hooks/useRideActions';
 import { RidesTab } from '@/app/community/components/FindRidesTab';
 import FindPassengersTab from '@/app/community/components/FindPassengersTab';
 import { MyPostsTab } from '@/app/community/components/MyPostsTab';
-import { CommunityMembersList } from '@/app/community/components/members';
+import CommunityMembersList from '@/app/community/components/members/CommunityMembersList';
 import MyTripsView from '@/components/trips/MyTripsView';
 import { BlockedUsersProvider } from '@/contexts/BlockedUsersContext';
 

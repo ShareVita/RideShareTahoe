@@ -7,6 +7,13 @@ export {
   shouldSendReengageEmail,
 } from './sendEmail';
 export {
+  getAppUrl,
+  getUserEmail,
+  getUserWithEmail,
+  getUsersWithEmails,
+  sanitizeForLog,
+} from './helpers';
+export {
   cancelUserScheduledEmails,
   getUserScheduledEmails,
   processScheduledEmails,
@@ -24,3 +31,4 @@ export type { ScheduledEmail } from './scheduler';
 export type { ReengageResult } from './reengage';
 export type { EmailPayload, EmailTemplate, TemplateVariables } from './templates';
 export type { EmailQueueOptions, EmailRateLimitConfig } from '../emailQueue';
+export type { UserWithEmail } from './helpers';

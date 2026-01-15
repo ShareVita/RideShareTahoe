@@ -8,10 +8,9 @@ jest.mock('./passengers/PassengersSection', () => ({
   PassengersSection: () => <div data-testid="passengers-section">Passengers Section</div>,
 }));
 
-jest.mock('./members', () => ({
-  CommunityMembersList: () => (
-    <div data-testid="community-members-list">Community Members List</div>
-  ),
+jest.mock('./members/CommunityMembersList', () => ({
+  __esModule: true,
+  default: () => <div data-testid="community-members-list">Community Members List</div>,
 }));
 
 describe('FindPassengersTab', () => {

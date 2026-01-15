@@ -1,8 +1,3 @@
--- Migration: User Blocking System (ADR 004)
---
--- This migration creates the user_blocks table for implementing a two-way mirror
--- blocking system where blocked users cannot message, view profiles, or see social links.
-
 -- Create user_blocks table
 CREATE TABLE IF NOT EXISTS public.user_blocks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
