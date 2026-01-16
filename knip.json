@@ -1,4 +1,17 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "tags": ["-lintignore"]
+  "tags": ["-lintignore"],
+  "project": [
+    "app/**!",
+    "components/**!",
+    "contexts/**!",
+    "email-templates/**!",
+    "hooks/**!",
+    "lib/**!",
+    "libs/**!",
+    "public/**!",
+    "supabase/**!",
+    "types/**!",
+    "!scripts/**"
+  ]
 }
