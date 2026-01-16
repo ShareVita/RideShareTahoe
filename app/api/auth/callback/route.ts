@@ -129,9 +129,10 @@ async function processCodeExchangeAndProfileUpdate(
   );
 
   // Upsert user's email into user_private_info (required for email sending)
-  // The email comes from Supabase Auth (populated by OAuth provider)
+  // Uses service_role to bypass RLS policies on this protected table
   if (user.email) {
-    const { error: privateInfoError } = await supabase
+    const supabaseAdmin = await createClient('service_role');
+    const { error: privateInfoError } = await supabaseAdmin
       .from('user_private_info')
       .upsert(
         { id: user.id, email: user.email },
