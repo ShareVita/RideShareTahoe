@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * });
  * ```
  */
-type RouteHandler = (request: NextRequest) => Promise<NextResponse>;
+type RouteHandler = (_request: NextRequest) => Promise<NextResponse>;
 
 export function internalOnly(handler: RouteHandler): RouteHandler {
   return async (request: NextRequest): Promise<NextResponse> => {
