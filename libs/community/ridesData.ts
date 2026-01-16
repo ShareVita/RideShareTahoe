@@ -4,6 +4,7 @@ import type {
   ProfileType,
   RidePostType,
 } from '@/app/community/types';
+import { filterRidesByBoth } from '@/app/community/utils';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 
@@ -381,11 +382,30 @@ export const fetchAllRides = async (
     owner: profileMap.get(ride.poster_id) || null,
   }));
 
-  const totalCount = count ?? rides.length;
-  const hasMore = count === null ? rides.length === pageSize : from + rides.length < totalCount;
+  // Apply precise distance-based filtering in-memory using the community utils
+  // The DB query applies a bounding-box to reduce rows; this step enforces
+  // the exact radius checks (haversine) so results match client expectations.
+  const filteredRides =
+    filters?.departureFilter || filters?.destinationFilter
+      ? filterRidesByBoth(
+          ridesWithOwners,
+          filters?.departureFilter ?? null,
+          filters?.destinationFilter ?? null
+        )
+      : ridesWithOwners;
+
+  // Note: because we apply the stricter distance filter in-memory after the
+  // DB query, the returned totalCount reflects the filtered set on this page.
+  // Accurate pagination across all pages would require counting matches with
+  // the same precise distance logic at the DB level (not implemented here).
+  const totalCount = filteredRides.length;
+  const hasMore =
+    count === null
+      ? filteredRides.length === pageSize
+      : from + filteredRides.length < (count ?? filteredRides.length);
 
   return {
-    rides: ridesWithOwners,
+    rides: filteredRides,
     totalCount,
     hasMore,
   };
