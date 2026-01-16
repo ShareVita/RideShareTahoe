@@ -1,8 +1,9 @@
 import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { internalOnly } from '@/libs/api/internalOnly';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export const POST = internalOnly(async (request) => {
   try {
     const { meetingId, userId } = await request.json();
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = await createClient('service_role');
 
     // Get meeting details (without email - email is in user_private_info)
     const { data: meeting, error: meetingError } = await supabase
@@ -86,4 +87,4 @@ export async function POST(request: NextRequest) {
       }
     );
   }
-}
+});

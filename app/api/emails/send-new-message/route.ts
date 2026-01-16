@@ -1,8 +1,9 @@
 import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { internalOnly } from '@/libs/api/internalOnly';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export const POST = internalOnly(async (request) => {
   try {
     const { recipientId, senderId, messagePreview, messageId, threadId } = await request.json();
 
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const supabase = await createClient();
+    const supabase = await createClient('service_role');
 
     // Get recipient data with email from user_private_info
     const recipient = await getUserWithEmail(supabase, recipientId);
@@ -83,4 +84,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

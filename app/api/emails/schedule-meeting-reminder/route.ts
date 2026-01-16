@@ -1,8 +1,9 @@
 import { scheduleMeetingReminder } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { internalOnly } from '@/libs/api/internalOnly';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export const POST = internalOnly(async (request) => {
   try {
     const { userId, meetingId, meetingTitle, startsAt } = await request.json();
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = await createClient('service_role');
 
     // Verify meeting exists and user has access
     const { data: meeting, error: meetingError } = await supabase
@@ -69,4 +70,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

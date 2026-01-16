@@ -19,7 +19,7 @@ export async function processScheduledEmails(): Promise<{
   processed: number;
   errors: Array<{ id: number; error: string }>;
 }> {
-  const supabase = await createClient();
+  const supabase = await createClient('service_role');
   const errors: Array<{ id: number; error: string }> = [];
   let processed = 0;
 
@@ -130,7 +130,7 @@ export async function scheduleMeetingReminder({
   const reminderTime = new Date(startsAt);
   reminderTime.setDate(reminderTime.getDate() - 1); // 1 day before
 
-  const supabase = await createClient();
+  const supabase = await createClient('service_role');
   const { error } = await supabase.from('scheduled_emails').insert({
     user_id: userId,
     email_type: 'meeting_reminder',
@@ -157,7 +157,7 @@ export async function scheduleNurtureEmail(userId: string): Promise<void> {
   const nurtureTime = new Date();
   nurtureTime.setDate(nurtureTime.getDate() + 3);
 
-  const supabase = await createClient();
+  const supabase = await createClient('service_role');
   const { error } = await supabase.from('scheduled_emails').insert({
     user_id: userId,
     email_type: 'nurture_day3',
@@ -176,7 +176,7 @@ export async function scheduleNurtureEmail(userId: string): Promise<void> {
  * Get scheduled emails for a user
  */
 export async function getUserScheduledEmails(userId: string): Promise<ScheduledEmail[]> {
-  const supabase = await createClient();
+  const supabase = await createClient('service_role');
   const { data, error } = await supabase
     .from('scheduled_emails')
     .select('*')
@@ -194,7 +194,7 @@ export async function getUserScheduledEmails(userId: string): Promise<ScheduledE
  * Cancel scheduled emails for a user
  */
 export async function cancelUserScheduledEmails(userId: string, emailType?: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = await createClient('service_role');
 
   let query = supabase.from('scheduled_emails').delete().eq('user_id', userId);
 
