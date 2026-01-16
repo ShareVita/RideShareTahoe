@@ -13,9 +13,9 @@ import { NextRequest, NextResponse } from 'next/server';
  * });
  * ```
  */
-export function internalOnly(
-  handler: (request: NextRequest) => Promise<NextResponse>
-): (request: NextRequest) => Promise<NextResponse> {
+type RouteHandler = (request: NextRequest) => Promise<NextResponse>;
+
+export function internalOnly(handler: RouteHandler): RouteHandler {
   return async (request: NextRequest): Promise<NextResponse> => {
     const apiKey = request.headers.get('x-internal-api-key');
     if (apiKey !== process.env.INTERNAL_API_KEY) {
