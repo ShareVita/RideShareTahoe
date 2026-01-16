@@ -48,7 +48,7 @@
   "dependencies": {
     "@headlessui/react": "^2.1.0",
     "@hookform/resolvers": "^5.2.2",
-    "@react-email/components": "0.0.31",
+    "@react-email/components": "^1.0.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@tailwindcss/postcss": "^4.1.18",
