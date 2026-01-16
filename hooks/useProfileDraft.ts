@@ -25,7 +25,7 @@ type ProfileUpdater<TProfile> = SetStateAction<TProfile>;
  * Defines the public return shape of the useProfileDraft hook.
  * @template TProfile The type of the profile data.
  */
-export interface UseProfileDraftResult<TProfile> {
+interface UseProfileDraftResult<TProfile> {
   /** The current profile state (draft or initial). */
   profile: TProfile;
   /**

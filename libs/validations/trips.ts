@@ -23,5 +23,4 @@ export const updateTripBookingSchema = z.object({
   driver_notes: z.string().max(500).optional(),
 });
 
-export type CreateTripBookingInput = z.infer<typeof createTripBookingSchema>;
 export type UpdateTripBookingInput = z.infer<typeof updateTripBookingSchema>;

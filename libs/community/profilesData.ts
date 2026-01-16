@@ -6,7 +6,7 @@ export type CommunitySupabaseClient = ReturnType<typeof createClient>;
 /**
  * Response from fetchProfiles including pagination metadata.
  */
-export interface FetchProfilesResponse {
+interface FetchProfilesResponse {
   profiles: ProfileType[];
   totalCount: number;
   page: number;

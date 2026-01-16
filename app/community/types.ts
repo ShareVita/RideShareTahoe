@@ -3,19 +3,6 @@
  */
 
 /**
- * Captures browser network status details.
- */
-export interface NetworkInfo {
-  userAgent: string;
-  connectionType: string;
-  downlink: number | string;
-  rtt: number | string;
-  saveData: boolean;
-  online: boolean;
-  timestamp: string;
-}
-
-/**
  * Location filter state produced by the `LocationFilter` component.
  */
 export interface LocationFilterType {
@@ -30,10 +17,6 @@ export interface LocationFilterType {
 export interface CommunityUser {
   id: string;
 }
-
-/**
- * Dog metadata returned from the `dogs` table.
- */
 
 /**
  * Profile metadata returned with availability posts.
@@ -67,24 +50,6 @@ export interface MessageModalState {
   isOpen: boolean;
   recipient: ProfileType | null;
   ridePost?: RidePostType | null;
-}
-
-/**
- * Navigator connection metadata from the Network Information API.
- */
-export type EffectiveConnectionType = 'slow-2g' | '2g' | '3g' | '4g' | 'unknown';
-
-export interface NetworkInformation extends EventTarget {
-  readonly effectiveType?: EffectiveConnectionType;
-  readonly downlink?: number;
-  readonly rtt?: number;
-  readonly saveData?: boolean;
-}
-
-export interface NavigatorWithConnection extends Navigator {
-  readonly connection?: NetworkInformation;
-  readonly mozConnection?: NetworkInformation;
-  readonly webkitConnection?: NetworkInformation;
 }
 
 /**

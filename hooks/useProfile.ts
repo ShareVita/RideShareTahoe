@@ -24,36 +24,6 @@ export interface UserProfile {
 }
 
 /**
- * Interface for the 'dogs' database table data.
- */
-export interface UserDog {
-  id: string;
-  owner_id: string;
-  name: string;
-  breed: string | null;
-  birthday: string | null;
-  age_years: number;
-  age_months: number;
-  size: string | null;
-  photo_url: string | null;
-  gender: string | null;
-  neutered: boolean;
-  temperament: string[] | null;
-  energy_level: string | null;
-  dog_friendly: boolean;
-  cat_friendly: boolean;
-  kid_friendly: boolean;
-  leash_trained: boolean;
-  crate_trained: boolean;
-  house_trained: boolean;
-  fully_vaccinated: boolean;
-  activities: string[] | null;
-  description: string | null;
-  created_at: string;
-  updated_at: string | null;
-}
-
-/**
  * Defines the allowed data structure for updating a user profile.
  * Excludes non-updatable fields like 'id' and 'email'.
  */
@@ -62,7 +32,7 @@ export type UpdatableProfileData = Partial<Omit<UserProfile, 'id' | 'email'>>;
 /**
  * Represents a user consent record from the database.
  */
-export interface UserConsent {
+interface UserConsent {
   id: string;
   user_id: string;
   document_type: 'tos' | 'privacy_policy' | 'community_guidelines';
@@ -162,38 +132,6 @@ export const useUserProfile = () => {
     },
     enabled: !!user,
     staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-};
-
-/**
- * Loads the list of dogs owned by the current user.
- *
- * @returns A query result containing the user's dogs array.
- * @throws {Error} When fetching the dogs list fails.
- */
-export const useUserDogs = () => {
-  const { user } = useUser();
-  const supabase = createClient();
-
-  return useQuery<UserDog[], Error>({
-    queryKey: ['dogs', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from('dogs')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to fetch dogs');
-      }
-
-      return (data as UserDog[]) || [];
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 

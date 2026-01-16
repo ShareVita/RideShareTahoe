@@ -105,7 +105,7 @@ export const fetchDriverRides = async (
 /**
  * Fetches passenger ride posts that are not owned by the current user.
  */
-export interface FetchPassengerRidesOptions {
+interface FetchPassengerRidesOptions {
   page?: number;
   pageSize?: number;
   departureFilter?: LocationFilterType | null;
@@ -205,7 +205,7 @@ export const fetchMyRides = async (
 /**
  * Response type for paginated ride fetches.
  */
-export interface FetchAllRidesFilters {
+interface FetchAllRidesFilters {
   departureFilter?: LocationFilterType | null;
   destinationFilter?: LocationFilterType | null;
 }
