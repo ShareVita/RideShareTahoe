@@ -65,6 +65,7 @@
     "react-hook-form": "^7.70.0",
     "react-hot-toast": "^2.4.1",
     "react-tooltip": "^5.26.3",
+    "@react-email/components": "^0.0.31",
     "resend": "^6.6.0",
     "striptags": "^3.2.0",
     "typescript": "^5.9.3",
