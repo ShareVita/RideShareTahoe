@@ -1,7 +1,7 @@
 import type { createClient } from '@/libs/supabase/client';
 import type { ProfileType } from '@/app/community/types';
 
-export type CommunitySupabaseClient = ReturnType<typeof createClient>;
+type CommunitySupabaseClient = ReturnType<typeof createClient>;
 
 /**
  * Response from fetchDrivers including pagination metadata.

@@ -45,7 +45,7 @@ export interface ReviewStats {
 }
 
 /** Represents the shape of the data returned by useUserReviews. */
-export interface UserReviewsResult {
+interface UserReviewsResult {
   reviews: Review[];
   stats: ReviewStats;
 }
@@ -58,7 +58,7 @@ export interface ReviewSubmissionData {
 }
 
 /** Represents the response data after a successful submission. */
-export interface ReviewSubmissionResponse {
+interface ReviewSubmissionResponse {
   review: Review;
 }
 
