@@ -2,7 +2,7 @@ import { createClient } from '@/libs/supabase/server';
 import { sendEmail } from './sendEmail';
 import { EmailPayload } from './templates';
 
-export interface ScheduledEmail {
+interface ScheduledEmail {
   id: number;
   user_id: string;
   email_type: string;
@@ -72,7 +72,11 @@ export async function processScheduledEmails(): Promise<{
         // Get user email from user_private_info (parallel queries for efficiency)
         const [{ data: profile }, { data: privateInfo }] = await Promise.all([
           supabase.from('profiles').select('first_name').eq('id', scheduledEmail.user_id).single(),
-          supabase.from('user_private_info').select('email').eq('id', scheduledEmail.user_id).single(),
+          supabase
+            .from('user_private_info')
+            .select('email')
+            .eq('id', scheduledEmail.user_id)
+            .single(),
         ]);
 
         if (!profile || !privateInfo?.email) {

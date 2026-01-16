@@ -38,7 +38,7 @@ export interface Review {
 }
 
 /** Represents the aggregated statistics for a user's reviews. */
-export interface ReviewStats {
+interface ReviewStats {
   averageRating: number;
   reviewCount: number;
   ratingDistribution: Record<1 | 2 | 3 | 4 | 5, number>;
@@ -51,7 +51,7 @@ interface UserReviewsResult {
 }
 
 /** Represents the required data structure for submitting a new review. */
-export interface ReviewSubmissionData {
+interface ReviewSubmissionData {
   bookingId: string;
   rating: number;
   comment: string;
