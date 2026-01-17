@@ -4,6 +4,7 @@ import React, { FormEvent, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUpdateProfile, useUserConsents, type UpdatableProfileData } from '@/hooks/useProfile';
 import { geocodeLocation } from '@/libs/geocoding';
+import { capitalizeLocation } from '@/libs/utils';
 import PhotoUpload from '@/components/ui/PhotoUpload';
 
 const PRONOUN_OPTIONS = [
@@ -158,9 +159,9 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       profile_photo_url: formState.profile_photo_url || null,
 
       pronouns: formState.pronouns || null,
-      street_address: formState.street_address.trim() || null,
-      city: formState.city.trim() || null,
-      state: formState.state.trim() || null,
+      street_address: capitalizeLocation(formState.street_address.trim() || null) as string | null,
+      city: capitalizeLocation(formState.city.trim() || null) as string | null,
+      state: capitalizeLocation(formState.state.trim() || null) as string | null,
       zip_code: formState.zip_code.trim() || null,
 
       display_lat: formState.display_lat,
