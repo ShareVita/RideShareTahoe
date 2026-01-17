@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { PostgrestError } from '@supabase/supabase-js';
 
@@ -6,7 +7,7 @@ import { PostgrestError } from '@supabase/supabase-js';
  * Submits a new account deletion request.
  * Checks for existing requests and creates a new one with a 30-day scheduled deletion date.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -68,13 +69,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Retrieves the status of a user's pending deletion request.
  * Returns the request details and days remaining until deletion.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -133,13 +134,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Cancels a pending account deletion request.
  * This effectively "undeletes" the account before the process is finalized.
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withErrorHandling(async (request: NextRequest) => {
   const startTime = Date.now();
 
   try {
@@ -195,7 +196,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error: unknown) {
     return handleCancellationError(error, startTime);
   }
-}
+});
 
 function handleUpdateError(updateError: PostgrestError) {
   console.error('Update error details:', {

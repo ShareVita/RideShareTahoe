@@ -1,11 +1,12 @@
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Retrieves aggregate review statistics for a user.
  * Includes average rating, total count, and rating distribution.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -100,4 +101,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

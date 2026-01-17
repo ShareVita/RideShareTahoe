@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { vehicleSchema } from '@/libs/validations/vehicle';
 import { z } from 'zod';
 import {
@@ -10,7 +11,7 @@ import {
 /**
  * Retrieves all vehicles owned by the authenticated user.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -34,12 +35,12 @@ export async function GET(request: NextRequest) {
     console.error('Error in vehicles GET API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 /**
  * Registers a new vehicle for the authenticated user.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -79,4 +80,4 @@ export async function POST(request: NextRequest) {
     console.error('Error in vehicles POST API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -9,7 +10,7 @@ import {
  * Retrieves a list of upcoming community events.
  * Filters by event type and sorts by date.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -79,13 +80,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Creates a new community event.
  * Requires title, date, and location.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -146,4 +147,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -4,12 +4,13 @@ import {
   ensureProfileComplete,
 } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Retrieves reviews, optionally filtered by userId.
  * Supports pagination.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -70,13 +71,13 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});
 
 /**
  * Creates a new review for a completed ride booking.
  * Validates booking status, input fields, and ensures one review per trip per user.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -203,7 +204,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Validates the review input fields.

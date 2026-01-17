@@ -1,56 +1,8 @@
 import type { CommunitySupabaseClient } from './ridesData';
 import type { TripBooking } from '@/app/community/types';
-import { createTripBookingSchema, updateTripBookingSchema } from '@/libs/validations/trips';
-import type { CreateTripBookingInput, UpdateTripBookingInput } from '@/libs/validations/trips';
+import { updateTripBookingSchema } from '@/libs/validations/trips';
+import type { UpdateTripBookingInput } from '@/libs/validations/trips';
 import type { Database } from '@/types/database.types';
-
-/**
- * Creates a new trip booking (passenger joining a ride).
- */
-export const createTripBooking = async (
-  supabase: CommunitySupabaseClient,
-  userId: string,
-  input: CreateTripBookingInput
-): Promise<TripBooking> => {
-  // Validate input
-  const validated = createTripBookingSchema.parse(input);
-
-  // Combine date and time for pickup_time timestamp
-  const pickupTimestamp = `${validated.pickup_date}T${validated.pickup_time}:00`;
-
-  // Fetch ride to get driver_id
-  const { data: ride, error: rideError } = await supabase
-    .from('rides')
-    .select('poster_id, available_seats')
-    .eq('id', validated.ride_id)
-    .single();
-
-  if (rideError || !ride) {
-    throw new Error('Ride not found');
-  }
-
-  if (ride.available_seats !== null && ride.available_seats <= 0) {
-    throw new Error('No seats available on this ride');
-  }
-
-  const { data: booking, error } = await supabase
-    .from('trip_bookings')
-    .insert({
-      id: crypto.randomUUID(),
-      ride_id: validated.ride_id,
-      driver_id: ride.poster_id,
-      passenger_id: userId,
-      pickup_location: validated.pickup_location,
-      pickup_time: new Date(pickupTimestamp).toISOString(),
-      passenger_notes: validated.passenger_notes,
-      status: 'pending',
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return booking as unknown as TripBooking;
-};
 
 /**
  * Updates a trip booking (e.g. driver accepting/rejecting).
@@ -79,29 +31,6 @@ export const updateTripBooking = async (
   const { error } = await supabase.from('trip_bookings').update(updates).eq('id', bookingId);
 
   if (error) throw error;
-};
-
-/**
- * Fetches all bookings for a specific ride (for driver view).
- */
-export const fetchRideBookings = async (
-  supabase: CommunitySupabaseClient,
-  rideId: string
-): Promise<TripBooking[]> => {
-  const { data, error } = await supabase
-    .from('trip_bookings')
-    .select(
-      `
-      *,
-      passenger:profiles!trip_bookings_passenger_id_fkey (
-        id, first_name, last_name, profile_photo_url
-      )
-    `
-    )
-    .eq('ride_id', rideId);
-
-  if (error) throw error;
-  return data as unknown as TripBooking[];
 };
 
 /**

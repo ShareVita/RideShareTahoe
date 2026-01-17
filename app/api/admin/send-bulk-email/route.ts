@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { sendEmail } from '@/libs/resend';
 import { strictRateLimit } from '@/libs/rateLimit';
@@ -36,7 +37,7 @@ const updateResultsWithBatch = (results: BulkEmailResult, batchResults: BatchRes
  * Sends bulk emails to users.
  * Supports batch processing, rate limiting, and email personalization.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   const { user, authError, supabase } = await getAuthenticatedUser(request);
 
   if (authError || !user) {
@@ -246,4 +247,4 @@ export async function POST(request: NextRequest) {
       }
     );
   }
-}
+});

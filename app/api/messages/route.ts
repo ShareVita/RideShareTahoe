@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -16,7 +17,7 @@ const MAX_MESSAGE_LENGTH = 5000;
  * Users must have a complete profile (first_name) to send messages.
  * RLS policies enforce that users are not blocked from messaging each other.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -212,12 +213,12 @@ export async function POST(request: NextRequest) {
       }
     );
   }
-}
+});
 
 /**
  * Retrieves messages for a specific conversation.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -275,4 +276,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

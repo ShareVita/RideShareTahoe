@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/libs/supabase/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Signs out the current user by invalidating their session.
  *
  * @returns {NextResponse} JSON response with null error on success, or error message on failure.
  */
-export async function POST() {
+export const POST = withErrorHandling(async () => {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut();
 
@@ -16,4 +17,4 @@ export async function POST() {
   }
 
   return NextResponse.json({ error: null });
-}
+});

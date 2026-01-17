@@ -1,7 +1,8 @@
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1'));
@@ -94,4 +95,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

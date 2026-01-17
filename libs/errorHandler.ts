@@ -1,3 +1,6 @@
+import { NextRequest } from 'next/server';
+import { apiRateLimit } from '@/libs/rateLimit';
+
 export class APIError extends Error {
   statusCode: number;
   code: string | null;
@@ -77,14 +80,32 @@ export const handleAPIError = (err: unknown, request: Request) => {
 };
 
 export const withErrorHandling = <TContext>(
+  // Accept any request-like object to support frameworks (NextRequest, Request, etc.)
   // eslint-disable-next-line no-unused-vars
-  handler: (req: Request, ctx: TContext) => Promise<Response>
+  handler: (req: NextRequest, ctx: TContext) => Promise<Response>
 ) => {
-  return async (request: Request, context: TContext) => {
+  return async (request: NextRequest, context: TContext) => {
+    // Apply a global API rate limit for all routes wrapped with this helper.
+    try {
+      const rl = apiRateLimit(request as unknown as Request);
+      if (!rl.success) {
+        return new Response(JSON.stringify({ error: rl.error?.message }), {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': (rl.error?.retryAfter || 60).toString(),
+          },
+        });
+      }
+    } catch (e) {
+      // If rate limit check itself fails, log and continue (fail-open)
+      console.error('API rate limit check failed:', e);
+    }
+
     try {
       return await handler(request, context);
     } catch (error) {
-      const errorResponse = handleAPIError(error, request);
+      const errorResponse = handleAPIError(error, request as Request);
 
       return new Response(
         JSON.stringify({

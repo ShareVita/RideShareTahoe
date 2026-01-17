@@ -37,16 +37,8 @@ export async function getUserWithEmail(
   userId: string
 ): Promise<UserWithEmail | null> {
   const [profileResult, privateInfoResult] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('user_private_info')
-      .select('email')
-      .eq('id', userId)
-      .single(),
+    supabase.from('profiles').select('id, first_name, last_name').eq('id', userId).single(),
+    supabase.from('user_private_info').select('email').eq('id', userId).single(),
   ]);
 
   if (profileResult.error || !profileResult.data) {
@@ -63,64 +55,4 @@ export async function getUserWithEmail(
     last_name: profileResult.data.last_name,
     email: privateInfoResult.data.email,
   };
-}
-
-/**
- * Fetch multiple users with their emails efficiently using a single query with JOIN.
- * Returns users that have valid email addresses.
- */
-export async function getUsersWithEmails(
-  supabase: SupabaseClient,
-  options?: { excludeBanned?: boolean }
-): Promise<UserWithEmail[]> {
-  let query = supabase
-    .from('profiles')
-    .select('id, first_name, last_name, user_private_info(email)');
-
-  if (options?.excludeBanned) {
-    query = query.eq('is_banned', false);
-  }
-
-  const { data: users, error } = await query;
-
-  if (error || !users) {
-    return [];
-  }
-
-  // Filter and transform to get users with valid emails
-  return users
-    .map((user) => {
-      // Handle Supabase's JOIN response format (can be array or object)
-      const privateInfo = Array.isArray(user.user_private_info)
-        ? user.user_private_info[0]
-        : user.user_private_info;
-
-      const email = privateInfo?.email;
-      if (!email) return null;
-
-      return {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email,
-      };
-    })
-    .filter((user): user is UserWithEmail => user !== null);
-}
-
-/**
- * Get email address for a user by their ID.
- * Returns null if user not found or has no email.
- */
-export async function getUserEmail(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<string | null> {
-  const { data } = await supabase
-    .from('user_private_info')
-    .select('email')
-    .eq('id', userId)
-    .single();
-
-  return data?.email || null;
 }

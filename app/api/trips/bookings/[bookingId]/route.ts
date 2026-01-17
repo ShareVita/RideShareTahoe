@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -8,6 +9,7 @@ import {
 import { sendConversationMessage } from '@/libs/supabase/conversations';
 import { z } from 'zod';
 import type { Database } from '@/types/database.types';
+import { Context } from 'node:vm';
 
 const bookingActionSchema = z.object({
   action: z.enum(['approve', 'deny', 'cancel']),
@@ -56,11 +58,9 @@ type BookingWithRelations = TripBookingRow & {
 /**
  * Allows the recipient of a booking request or invitation to approve or deny it directly from messages.
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ bookingId: string }> }
-) {
-  const url = new URL(request.url);
+export const PATCH = withErrorHandling(async (request: NextRequest, context: Context) => {
+  const url = new URL((request as unknown as Request).url);
+  const { params } = context as { params: Promise<{ bookingId: string }> };
   const pathSegments = url.pathname.split('/').filter(Boolean);
   // Fallback to the final segment in the URL when Next fails to populate params.
   const fallbackBookingId =
@@ -174,7 +174,7 @@ export async function PATCH(
     console.error('Error updating booking status', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+});
 
 /**
  * Fetches the booking and related entities.

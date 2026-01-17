@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -20,7 +21,7 @@ const invitationSchema = z.object({
 /**
  * Sends a ride invitation from a driver to a specific passenger and notifies the passenger via messages.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -154,4 +155,4 @@ export async function POST(request: NextRequest) {
     console.error('Error creating invitation', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+});

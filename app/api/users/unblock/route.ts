@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Unblock another user. Removes the two-way mirror block.
@@ -9,7 +10,7 @@ import { isValidUUID } from '@/libs/validation';
  * POST /api/users/unblock
  * Body: { blocked_id: UUID }
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -68,4 +69,4 @@ export async function POST(request: NextRequest) {
     console.error('Error unblocking user:', error);
     return NextResponse.json({ error: 'Failed to unblock user' }, { status: 500 });
   }
-}
+});

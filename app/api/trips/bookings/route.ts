@@ -5,6 +5,7 @@ import {
   ensureProfileComplete,
 } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { createTripBookingSchema } from '@/libs/validations/trips';
 import { z } from 'zod';
 import { sendConversationMessage } from '@/libs/supabase/conversations';
@@ -13,7 +14,7 @@ import { sendConversationMessage } from '@/libs/supabase/conversations';
  * Creates a new trip booking request.
  * Validates ride availability, seat count, and ensures no self-booking.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+});
 
 interface RideSummary {
   id: string;

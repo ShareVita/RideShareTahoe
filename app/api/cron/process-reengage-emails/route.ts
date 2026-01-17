@@ -1,7 +1,8 @@
 import { processReengageEmails } from '@/libs/email';
 import { NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
-export async function GET() {
+export const GET = withErrorHandling(async () => {
   try {
     console.log('Starting re-engagement email processing...');
 
@@ -29,4 +30,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

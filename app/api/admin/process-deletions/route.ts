@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
 /**
  * Processes all account deletion requests that have passed their scheduled date.
  * Validates admin status before execution.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request: NextRequest) => {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Retrieves all pending deletion requests for admin review.
