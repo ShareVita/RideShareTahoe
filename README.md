@@ -27,6 +27,7 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 - npm 10+
 - Git
 - Taskfile CLI (`task`, install instructions at https://taskfile.dev/docs/installation)
+- Docker Desktop (For Supabase)
 
 ## Local development setup (recommended)
 
@@ -76,6 +77,7 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 - `task services:start` / `task services:stop`: manually control the local Supabase stack.
 - `task db:reset`: reset the database if migrations are out of sync.
 - `npm run lint`, `npm run test`, `npm run build`: validation tools the project runs in CI.
+- `npx supabase migration up`: update local database with new migration files.
 
 ## Cron job helper
 
