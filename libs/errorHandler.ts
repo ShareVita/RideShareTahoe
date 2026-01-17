@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { apiRateLimit } from '@/libs/rateLimit';
 
 export class APIError extends Error {
   statusCode: number;
@@ -84,6 +85,23 @@ export const withErrorHandling = <TContext>(
   handler: (req: NextRequest, ctx: TContext) => Promise<Response>
 ) => {
   return async (request: NextRequest, context: TContext) => {
+    // Apply a global API rate limit for all routes wrapped with this helper.
+    try {
+      const rl = apiRateLimit(request as unknown as Request);
+      if (!rl.success) {
+        return new Response(JSON.stringify({ error: rl.error?.message }), {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': (rl.error?.retryAfter || 60).toString(),
+          },
+        });
+      }
+    } catch (e) {
+      // If rate limit check itself fails, log and continue (fail-open)
+      console.error('API rate limit check failed:', e);
+    }
+
     try {
       return await handler(request, context);
     } catch (error) {

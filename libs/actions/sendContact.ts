@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { headers } from 'next/headers';
-import { rateLimit } from '@/lib/ratelimit';
+import { rateLimitIp } from '@/libs/rateLimit';
 import config from '@/config';
 
 const contactSchema = z.object({
@@ -51,7 +51,7 @@ export async function sendContact(formData: FormData) {
     const headersList = await headers();
     const ip = headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip') ?? 'unknown';
 
-    const rateLimitOk = await rateLimit(ip, 'contact:submit', 5, 600); // 5 submissions per 10 minutes
+    const rateLimitOk = await rateLimitIp(ip, 'contact:submit', 5, 600); // 5 submissions per 10 minutes
     if (!rateLimitOk) {
       return {
         ok: false,

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { authRateLimit } from '@/libs/rateLimit';
 import { createClient } from '@/libs/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
 import { getAppUrl, sanitizeForLog } from '@/libs/email';
@@ -136,10 +137,7 @@ async function processCodeExchangeAndProfileUpdate(
       const supabaseAdmin = await createClient('service_role');
       const { error: privateInfoError } = await supabaseAdmin
         .from('user_private_info')
-        .upsert(
-          { id: user.id, email: user.email },
-          { onConflict: 'id' }
-        );
+        .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
       if (privateInfoError) {
         console.error('❌ Failed to upsert user_private_info:', JSON.stringify(privateInfoError));
       } else {
@@ -249,6 +247,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // 2. Process Authentication Code
   if (code) {
+    // Apply simple auth-specific rate limiting (protect code-exchange endpoint)
+    try {
+      const rl = authRateLimit(req as unknown as Request);
+      if (!rl.success) {
+        // Redirect to login with rate-limited error
+        return NextResponse.redirect(new URL('/login?error=rate_limited', requestUrl.origin));
+      }
+    } catch (e) {
+      console.error('Auth rate limit check failed:', e);
+    }
     try {
       return await processCodeExchangeAndProfileUpdate(requestUrl, code);
     } catch (error) {
