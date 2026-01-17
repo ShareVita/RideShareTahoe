@@ -62,7 +62,7 @@
     "nextjs-toploader": "^3.9.17",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-hook-form": "^7.70.0",
+    "react-hook-form": "^7.71.1",
     "react-hot-toast": "^2.4.1",
     "react-tooltip": "^5.26.3",
     "@react-email/components": "^0.0.31",
