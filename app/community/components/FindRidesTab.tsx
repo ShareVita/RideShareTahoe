@@ -14,6 +14,7 @@ import { SectionError } from './common/SectionError';
 import CommunityMembersList from './members/CommunityMembersList';
 import { RIDES_PAGE_SIZE } from '../constants';
 import type { RidePostType, CommunityUser, LocationFilterType, ProfileType } from '../types';
+import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface RidesTabProps {
   user: CommunityUser | null;
@@ -44,6 +45,7 @@ export function RidesTab({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
 
   // Location filter state
   const [departureFilter, setDepartureFilter] = useState<LocationFilterType | null>(null);
@@ -209,12 +211,16 @@ export function RidesTab({
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groupedRides.map((ride) => (
+          {groupedRides.map((post) => (
             <RidePostCard
-              key={ride.id}
-              post={ride}
+              key={post.id}
+              post={post}
               currentUserId={user?.id}
               onMessage={openMessageModal}
+              onViewDetails={() => {
+                setSelectedPost(null);
+                setTimeout(() => setSelectedPost(post), 0);
+              }}
             />
           ))}
         </div>
@@ -229,6 +235,16 @@ export function RidesTab({
             tabRef.current?.scrollIntoView({ behavior: 'smooth' });
           }}
         />
+
+        {selectedPost && (
+          <PostDetailModal
+            isOpen={!!selectedPost}
+            onClose={() => setSelectedPost(null)}
+            post={selectedPost}
+            currentUserId={user?.id ?? ''}
+            onMessage={openMessageModal}
+          />
+        )}
       </div>
     );
   };
