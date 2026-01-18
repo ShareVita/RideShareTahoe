@@ -298,6 +298,8 @@ export async function recordUserActivity({
 }
 
 /**
+ * @public
+ *
  * Get user's last activity for a specific event
  */
 export async function getUserLastActivity(userId: string, event: string): Promise<Date | null> {
@@ -316,6 +318,8 @@ export async function getUserLastActivity(userId: string, event: string): Promis
 }
 
 /**
+ * @public
+ *
  * Check if user should receive re-engagement email
  */
 export async function shouldSendReengageEmail(userId: string): Promise<boolean> {

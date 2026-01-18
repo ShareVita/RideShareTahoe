@@ -177,6 +177,8 @@ export async function scheduleNurtureEmail(userId: string): Promise<void> {
 }
 
 /**
+ * @public
+ *
  * Get scheduled emails for a user
  */
 export async function getUserScheduledEmails(userId: string): Promise<ScheduledEmail[]> {
@@ -195,6 +197,8 @@ export async function getUserScheduledEmails(userId: string): Promise<ScheduledE
 }
 
 /**
+ * @public
+ *
  * Cancel scheduled emails for a user
  */
 export async function cancelUserScheduledEmails(userId: string, emailType?: string): Promise<void> {

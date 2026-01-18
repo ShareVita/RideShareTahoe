@@ -135,6 +135,8 @@ async function shouldSendReengageEmail(userId: string): Promise<boolean> {
 }
 
 /**
+ * @public
+ *
  * Get users who are candidates for re-engagement emails
  */
 export async function getReengageCandidates(): Promise<
@@ -207,6 +209,8 @@ export async function getReengageCandidates(): Promise<
 }
 
 /**
+ * @public
+ *
  * Schedule re-engagement emails for inactive users
  */
 export async function scheduleReengageEmails(): Promise<{
