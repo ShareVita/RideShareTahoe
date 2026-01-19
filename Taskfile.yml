@@ -46,7 +46,7 @@ tasks:
       - services:start
     cmds:
       # Execute the entire logic inside a single PowerShell command string
-      - cmd: powershell scripts/populate-env-keys.ps1 {{.ENV_FILE}}
+      - cmd: powershell -ExecutionPolicy Bypass -File scripts/populate-env-keys.ps1 {{.ENV_FILE}}
         platforms: [windows]
       - cmd: chmod +x scripts/populate-env-keys.sh
         platforms: [linux, darwin]
