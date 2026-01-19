@@ -14,6 +14,12 @@ interface Profile {
   role: string;
 }
 
+/**
+ * Welcome onboarding page shown after sign-in which loads the current user's profile
+ * and nearby ride posts, then renders role-specific next steps.
+ *
+ * @returns A React component rendering the welcome/onboarding UI.
+ */
 export default function WelcomePage() {
   const { user } = useUser();
   const router = useRouter();
@@ -34,9 +40,25 @@ export default function WelcomePage() {
         .single();
 
       if (error) throw error;
-      setCurrentProfile(data);
+
+      // Normalize and type the returned profile before setting state.
+      // Fall back to a safe default role if the DB value is missing.
+      const profile: Profile = {
+        first_name: data?.first_name ?? '',
+        role: data?.role ?? 'passenger',
+      };
+      setCurrentProfile(profile);
     } catch (error) {
-      console.error('Error fetching current profile:', error);
+      // Ensure we capture non-enumerable Error properties and provide a readable log
+      const serialized = (() => {
+        try {
+          return JSON.stringify(error, Object.getOwnPropertyNames(error));
+        } catch {
+          return String(error);
+        }
+      })();
+      console.error('Error fetching current profile:', error, 'serialized:', serialized);
+      toast.error('Failed to load profile');
     }
   }, [user]);
 
