@@ -3,6 +3,7 @@ import { authRateLimit } from '@/libs/rateLimit';
 import { createClient } from '@/libs/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
 import { getAppUrl, sanitizeForLog } from '@/libs/email';
+import { getSafeError } from '@/lib/errorMap';
 
 // #region Types & Interfaces
 
@@ -247,8 +248,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const appUrl = getAppUrl();
 
   if (error) {
-    console.error('OAuth error:', error, errorDescription);
-    return NextResponse.redirect(new URL('/login?error=' + encodeURIComponent(error), appUrl));
+    const safeError = getSafeError(error);
+    console.error('OAuth error:', safeError, errorDescription);
+    return NextResponse.redirect(new URL('/login?error=' + encodeURIComponent(safeError), appUrl));
   }
 
   if (!code) {
