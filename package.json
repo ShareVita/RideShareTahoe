@@ -48,6 +48,7 @@
   "dependencies": {
     "@headlessui/react": "^2.1.0",
     "@hookform/resolvers": "^5.2.2",
+    "@react-email/components": "^1.0.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@tailwindcss/postcss": "^4.1.18",
@@ -65,8 +66,7 @@
     "react-hook-form": "^7.70.0",
     "react-hot-toast": "^2.4.1",
     "react-tooltip": "^5.26.3",
-    "@react-email/components": "^0.0.31",
-    "resend": "^6.7.0",
+    "resend": "^6.6.0",
     "striptags": "^3.2.0",
     "typescript": "^5.9.3",
     "zod": "^4.3.5"
