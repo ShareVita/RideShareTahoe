@@ -1,13 +1,15 @@
 import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
 import { internalOnly } from '@/libs/api/internalOnly';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withErrorHandling } from '@/libs/errorHandler';
 
 export const POST = withErrorHandling(
-  internalOnly(async (request) => {
+  internalOnly(async (req?: Request | NextRequest) => {
+    const nextReq = req as NextRequest;
+
     try {
-      const { meetingId, userId } = await request.json();
+      const { meetingId, userId } = await nextReq.json();
 
       if (!meetingId || !userId) {
         return NextResponse.json(
@@ -90,5 +92,6 @@ export const POST = withErrorHandling(
         }
       );
     }
-  })
+    // eslint-disable-next-line no-unused-vars
+  }) as (request?: Request | NextRequest) => Promise<NextResponse>
 );

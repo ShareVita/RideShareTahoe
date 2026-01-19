@@ -22,13 +22,13 @@ interface ErrorLike {
 }
 
 /** @public */
-export const handleAPIError = (err: unknown, request: Request) => {
+export const handleAPIError = (err: unknown, request?: Request) => {
   const error = err as ErrorLike;
   console.error('API Error:', {
     message: error.message,
     stack: error.stack,
-    url: request.url,
-    method: request.method,
+    url: request?.url,
+    method: request?.method,
     timestamp: new Date().toISOString(),
   });
 
@@ -82,22 +82,29 @@ export const handleAPIError = (err: unknown, request: Request) => {
 };
 
 export const withErrorHandling = <TContext>(
-  // Accept any request-like object to support frameworks (NextRequest, Request, etc.)
+  // Accept a request-like object to support frameworks (NextRequest, Request, etc.)
+  // Handler may be strongly-typed (e.g. (request: NextRequest) => ...) — use a
+  // flexible `any` rest-args to avoid strict-function-type incompatibilities.
   // eslint-disable-next-line no-unused-vars
-  handler: (req: NextRequest, ctx: TContext) => Promise<Response>
+  handler: (request?: Request | NextRequest, context?: TContext) => Promise<Response>
 ) => {
-  return async (request: NextRequest, context: TContext) => {
+  return async (...args: unknown[]) => {
+    const request = args[0] as NextRequest | undefined;
+    const context = args[1] as TContext | undefined;
+
     // Apply a global API rate limit for all routes wrapped with this helper.
     try {
-      const rl = apiRateLimit(request as unknown as Request);
-      if (!rl.success) {
-        return new Response(JSON.stringify({ error: rl.error?.message }), {
-          status: 429,
-          headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': (rl.error?.retryAfter || 60).toString(),
-          },
-        });
+      if (request) {
+        const rl = apiRateLimit(request as unknown as Request);
+        if (!rl.success) {
+          return new Response(JSON.stringify({ error: rl.error?.message }), {
+            status: 429,
+            headers: {
+              'Content-Type': 'application/json',
+              'Retry-After': (rl.error?.retryAfter || 60).toString(),
+            },
+          });
+        }
       }
     } catch (e) {
       // If rate limit check itself fails, log and continue (fail-open)
@@ -105,9 +112,9 @@ export const withErrorHandling = <TContext>(
     }
 
     try {
-      return await handler(request, context);
+      return await handler(request as unknown as Request | undefined, context);
     } catch (error) {
-      const errorResponse = handleAPIError(error, request as Request);
+      const errorResponse = handleAPIError(error, request as Request | undefined);
 
       return new Response(
         JSON.stringify({

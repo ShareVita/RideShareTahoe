@@ -34,9 +34,10 @@ interface ProfileResponse {
  * Retrieves the authenticated user's profile and social links.
  * Used for populating the user dashboard.
  */
-export const GET = withErrorHandling(async (request: NextRequest) => {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);

@@ -10,9 +10,10 @@ import { withErrorHandling } from '@/libs/errorHandler';
  * POST /api/users/unblock
  * Body: { blocked_id: UUID }
  */
-export const POST = withErrorHandling(async (request: NextRequest) => {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -37,7 +38,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
       );
     }
 
-    const { blocked_id } = await request.json();
+    const { blocked_id } = await req.json();
 
     if (!blocked_id || typeof blocked_id !== 'string') {
       return NextResponse.json({ error: 'blocked_id is required' }, { status: 400 });

@@ -6,15 +6,27 @@ import { withErrorHandling } from '@/libs/errorHandler';
  * Retrieves a detailed review by ID.
  */
 export const GET = withErrorHandling(
-  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  async (request?: Request | NextRequest, context?: { params: Promise<{ id: string }> }) => {
+    const req = request as NextRequest;
     try {
-      const { user, authError, supabase } = await getAuthenticatedUser(request);
+      const { user, authError, supabase } = await getAuthenticatedUser(req);
 
       if (authError || !user) {
         return createUnauthorizedResponse(authError);
       }
 
-      const { id } = await params;
+      // Prefer context.params when provided by Next; otherwise fall back to extracting the id from the URL
+      let id = '';
+      if (context?.params) {
+        id = (await context.params).id;
+      } else {
+        try {
+          const segments = new URL(req.url).pathname.split('/').filter(Boolean);
+          id = segments[segments.length - 1] ?? '';
+        } catch {
+          id = '';
+        }
+      }
 
       const { data: review, error } = await supabase
         .from('reviews')

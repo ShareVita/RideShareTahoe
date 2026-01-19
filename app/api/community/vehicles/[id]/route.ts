@@ -9,16 +9,18 @@ import { z } from 'zod';
  * Enforces ownership check before modification.
  */
 export const PUT = withErrorHandling(
-  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  async (req?: Request | NextRequest, context?: { params: Promise<{ id: string }> }) => {
+    const nextReq = req as NextRequest;
+
     try {
-      const { id } = await params;
-      const { user, authError, supabase } = await getAuthenticatedUser(request);
+      const { id } = await context!.params;
+      const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
       if (authError || !user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const body = await request.json();
+      const body = await nextReq.json();
       const validationResult = vehicleSchema.safeParse(body);
 
       if (!validationResult.success) {
@@ -68,10 +70,12 @@ export const PUT = withErrorHandling(
  * Enforces ownership check before deletion.
  */
 export const DELETE = withErrorHandling(
-  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  async (req?: Request | NextRequest, context?: { params: Promise<{ id: string }> }) => {
+    const nextReq = req as NextRequest;
+
     try {
-      const { id } = await params;
-      const { user, authError, supabase } = await getAuthenticatedUser(request);
+      const { id } = await context!.params;
+      const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
       if (authError || !user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

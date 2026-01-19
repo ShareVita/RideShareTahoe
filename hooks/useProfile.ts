@@ -138,7 +138,7 @@ export const useUserProfile = () => {
 /**
  * Options for the profile update mutation.
  */
-interface UpdateProfileOptions {
+export interface UpdateProfileOptions {
   profileData: UpdatableProfileData;
   recordConsent?: boolean;
 }

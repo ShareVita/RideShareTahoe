@@ -3,7 +3,8 @@ import { withErrorHandling } from '@/libs/errorHandler';
 
 // This route is used to store the leads that are generated from the landing page.
 // The API call is initiated by <ButtonLead /> component
-export const POST = withErrorHandling(async (req: NextRequest) => {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   const body = await req.json();
 
   if (!body.email) {

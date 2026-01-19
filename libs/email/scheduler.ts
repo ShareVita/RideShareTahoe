@@ -2,7 +2,7 @@ import { createClient } from '@/libs/supabase/server';
 import { sendEmail } from './sendEmail';
 import { EmailPayload } from './templates';
 
-interface ScheduledEmail {
+export interface ScheduledEmail {
   id: number;
   user_id: string;
   email_type: string;

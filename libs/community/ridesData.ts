@@ -33,6 +33,29 @@ export const fetchPassengerRides = async (
 };
 
 /**
+ * Fetches driver ride posts (posting_type = 'driver').
+ */
+export const fetchDriverRides = async (
+  supabase: CommunitySupabaseClient,
+  currentUser: CommunityUser | null,
+  options?: FetchPassengerRidesOptions
+): Promise<RidePostType[]> => {
+  const response = await fetchAllRides(
+    supabase,
+    currentUser,
+    options?.page,
+    options?.pageSize,
+    'driver',
+    {
+      departureFilter: options?.departureFilter,
+      destinationFilter: options?.destinationFilter,
+    }
+  );
+
+  return response.rides;
+};
+
+/**
  * Fetches ride posts owned by the current user.
  */
 export const fetchMyRides = async (

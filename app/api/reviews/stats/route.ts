@@ -6,11 +6,12 @@ import { withErrorHandling } from '@/libs/errorHandler';
  * Retrieves aggregate review statistics for a user.
  * Includes average rating, total count, and rating distribution.
  */
-export const GET = withErrorHandling(async (request: NextRequest) => {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const userIdParam = searchParams.get('userId');
 
     // If authentication failed, only allow access when userId is explicitly provided

@@ -14,9 +14,10 @@ import { sendConversationMessage } from '@/libs/supabase/conversations';
  * Creates a new trip booking request.
  * Validates ride availability, seat count, and ensures no self-booking.
  */
-export const POST = withErrorHandling(async (request: NextRequest) => {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -25,7 +26,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     const profileError = await ensureProfileComplete(supabase, user.id, 'booking a ride');
     if (profileError) return profileError;
 
-    const json = await request.json();
+    const json = await req.json();
     const body = createTripBookingSchema.parse(json);
 
     // Fetch ride to check availability and get driver_id

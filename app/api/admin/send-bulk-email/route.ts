@@ -37,8 +37,9 @@ const updateResultsWithBatch = (results: BulkEmailResult, batchResults: BatchRes
  * Sends bulk emails to users.
  * Supports batch processing, rate limiting, and email personalization.
  */
-export const POST = withErrorHandling(async (request: NextRequest) => {
-  const { user, authError, supabase } = await getAuthenticatedUser(request);
+export const POST = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+  const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
   if (authError || !user) {
     return createUnauthorizedResponse(authError);
@@ -61,7 +62,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   }
   try {
     // Apply rate limiting
-    const rateLimitResult = strictRateLimit(request);
+    const rateLimitResult = strictRateLimit(nextReq);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         {
@@ -82,7 +83,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
       textContent,
       batchSize = 50,
       delayMs = 1000,
-    } = await request.json();
+    } = await nextReq.json();
 
     if (!subject || !htmlContent) {
       return NextResponse.json(

@@ -6,16 +6,18 @@ import {
   getAuthenticatedUser,
 } from '@/libs/supabase/auth';
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
+export const GET = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
     // Get URL parameters for filtering
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(nextReq.url);
     const placeType = searchParams.get('type');
     const dogFriendly = searchParams.get('dog_friendly');
     const limit = Number.parseInt(searchParams.get('limit') || '10');
@@ -80,9 +82,11 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   }
 });
 
-export const POST = withErrorHandling(async (request: NextRequest) => {
+export const POST = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -91,7 +95,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     const profileError = await ensureProfileComplete(supabase, user.id, 'adding places');
     if (profileError) return profileError;
 
-    const body = await request.json();
+    const body = await nextReq.json();
 
     // Validate required fields
     if (!body.name || !body.address || !body.type) {

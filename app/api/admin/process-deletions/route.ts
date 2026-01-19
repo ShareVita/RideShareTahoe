@@ -6,9 +6,11 @@ import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabas
  * Processes all account deletion requests that have passed their scheduled date.
  * Validates admin status before execution.
  */
-export const POST = withErrorHandling(async (request: NextRequest) => {
+export const POST = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);

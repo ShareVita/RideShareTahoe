@@ -7,15 +7,16 @@ import { PostgrestError } from '@supabase/supabase-js';
  * Submits a new account deletion request.
  * Checks for existing requests and creates a new one with a 30-day scheduled deletion date.
  */
-export const POST = withErrorHandling(async (request: NextRequest) => {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const { reason } = body;
 
     // Check if user already has a pending deletion request
@@ -75,9 +76,10 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
  * Retrieves the status of a user's pending deletion request.
  * Returns the request details and days remaining until deletion.
  */
-export const GET = withErrorHandling(async (request: NextRequest) => {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     // Log the authentication attempt for debugging
     console.log('GET Auth check:', {
@@ -140,13 +142,14 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
  * Cancels a pending account deletion request.
  * This effectively "undeletes" the account before the process is finalized.
  */
-export const DELETE = withErrorHandling(async (request: NextRequest) => {
+export const DELETE = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   const startTime = Date.now();
 
   try {
     console.log('Starting deletion cancellation request...');
 
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);

@@ -14,14 +14,17 @@ import { NextRequest, NextResponse } from 'next/server';
  * ```
  */
 // eslint-disable-next-line no-unused-vars
-type RouteHandler = (request: NextRequest) => Promise<NextResponse>;
+type RouteHandler = (request: NextRequest, context?: unknown) => Promise<NextResponse>;
 
 export function internalOnly(handler: RouteHandler): RouteHandler {
-  return async (request: NextRequest): Promise<NextResponse> => {
+  return async (request: NextRequest, context?: unknown): Promise<NextResponse> => {
     const apiKey = request.headers.get('x-internal-api-key');
+
     if (apiKey !== process.env.INTERNAL_API_KEY) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    return handler(request);
+
+    // Pass both arguments to the handler
+    return handler(request, context);
   };
 }
