@@ -17,17 +17,21 @@ interface SendConversationMessageOptions {
 }
 
 /**
+ * @internal
+ *
  * Compare function for reliable alphabetical sorting using localeCompare.
  *
  * @param a - First string to compare.
  * @param b - Second string to compare.
  * @returns Negative if a < b, positive if a > b, zero if equal.
  */
-function alphabeticalCompare(a: string, b: string): number {
+export function alphabeticalCompare(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
 /**
+ * @internal
+ *
  * Ensures there is a conversation between two participants for the given ride.
  *
  * @param supabase - Supabase client used for querying the conversations table.
@@ -36,7 +40,7 @@ function alphabeticalCompare(a: string, b: string): number {
  * @param rideId - Optional ride UUID that ties the conversation to a ride.
  * @returns The existing or newly created conversation record.
  */
-async function ensureConversationForRide(
+export async function ensureConversationForRide(
   supabase: SupabaseClient,
   participantA: string,
   participantB: string,
@@ -89,7 +93,7 @@ async function ensureConversationForRide(
       .select('*')
       .eq('participant1_id', participantA)
       .eq('participant2_id', participantB)
-      .is('ride_id', null)
+      .eq('ride_id', null)
       .maybeSingle<ConversationRow>();
 
     if (genErr1) throw genErr1;
@@ -100,7 +104,7 @@ async function ensureConversationForRide(
       .select('*')
       .eq('participant1_id', participantB)
       .eq('participant2_id', participantA)
-      .is('ride_id', null)
+      .eq('ride_id', null)
       .maybeSingle<ConversationRow>();
 
     if (genErr2) throw genErr2;
