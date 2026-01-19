@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-import { type Review } from '@/hooks/useReviews';
+import { type Review, useSubmitReview } from '@/hooks/useReviews';
 
 interface PendingReview {
   meeting_id: string;
@@ -31,6 +31,8 @@ export default function ReviewModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const submitReviewMutation = useSubmitReview();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -53,39 +55,26 @@ export default function ReviewModal({
     setError('');
 
     try {
-      const response = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bookingId: pendingReview.booking_id,
-          rating,
-          comment: comment.trim(),
-        }),
+      const data = await submitReviewMutation.mutateAsync({
+        bookingId: pendingReview.booking_id,
+        rating,
+        comment: comment.trim(),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMessage = data.details || data.error || 'Failed to submit review';
-        throw new Error(errorMessage);
-      }
 
       // Reset form
       setRating(0);
       setComment('');
 
       // Notify parent component
-      if (onReviewSubmitted && data.review) {
+      if (onReviewSubmitted && data?.review) {
         onReviewSubmitted(data.review);
       }
 
       // Close modal
       onClose();
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      setError((error as Error).message);
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      setError((err as Error).message || 'Failed to submit review');
     } finally {
       setIsSubmitting(false);
     }
