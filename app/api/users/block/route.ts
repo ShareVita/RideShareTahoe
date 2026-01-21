@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Block another user. Creates a two-way mirror block preventing messaging and profile viewing.
@@ -9,9 +10,10 @@ import { isValidUUID } from '@/libs/validation';
  * POST /api/users/block
  * Body: { blocked_id: UUID }
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { blocked_id } = await request.json();
+    const { blocked_id } = await req.json();
 
     if (!blocked_id || typeof blocked_id !== 'string') {
       return NextResponse.json({ error: 'blocked_id is required' }, { status: 400 });
@@ -84,4 +86,4 @@ export async function POST(request: NextRequest) {
     console.error('Error blocking user:', error);
     return NextResponse.json({ error: 'Failed to block user' }, { status: 500 });
   }
-}
+});

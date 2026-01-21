@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -9,16 +10,18 @@ import {
  * Retrieves a list of upcoming community events.
  * Filters by event type and sorts by date.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
     // Get URL parameters for filtering
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(nextReq.url);
     const eventType = searchParams.get('event_type');
     const limit = Number.parseInt(searchParams.get('limit') || '10');
     const offset = Number.parseInt(searchParams.get('offset') || '0');
@@ -79,15 +82,17 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Creates a new community event.
  * Requires title, date, and location.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -96,7 +101,7 @@ export async function POST(request: NextRequest) {
     const profileError = await ensureProfileComplete(supabase, user.id, 'creating events');
     if (profileError) return profileError;
 
-    const body = await request.json();
+    const body = await nextReq.json();
 
     // Validate required fields
     if (!body.title || !body.event_date || !body.location) {
@@ -146,4 +151,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

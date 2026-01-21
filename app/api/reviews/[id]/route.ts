@@ -1,45 +1,60 @@
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Retrieves a detailed review by ID.
  */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+export const GET = withErrorHandling(
+  async (request?: Request | NextRequest, context?: { params: Promise<{ id: string }> }) => {
+    const req = request as NextRequest;
+    try {
+      const { user, authError, supabase } = await getAuthenticatedUser(req);
 
-    if (authError || !user) {
-      return createUnauthorizedResponse(authError);
-    }
+      if (authError || !user) {
+        return createUnauthorizedResponse(authError);
+      }
 
-    const { id } = await params;
+      // Prefer context.params when provided by Next; otherwise fall back to extracting the id from the URL
+      let id = '';
+      if (context?.params) {
+        id = (await context.params).id;
+      } else {
+        try {
+          const segments = new URL(req.url).pathname.split('/').filter(Boolean);
+          id = segments[segments.length - 1] ?? '';
+        } catch {
+          id = '';
+        }
+      }
 
-    const { data: review, error } = await supabase
-      .from('reviews')
-      .select(
-        `
+      const { data: review, error } = await supabase
+        .from('reviews')
+        .select(
+          `
         *,
         reviewer:profiles!reviews_reviewer_id_fkey(first_name, last_name, email, profile_photo_url),
         reviewee:profiles!reviews_reviewee_id_fkey(first_name, last_name, email, profile_photo_url),
         meeting:meetings(title, start_datetime, end_datetime)
       `
-      )
-      .eq('id', id)
-      .single();
+        )
+        .eq('id', id)
+        .single();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    return NextResponse.json({ review });
-  } catch (error) {
-    console.error('Error fetching review:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch review' },
-      {
-        status: 500,
-      }
-    );
+      return NextResponse.json({ review });
+    } catch (error) {
+      console.error('Error fetching review:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch review' },
+        {
+          status: 500,
+        }
+      );
+    }
   }
-}
+);
 
 /**
  * Updates an existing review.

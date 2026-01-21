@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { sendEmail } from '@/libs/resend';
 import { strictRateLimit } from '@/libs/rateLimit';
@@ -36,8 +37,9 @@ const updateResultsWithBatch = (results: BulkEmailResult, batchResults: BatchRes
  * Sends bulk emails to users.
  * Supports batch processing, rate limiting, and email personalization.
  */
-export async function POST(request: NextRequest) {
-  const { user, authError, supabase } = await getAuthenticatedUser(request);
+export const POST = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+  const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
   if (authError || !user) {
     return createUnauthorizedResponse(authError);
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     // Apply rate limiting
-    const rateLimitResult = strictRateLimit(request);
+    const rateLimitResult = strictRateLimit(nextReq);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         {
@@ -81,7 +83,7 @@ export async function POST(request: NextRequest) {
       textContent,
       batchSize = 50,
       delayMs = 1000,
-    } = await request.json();
+    } = await nextReq.json();
 
     if (!subject || !htmlContent) {
       return NextResponse.json(
@@ -246,4 +248,4 @@ export async function POST(request: NextRequest) {
       }
     );
   }
-}
+});

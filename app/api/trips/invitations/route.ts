@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -20,9 +21,10 @@ const invitationSchema = z.object({
 /**
  * Sends a ride invitation from a driver to a specific passenger and notifies the passenger via messages.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
     const profileError = await ensureProfileComplete(supabase, user.id, 'inviting a rider');
     if (profileError) return profileError;
 
-    const json = await request.json();
+    const json = await req.json();
     const body = invitationSchema.parse(json);
 
     if (body.passenger_id === user.id) {
@@ -154,4 +156,4 @@ export async function POST(request: NextRequest) {
     console.error('Error creating invitation', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+});

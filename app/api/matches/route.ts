@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { calculateDistance } from '@/libs/distance';
 
@@ -8,11 +9,12 @@ import { calculateDistance } from '@/libs/distance';
  * - Passengers see drivers.
  * - Results are sorted by distance.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const limit = Number.parseInt(searchParams.get('limit') || '4');
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -152,4 +154,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

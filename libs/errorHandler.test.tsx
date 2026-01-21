@@ -1,3 +1,12 @@
+import { NextRequest } from 'next/server';
+import {
+  APIError,
+  handleAPIError,
+  withErrorHandling,
+  createErrorResponse,
+  createSuccessResponse,
+} from './errorHandler';
+
 // Mock global Response and Headers for the Node.js/Jest environment
 // @ts-expect-error globalThis.Headers is not a standard type in Node.js environments
 globalThis.Headers = class {
@@ -36,14 +45,6 @@ globalThis.Response = class {
   }
 };
 
-import {
-  APIError,
-  handleAPIError,
-  withErrorHandling,
-  createErrorResponse,
-  createSuccessResponse,
-} from './errorHandler';
-
 // Use fake timers to control new Date() for consistent timestamps
 const mockTimestamp = '2025-01-01T10:00:00.000Z';
 jest.useFakeTimers();
@@ -53,7 +54,7 @@ jest.setSystemTime(new Date(mockTimestamp));
 const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
 describe('errorHandler.js', () => {
-  let mockRequest: Request;
+  let mockRequest: NextRequest;
 
   beforeEach(() => {
     consoleErrorSpy.mockClear();
@@ -61,7 +62,7 @@ describe('errorHandler.js', () => {
     mockRequest = {
       url: 'https://test.com/api/v1/resource',
       method: 'GET',
-    } as Request;
+    } as NextRequest;
   });
 
   afterAll(() => {

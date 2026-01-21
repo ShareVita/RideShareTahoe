@@ -1,9 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { authRateLimit } from '@/libs/rateLimit';
 import { createClient } from '@/libs/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
 import { getAppUrl, sanitizeForLog } from '@/libs/email';
+import { getSafeError } from '@/lib/errorMap';
 
-// Define types locally for safety (mirroring database schema)
+// #region Types & Interfaces
+
+/**
+ * Local representation of the database profile schema.
+ */
 interface Profile {
   id: string;
   first_name: string | null;
@@ -16,9 +22,17 @@ interface Profile {
   display_lng: number | null;
 }
 
+// #endregion
+
+// #region Navigation Helpers
+
 /**
  * Determines the final destination URL based on user status and profile completeness.
- * Appends a cache-busting parameter to ensure client-side session freshness.
+ * * @param {string} finalRedirectBaseUrl - Trusted base URL for the application.
+ * @param {Profile} profile - The user's profile data.
+ * @param {boolean} isNewUser - Whether the user is logging in for the first time.
+ * @param {boolean} hasPhonePrivate - Presence of phone number in private storage.
+ * @returns {string} The redirect URL with a cache-busting parameter.
  */
 function determineRedirectPath(
   finalRedirectBaseUrl: string,
@@ -28,14 +42,11 @@ function determineRedirectPath(
 ): string {
   const cacheBust: string = `_t=${Date.now()}`;
 
-  // NEW USERS → Always go to profile edit
   if (isNewUser) {
     console.log('🆕 NEW USER → Redirecting to /profile/edit');
     return `${finalRedirectBaseUrl}/profile/edit?${cacheBust}`;
   }
 
-  // Check profile completeness for existing users
-  // Treat bio as optional; require role, phone, and a verified location
   const hasRole: boolean = !!profile.role && profile.role.trim().length > 0;
   const hasLocation: boolean = profile.display_lat !== null && profile.display_lng !== null;
 
@@ -47,7 +58,6 @@ function determineRedirectPath(
     hasLocation ? '✅ Verified (display_lat/lng present)' : '❌ Missing'
   );
 
-  // Existing user logic
   if (hasRole && hasPhonePrivate && hasLocation) {
     console.log('✅ PROFILE COMPLETE → Redirecting to /community');
     return `${finalRedirectBaseUrl}/community?${cacheBust}`;
@@ -58,8 +68,10 @@ function determineRedirectPath(
 }
 
 /**
- * Check if welcome email was already sent to this user (idempotent check).
- * Uses email_events table instead of time-based checks for reliability.
+ * Checks the email_events table to determine if a welcome email has been sent.
+ * * @param {Awaited<ReturnType<typeof createClient>>} supabase - Supabase client instance.
+ * @param {string} userId - Target user UUID.
+ * @returns {Promise<boolean>}
  */
 async function hasWelcomeEmailBeenSent(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -75,17 +87,22 @@ async function hasWelcomeEmailBeenSent(
   return !!welcomeEmailRecord;
 }
 
+// #endregion
+
+// #region Core Logic
+
 /**
- * Executes the core OAuth logic: code exchange, profile synchronization, emails, and final routing.
+ * Executes the OAuth code exchange and synchronizes provider metadata with the database.
+ * * @param {URL} requestUrl - The incoming request URL containing the code.
+ * @param {string} code - OAuth2 authorization code.
+ * @returns {Promise<NextResponse>}
  */
 async function processCodeExchangeAndProfileUpdate(
   requestUrl: URL,
   code: string
 ): Promise<NextResponse> {
-  // Use secure Publishable Key client with cookie handling
   const supabase = await createClient();
 
-  // 1. Exchange Code
   const { data, error: exchangeError } = (await supabase.auth.exchangeCodeForSession(code)) as {
     data: { session: Session | null; user: User | null };
     error: unknown;
@@ -104,9 +121,8 @@ async function processCodeExchangeAndProfileUpdate(
   }
 
   const user: User = data.user;
-  const finalRedirectBaseUrl: string = requestUrl.origin;
+  const finalRedirectBaseUrl: string = getAppUrl();
 
-  // 3. Profile Fetch and Data Merge
   const userMetadata: UserMetadata = user.user_metadata || {};
   const googleGivenName: string | undefined = userMetadata.given_name || userMetadata.first_name;
   const googleFamilyName: string | undefined = userMetadata.family_name || userMetadata.last_name;
@@ -118,28 +134,22 @@ async function processCodeExchangeAndProfileUpdate(
     .eq('id', user.id)
     .single();
 
-  // 2. New User Check: Use idempotent database check instead of profile existence
-  // (Profile may be auto-created by database trigger, so we check email_events instead)
-  const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabase, user.id);
+  const welcomeAlreadySent: boolean = await hasWelcomeEmailBeenSent(supabase, user.id);
   const isNewUser: boolean = !welcomeAlreadySent;
+
   console.log(
     isNewUser
       ? `🆕 NEW USER DETECTED (no welcome email sent yet) - ${sanitizeForLog(user.id)}`
       : `👤 EXISTING USER - ${sanitizeForLog(user.id)}`
   );
 
-  // Upsert user's email into user_private_info (required for email sending)
-  // Uses service_role to bypass RLS policies on this protected table
   console.log(`[Auth] User email from OAuth: ${user.email || 'NOT AVAILABLE'}`);
   if (user.email) {
     try {
       const supabaseAdmin = await createClient('service_role');
       const { error: privateInfoError } = await supabaseAdmin
         .from('user_private_info')
-        .upsert(
-          { id: user.id, email: user.email },
-          { onConflict: 'id' }
-        );
+        .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
       if (privateInfoError) {
         console.error('❌ Failed to upsert user_private_info:', JSON.stringify(privateInfoError));
       } else {
@@ -152,19 +162,16 @@ async function processCodeExchangeAndProfileUpdate(
     console.error('❌ No email available from OAuth user object');
   }
 
-  // Fetch private info for checking completeness (phone)
   const { data: privateInfo } = await supabase
     .from('user_private_info')
     .select('phone_number')
     .eq('id', user.id)
     .maybeSingle();
 
-  // Determine completeness using mixed data
-  const hasPhonePrivate = !!(
+  const hasPhonePrivate: boolean = !!(
     privateInfo?.phone_number && privateInfo.phone_number.trim().length > 0
   );
 
-  // Build the upsert payload. Include `id` to allow insert-if-missing
   const upsertData: Partial<Profile> & { id: string } = {
     id: user.id,
     first_name: googleGivenName || existingProfile?.first_name || null,
@@ -172,7 +179,6 @@ async function processCodeExchangeAndProfileUpdate(
     profile_photo_url: googlePicture || existingProfile?.profile_photo_url || null,
   };
 
-  // 4. Profile Upsert (insert if missing, update if exists)
   const { data: updatedProfile, error: profileError } = await supabase
     .from('profiles')
     .upsert(upsertData, { onConflict: 'id' })
@@ -190,11 +196,10 @@ async function processCodeExchangeAndProfileUpdate(
     return NextResponse.redirect(new URL('/login?error=profile_update_failed', requestUrl.origin));
   }
 
-  // 5. Welcome Email (only for new users who haven't received one yet)
   if (isNewUser) {
     try {
-      const appUrl = getAppUrl();
-      const emailResponse = await fetch(`${appUrl}/api/emails/send-welcome`, {
+      const appUrl: string = getAppUrl();
+      const emailResponse: Response = await fetch(`${appUrl}/api/emails/send-welcome`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,7 +209,7 @@ async function processCodeExchangeAndProfileUpdate(
       });
 
       if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
+        const errorText: string = await emailResponse.text();
         console.error(
           `❌ Welcome email API error: ${emailResponse.status} - ${sanitizeForLog(errorText)}`
         );
@@ -212,53 +217,59 @@ async function processCodeExchangeAndProfileUpdate(
         console.log(`✅ Welcome email sent for user ${sanitizeForLog(user.id)}`);
       }
     } catch (emailError) {
-      // Don't block the auth flow if email fails - log and continue
       console.error('❌ Error sending welcome email:', emailError);
     }
   }
 
-  // 6. Routing
-  const redirectPath = determineRedirectPath(
+  const redirectPath: string = determineRedirectPath(
     finalRedirectBaseUrl,
     updatedProfile,
     isNewUser,
     hasPhonePrivate
   );
 
-  // Use NextResponse.redirect() which sets the status and Location header.
   return NextResponse.redirect(redirectPath);
 }
 
+// #endregion
+
+// #region Handlers
+
 /**
- * Handles the OAuth callback from the authentication provider.
- * Exchanges the code for a session and sets up the user profile.
+ * Route handler for the authentication callback.
+ * * @param {NextRequest} req - Incoming Next.js request.
+ * @returns {Promise<NextResponse>}
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const requestUrl = new URL(req.url);
+  const requestUrl: URL = new URL(req.url);
   const code: string | null = requestUrl.searchParams.get('code');
   const error: string | null = requestUrl.searchParams.get('error');
   const errorDescription: string | null = requestUrl.searchParams.get('error_description');
+  const appUrl = getAppUrl();
 
-  // 1. Handle OAuth Errors (Guard Clause)
   if (error) {
-    console.error('OAuth error:', error, errorDescription);
-    return NextResponse.redirect(
-      new URL('/login?error=' + encodeURIComponent(error), requestUrl.origin)
-    );
+    const safeError = getSafeError(error);
+    const safeErrorDescription = errorDescription ? sanitizeForLog(errorDescription) : null;
+    console.error('OAuth error:', safeError, safeErrorDescription);
+    return NextResponse.redirect(new URL('/login?error=' + encodeURIComponent(safeError), appUrl));
   }
 
-  // 2. Process Authentication Code
-  if (code) {
-    try {
-      return await processCodeExchangeAndProfileUpdate(requestUrl, code);
-    } catch (error) {
-      // Catch unexpected errors
-      console.error('Unexpected error during session exchange:', error);
-      return NextResponse.redirect(new URL('/login?error=unexpected_error', requestUrl.origin));
-    }
+  if (!code) {
+    return NextResponse.redirect(new URL('/login', appUrl));
   }
 
-  // 3. Fallback: No Code Present
-  console.log('⚠️ No code present - Redirecting to login');
-  return NextResponse.redirect(new URL('/login', requestUrl.origin));
+  const rl = authRateLimit(req as unknown as Request);
+
+  if (!rl.success) {
+    return NextResponse.redirect(new URL('/login?error=rate_limited', appUrl));
+  }
+
+  try {
+    return await processCodeExchangeAndProfileUpdate(requestUrl, code);
+  } catch (err) {
+    console.error('Critical Auth Failure:', err);
+    return NextResponse.redirect(new URL('/login?error=server_error', appUrl));
+  }
 }
+
+// #endregion

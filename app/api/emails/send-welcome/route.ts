@@ -8,19 +8,23 @@ import {
 } from '@/libs/email';
 import { createClient } from '@/libs/supabase/server';
 import { internalOnly } from '@/libs/api/internalOnly';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
-export const POST = internalOnly(async (request) => {
-  try {
-    const { userId } = await request.json();
+/**
+ * POST route to send a welcome email for a user.
+ *
+ * Expects JSON body: { userId: string }
+ */
+export const POST = withErrorHandling(
+  internalOnly(async (req?: Request | NextRequest) => {
+    // internalOnly guarantees this is a NextRequest at runtime; narrow the type for TS
+    const nextReq = req as NextRequest;
+
+    const { userId } = await nextReq.json();
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        {
-          status: 400,
-        }
-      );
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
     const supabase = await createClient('service_role');
@@ -46,12 +50,7 @@ export const POST = internalOnly(async (request) => {
     const user = await getUserWithEmail(supabase, userId);
 
     if (!user || !user.email) {
-      return NextResponse.json(
-        { error: 'User not found or missing email' },
-        {
-          status: 404,
-        }
-      );
+      return NextResponse.json({ error: 'User not found or missing email' }, { status: 404 });
     }
 
     // Record user login activity
@@ -61,7 +60,7 @@ export const POST = internalOnly(async (request) => {
       metadata: { source: 'welcome_email_trigger' },
     });
 
-    // Send welcome email (the sendEmail function should record to email_events)
+    // Send welcome email
     await sendEmail({
       userId,
       to: user.email,
@@ -81,13 +80,6 @@ export const POST = internalOnly(async (request) => {
       success: true,
       message: 'Welcome email sent and nurture email scheduled',
     });
-  } catch (error) {
-    console.error('Error sending welcome email:', error);
-    return NextResponse.json(
-      { error: 'Failed to send welcome email' },
-      {
-        status: 500,
-      }
-    );
-  }
-});
+    // eslint-disable-next-line no-unused-vars
+  }) as (request?: Request | NextRequest) => Promise<Response>
+);

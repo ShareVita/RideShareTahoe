@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -16,9 +17,10 @@ const MAX_MESSAGE_LENGTH = 5000;
  * Users must have a complete profile (first_name) to send messages.
  * RLS policies enforce that users are not blocked from messaging each other.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { recipient_id, content, ride_post_id } = await request.json();
+    const { recipient_id, content, ride_post_id } = await req.json();
 
     if (!recipient_id || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -212,20 +214,21 @@ export async function POST(request: NextRequest) {
       }
     );
   }
-}
+});
 
 /**
  * Retrieves messages for a specific conversation.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const conversationId = searchParams.get('conversation_id');
 
     if (!conversationId) {
@@ -275,4 +278,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

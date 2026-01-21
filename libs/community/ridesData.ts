@@ -4,6 +4,7 @@ import type {
   ProfileType,
   RidePostType,
 } from '@/app/community/types';
+import { filterRidesByBoth } from '@/app/community/utils';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 
@@ -11,100 +12,9 @@ import type { Database } from '@/types/database.types';
 export type CommunitySupabaseClient = SupabaseClient<Database>;
 
 /**
- * Fetches driver ride posts that are not owned by the current user.
- */
-export const fetchDriverRides = async (
-  supabase: CommunitySupabaseClient,
-  currentUser: CommunityUser | null
-): Promise<RidePostType[]> => {
-  const baseQuery = supabase
-    .from('rides')
-    .select(
-      `
-      id,
-      poster_id,
-      posting_type,
-      start_location,
-      end_location,
-      start_lat,
-      start_lng,
-      end_lat,
-      end_lng,
-      departure_date,
-      departure_time,
-      return_date,
-      return_time,
-      is_round_trip,
-      trip_direction,
-      round_trip_group_id,
-      is_recurring,
-      recurring_days,
-      pricing_type,
-      price_per_seat,
-      gas_estimate,
-      total_seats,
-      available_seats,
-      car_type,
-      has_awd,
-      driving_arrangement,
-      music_preference,
-      conversation_preference,
-      title,
-      description,
-      special_instructions,
-      status,
-      created_at
-    `
-    )
-    .eq('posting_type', 'driver')
-    .eq('status', 'active')
-    .gte('departure_date', new Date().toISOString().split('T')[0]);
-
-  const query = currentUser ? baseQuery.neq('poster_id', currentUser.id) : baseQuery;
-
-  const { data: rides, error } = (await query.order('departure_date', {
-    ascending: true,
-  })) as { data: Omit<RidePostType, 'owner'>[] | null; error: unknown };
-  if (error) {
-    console.error('Error fetching driver rides:', JSON.stringify(error, null, 2));
-    // @ts-expect-error - logging optional property
-    if (error.message) console.error('Error message:', error.message);
-    throw error;
-  }
-
-  if (!rides || rides.length === 0) return [];
-
-  // Manual join for profiles
-  const posterIds = Array.from(new Set(rides.map((r) => r.poster_id)));
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, profile_photo_url, city')
-    .in('id', posterIds);
-
-  if (profilesError) {
-    console.error('Error fetching profiles for rides:', profilesError);
-    // Return rides without owner info if profile fetch fails, or throw?
-    // Better to throw or return partial data? Let's return partial but it might break UI.
-    // Let's log and return rides with null owner if we can't find them.
-  }
-
-  const profileMap = new Map(profiles?.map((p) => [p.id, p]));
-
-  // Filter out any rides where the owner could not be found or is invalid
-  const validRides = rides
-    .map((ride) => ({
-      ...ride,
-      owner: profileMap.get(ride.poster_id) || null,
-    }))
-    .filter((ride) => ride.owner?.first_name);
-
-  return validRides as RidePostType[];
-};
-
-/**
  * Fetches passenger ride posts that are not owned by the current user.
  */
-export interface FetchPassengerRidesOptions {
+interface FetchPassengerRidesOptions {
   page?: number;
   pageSize?: number;
   departureFilter?: LocationFilterType | null;
@@ -120,6 +30,29 @@ export const fetchPassengerRides = async (
     departureFilter: options?.departureFilter,
     destinationFilter: options?.destinationFilter,
   });
+};
+
+/**
+ * Fetches driver ride posts (posting_type = 'driver').
+ */
+export const fetchDriverRides = async (
+  supabase: CommunitySupabaseClient,
+  currentUser: CommunityUser | null,
+  options?: FetchPassengerRidesOptions
+): Promise<RidePostType[]> => {
+  const response = await fetchAllRides(
+    supabase,
+    currentUser,
+    options?.page,
+    options?.pageSize,
+    'driver',
+    {
+      departureFilter: options?.departureFilter,
+      destinationFilter: options?.destinationFilter,
+    }
+  );
+
+  return response.rides;
 };
 
 /**
@@ -204,7 +137,7 @@ export const fetchMyRides = async (
 /**
  * Response type for paginated ride fetches.
  */
-export interface FetchAllRidesFilters {
+interface FetchAllRidesFilters {
   departureFilter?: LocationFilterType | null;
   destinationFilter?: LocationFilterType | null;
 }
@@ -381,11 +314,30 @@ export const fetchAllRides = async (
     owner: profileMap.get(ride.poster_id) || null,
   }));
 
-  const totalCount = count ?? rides.length;
-  const hasMore = count === null ? rides.length === pageSize : from + rides.length < totalCount;
+  // Apply precise distance-based filtering in-memory using the community utils
+  // The DB query applies a bounding-box to reduce rows; this step enforces
+  // the exact radius checks (haversine) so results match client expectations.
+  const filteredRides =
+    filters?.departureFilter || filters?.destinationFilter
+      ? filterRidesByBoth(
+          ridesWithOwners,
+          filters?.departureFilter ?? null,
+          filters?.destinationFilter ?? null
+        )
+      : ridesWithOwners;
+
+  // Note: because we apply the stricter distance filter in-memory after the
+  // DB query, the returned totalCount reflects the filtered set on this page.
+  // Accurate pagination across all pages would require counting matches with
+  // the same precise distance logic at the DB level (not implemented here).
+  const totalCount = filteredRides.length;
+  const hasMore =
+    count === null
+      ? filteredRides.length === pageSize
+      : from + filteredRides.length < (count ?? filteredRides.length);
 
   return {
-    rides: ridesWithOwners,
+    rides: filteredRides,
     totalCount,
     hasMore,
   };

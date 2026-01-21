@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
 interface BookingWithProfiles {
@@ -22,9 +23,10 @@ interface BookingWithProfiles {
  * Retrieves a list of past bookings that the current user has not yet reviewed.
  * Filters for confirmed or completed bookings where the trip date has passed.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -105,4 +107,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

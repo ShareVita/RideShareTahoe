@@ -3,14 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { ReactNode } from 'react';
 
 // Import hooks and type definitions from the file being tested
-import {
-  useUserProfile,
-  useUserDogs,
-  useUpdateProfile,
-  UserProfile,
-  UserDog,
-  UpdatableProfileData,
-} from './useProfile'; // Corrected import from useProfile
+import { useUserProfile, useUpdateProfile, UserProfile, UpdatableProfileData } from './useProfile'; // Corrected import from useProfile
 
 // #region Mock Dependencies
 
@@ -22,7 +15,6 @@ jest.mock('@/components/providers/SupabaseUserProvider', () => ({
 }));
 
 const mockSingle = jest.fn();
-const mockOrder = jest.fn();
 
 // --- Dedicated Query Chain Mocks (Self-Contained Logic) ---
 
@@ -99,22 +91,11 @@ const createSocialChain = () => {
   return chain;
 };
 
-// Dogs Chain: .select().eq().order()
-const createDogsChain = () => {
-  const orderChain = { order: mockOrder };
-  const eqChain = { eq: jest.fn().mockReturnValue(orderChain) };
-
-  return {
-    select: jest.fn().mockReturnValue(eqChain),
-  };
-};
-
 // 3. Mock Supabase from function
 const mockFrom = jest.fn((table: string) => {
   if (table === 'profiles') return createProfileChain();
   if (table === 'user_private_info') return createPrivateInfoChain();
   if (table === 'profile_socials') return createSocialChain();
-  if (table === 'dogs') return createDogsChain();
   return createProfileChain(); // Fallback
 });
 
@@ -159,7 +140,7 @@ describe('Data Hooks', () => {
 
   // Custom render hook function
   const renderHookWithClient = <TResult,>(hook: () => TResult) => {
-    return renderHook(hook, { wrapper: createWrapper(queryClient) });
+    return renderHook(() => hook(), { wrapper: createWrapper(queryClient) });
   };
 
   // #region useUserProfile Tests
@@ -247,106 +228,6 @@ describe('Data Hooks', () => {
   });
 
   // #endregion useUserProfile Tests
-
-  // #region useUserDogs Tests
-
-  describe('useUserDogs', () => {
-    const mockDogs: UserDog[] = [
-      {
-        id: 'd1',
-        owner_id: mockUser.id,
-        name: 'Skippy',
-        breed: 'Pug',
-        birthday: '2020-01-01',
-        age_years: 3,
-        age_months: 36,
-        size: '0-10',
-        photo_url: null,
-        gender: 'male',
-        neutered: true,
-        temperament: ['friendly', 'playful'],
-        energy_level: 'moderate',
-        dog_friendly: true,
-        cat_friendly: false,
-        kid_friendly: true,
-        leash_trained: true,
-        crate_trained: false,
-        house_trained: true,
-        fully_vaccinated: true,
-        activities: ['fetch', 'walks'],
-        description: 'Loves to play fetch.',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z',
-      },
-      {
-        id: 'd2',
-        owner_id: mockUser.id,
-        name: 'Spot',
-        breed: 'Lab',
-        birthday: '2018-01-01',
-        age_years: 5,
-        age_months: 60,
-        size: '41-70',
-        photo_url: null,
-        gender: 'female',
-        neutered: true,
-        temperament: ['gentle', 'active'],
-        energy_level: 'high',
-        dog_friendly: true,
-        cat_friendly: true,
-        kid_friendly: true,
-        leash_trained: true,
-        crate_trained: true,
-        house_trained: true,
-        fully_vaccinated: true,
-        activities: ['swimming', 'running'],
-        description: 'Enjoys swimming and running.',
-        created_at: '2023-01-02T00:00:00Z',
-        updated_at: '2023-01-02T00:00:00Z',
-      },
-    ];
-
-    it('should fetch user dogs successfully', async () => {
-      mockOrder.mockResolvedValue({ data: mockDogs, error: null });
-
-      const { result } = renderHookWithClient(useUserDogs);
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-      expect(mockFrom).toHaveBeenCalledWith('dogs');
-
-      // Dogs Chain: .select().eq().order()
-      const dogsChain = mockFrom.mock.results.find((r) => r.value?.select().order)?.value;
-      if (dogsChain) {
-        expect(dogsChain.select().eq).toHaveBeenCalledWith('owner_id', mockUser.id);
-      }
-
-      expect(mockOrder).toHaveBeenCalledWith('created_at', { ascending: false });
-      expect(result.current.data).toEqual(mockDogs);
-    });
-
-    it('should return empty array if user is not logged in', async () => {
-      mockUseUser.mockReturnValue({ user: null, loading: false });
-
-      const { result } = renderHookWithClient(useUserDogs);
-
-      expect(result.current.status).toBe('pending');
-      expect(result.current.isFetching).toBe(false);
-      expect(result.current.data).toBe(undefined);
-    });
-
-    it('should handle fetch errors gracefully', async () => {
-      const mockError = { message: 'Dog DB Failed' };
-      mockOrder.mockResolvedValue({ data: null, error: mockError });
-
-      const { result } = renderHookWithClient(useUserDogs);
-
-      await waitFor(() => expect(result.current.isError).toBe(true));
-      expect(result.current.error?.message).toBe('Dog DB Failed');
-    });
-  });
-
-  // #endregion useUserDogs Tests
 
   // #region useUpdateProfile Tests
 

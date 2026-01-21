@@ -4,20 +4,22 @@ import {
   ensureProfileComplete,
 } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Retrieves reviews, optionally filtered by userId.
  * Supports pagination.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
     const limit = Number.parseInt(searchParams.get('limit') || '50');
     const offset = Number.parseInt(searchParams.get('offset') || '0');
@@ -70,15 +72,16 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});
 
 /**
  * Creates a new review for a completed ride booking.
  * Validates booking status, input fields, and ensures one review per trip per user.
  */
-export async function POST(request: NextRequest) {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -87,7 +90,7 @@ export async function POST(request: NextRequest) {
     const profileError = await ensureProfileComplete(supabase, user.id, 'leaving reviews');
     if (profileError) return profileError;
 
-    const { bookingId, rating, comment } = await request.json();
+    const { bookingId, rating, comment } = await req.json();
 
     // Validate input
     const inputError = validateReviewInput(bookingId, rating, comment);
@@ -203,7 +206,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Validates the review input fields.

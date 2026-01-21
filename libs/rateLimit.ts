@@ -27,6 +27,7 @@ interface RateLimitData {
 
 const rateLimitMap = new Map<string, RateLimitData>();
 
+/** @internal */
 export const rateLimit = (options: RateLimitOptions = {}) => {
   const {
     windowMs = 15 * 60 * 1000, // 15 minutes
@@ -181,7 +182,11 @@ export async function checkSupabaseRateLimit(
   }
 }
 
-// Test helper to reset rate limit state between tests
+/**
+ * @internal
+ *
+ * Test helper to reset rate limit state between tests
+ */
 export const __resetRateLimitMap = () => {
   rateLimitMap.clear();
 };

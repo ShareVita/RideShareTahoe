@@ -177,17 +177,3 @@ export async function loadEmailTemplate(
     text,
   };
 }
-
-/**
- * Get all available email types
- */
-export function getAvailableEmailTypes(): string[] {
-  return Object.keys(TEMPLATE_REGISTRY);
-}
-
-/**
- * Check if email type is valid
- */
-export function isValidEmailType(emailType: string): emailType is keyof typeof TEMPLATE_REGISTRY {
-  return emailType in TEMPLATE_REGISTRY;
-}

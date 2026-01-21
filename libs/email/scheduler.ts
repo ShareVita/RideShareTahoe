@@ -72,7 +72,11 @@ export async function processScheduledEmails(): Promise<{
         // Get user email from user_private_info (parallel queries for efficiency)
         const [{ data: profile }, { data: privateInfo }] = await Promise.all([
           supabase.from('profiles').select('first_name').eq('id', scheduledEmail.user_id).single(),
-          supabase.from('user_private_info').select('email').eq('id', scheduledEmail.user_id).single(),
+          supabase
+            .from('user_private_info')
+            .select('email')
+            .eq('id', scheduledEmail.user_id)
+            .single(),
         ]);
 
         if (!profile || !privateInfo?.email) {
@@ -173,6 +177,8 @@ export async function scheduleNurtureEmail(userId: string): Promise<void> {
 }
 
 /**
+ * @public
+ *
  * Get scheduled emails for a user
  */
 export async function getUserScheduledEmails(userId: string): Promise<ScheduledEmail[]> {
@@ -191,6 +197,8 @@ export async function getUserScheduledEmails(userId: string): Promise<ScheduledE
 }
 
 /**
+ * @public
+ *
  * Cancel scheduled emails for a user
  */
 export async function cancelUserScheduledEmails(userId: string, emailType?: string): Promise<void> {

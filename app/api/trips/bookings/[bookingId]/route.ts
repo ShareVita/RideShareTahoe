@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -8,6 +9,7 @@ import {
 import { sendConversationMessage } from '@/libs/supabase/conversations';
 import { z } from 'zod';
 import type { Database } from '@/types/database.types';
+import { Context } from 'node:vm';
 
 const bookingActionSchema = z.object({
   action: z.enum(['approve', 'deny', 'cancel']),
@@ -56,125 +58,129 @@ type BookingWithRelations = TripBookingRow & {
 /**
  * Allows the recipient of a booking request or invitation to approve or deny it directly from messages.
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ bookingId: string }> }
-) {
-  const url = new URL(request.url);
-  const pathSegments = url.pathname.split('/').filter(Boolean);
-  // Fallback to the final segment in the URL when Next fails to populate params.
-  const fallbackBookingId =
-    pathSegments.length > 3 ? pathSegments[pathSegments.length - 1] : undefined;
-  const { bookingId: paramBookingId } = await params;
-  const bookingId = ((paramBookingId ?? '').trim() || (fallbackBookingId ?? '')).trim();
-
-  try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
-
-    if (authError || !user) {
-      return createUnauthorizedResponse(authError);
-    }
-
-    const profileError = await ensureProfileComplete(
-      supabase,
-      user.id,
-      'responding to a booking request'
-    );
-    if (profileError) return profileError;
-
-    if (!bookingId) {
-      return NextResponse.json({ error: 'Booking ID is required' }, { status: 400 });
-    }
-
-    const body = bookingActionSchema.parse(await request.json());
-
-    const booking = await fetchBooking(supabase, bookingId);
-    if (!booking) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
-    }
-
-    const userRole = getUserRole(booking, user.id);
-    if (userRole === 'none') {
-      return NextResponse.json({ error: 'Not authorized to modify this booking' }, { status: 403 });
-    }
-
-    const actionType = getActionType(body.action, booking, userRole);
-    if (actionType === 'invalid') {
-      return NextResponse.json(
-        { error: 'Invalid action for the current booking state' },
-        { status: 400 }
-      );
-    }
-
-    const nextStatus: BookingStatus = body.action === 'approve' ? 'confirmed' : 'cancelled';
-
-    const bookingRide = booking.ride;
-    // Only decrement seats when confirming a pending booking (driver approving passenger request)
-    // For invited bookings (passenger accepting invitation), seats were already decremented when invitation was created
-    if (
-      nextStatus === 'confirmed' &&
-      booking.status === 'pending' &&
-      bookingRide &&
-      bookingRide.available_seats !== null
-    ) {
-      const seatResult = await handleSeatUpdate(supabase, bookingRide);
-      if (seatResult !== true) {
-        return NextResponse.json({ error: seatResult }, { status: 400 });
-      }
-    }
-
-    // If cancelling/denying an invitation, restore the seat since it was decremented when invitation was created
-    if (
-      nextStatus === 'cancelled' &&
-      booking.status === 'invited' &&
-      bookingRide &&
-      bookingRide.available_seats !== null
-    ) {
-      const { error: seatRestoreError } = await supabase
-        .from('rides')
-        .update({ available_seats: bookingRide.available_seats + 1 })
-        .eq('id', bookingRide.id);
-
-      if (seatRestoreError) {
-        console.error('Failed to restore seat after invitation denial', seatRestoreError);
-        // Continue anyway - the cancellation should still proceed
-      }
-    }
-
-    const updateResult = await updateBookingStatus(supabase, bookingId, nextStatus);
-    if (updateResult !== true) {
-      throw updateResult;
-    }
-
-    const content = buildBookingMessage({
-      booking,
-      userRole,
-      action: body.action,
-    });
+export const PATCH = withErrorHandling(
+  async (request?: Request | NextRequest, context?: Context) => {
+    const req = request as NextRequest;
+    const url = new URL((request as unknown as Request).url);
+    const { params } = context as { params: Promise<{ bookingId: string }> };
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+    // Fallback to the final segment in the URL when Next fails to populate params.
+    const fallbackBookingId =
+      pathSegments.length > 3 ? pathSegments[pathSegments.length - 1] : undefined;
+    const { bookingId: paramBookingId } = await params;
+    const bookingId = ((paramBookingId ?? '').trim() || (fallbackBookingId ?? '')).trim();
 
     try {
-      const recipientId = userRole === 'driver' ? booking.passenger_id : booking.driver_id;
-      await sendConversationMessage({
+      const { user, authError, supabase } = await getAuthenticatedUser(req);
+
+      if (authError || !user) {
+        return createUnauthorizedResponse(authError);
+      }
+
+      const profileError = await ensureProfileComplete(
         supabase,
-        senderId: user.id,
-        recipientId,
-        rideId: booking.ride_id,
-        content,
+        user.id,
+        'responding to a booking request'
+      );
+      if (profileError) return profileError;
+
+      if (!bookingId) {
+        return NextResponse.json({ error: 'Booking ID is required' }, { status: 400 });
+      }
+
+      const body = bookingActionSchema.parse(await req.json());
+
+      const booking = await fetchBooking(supabase, bookingId);
+      if (!booking) {
+        return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+      }
+
+      const userRole = getUserRole(booking, user.id);
+      if (userRole === 'none') {
+        return NextResponse.json(
+          { error: 'Not authorized to modify this booking' },
+          { status: 403 }
+        );
+      }
+
+      const actionType = getActionType(body.action, booking, userRole);
+      if (actionType === 'invalid') {
+        return NextResponse.json(
+          { error: 'Invalid action for the current booking state' },
+          { status: 400 }
+        );
+      }
+
+      const nextStatus: BookingStatus = body.action === 'approve' ? 'confirmed' : 'cancelled';
+
+      const bookingRide = booking.ride;
+      // Only decrement seats when confirming a pending booking (driver approving passenger request)
+      // For invited bookings (passenger accepting invitation), seats were already decremented when invitation was created
+      if (
+        nextStatus === 'confirmed' &&
+        booking.status === 'pending' &&
+        bookingRide &&
+        bookingRide.available_seats !== null
+      ) {
+        const seatResult = await handleSeatUpdate(supabase, bookingRide);
+        if (seatResult !== true) {
+          return NextResponse.json({ error: seatResult }, { status: 400 });
+        }
+      }
+
+      // If cancelling/denying an invitation, restore the seat since it was decremented when invitation was created
+      if (
+        nextStatus === 'cancelled' &&
+        booking.status === 'invited' &&
+        bookingRide &&
+        bookingRide.available_seats !== null
+      ) {
+        const { error: seatRestoreError } = await supabase
+          .from('rides')
+          .update({ available_seats: bookingRide.available_seats + 1 })
+          .eq('id', bookingRide.id);
+
+        if (seatRestoreError) {
+          console.error('Failed to restore seat after invitation denial', seatRestoreError);
+          // Continue anyway - the cancellation should still proceed
+        }
+      }
+
+      const updateResult = await updateBookingStatus(supabase, bookingId, nextStatus);
+      if (updateResult !== true) {
+        throw updateResult;
+      }
+
+      const content = buildBookingMessage({
+        booking,
+        userRole,
+        action: body.action,
       });
-    } catch (conversationError: unknown) {
-      console.error('Error notifying participant about booking response', conversationError);
-    }
 
-    return NextResponse.json({ success: true, status: nextStatus });
-  } catch (error: unknown) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
-    }
+      try {
+        const recipientId = userRole === 'driver' ? booking.passenger_id : booking.driver_id;
+        await sendConversationMessage({
+          supabase,
+          senderId: user.id,
+          recipientId,
+          rideId: booking.ride_id,
+          content,
+        });
+      } catch (conversationError: unknown) {
+        console.error('Error notifying participant about booking response', conversationError);
+      }
 
-    console.error('Error updating booking status', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+      return NextResponse.json({ success: true, status: nextStatus });
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({ error: error.issues }, { status: 400 });
+      }
+
+      console.error('Error updating booking status', error);
+      return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
   }
-}
+);
 
 /**
  * Fetches the booking and related entities.

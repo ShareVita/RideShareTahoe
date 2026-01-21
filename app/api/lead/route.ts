@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 // This route is used to store the leads that are generated from the landing page.
 // The API call is initiated by <ButtonLead /> component
-export async function POST(req: NextRequest) {
+export const POST = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   const body = await req.json();
 
   if (!body.email) {
@@ -25,4 +27,4 @@ export async function POST(req: NextRequest) {
     const errorMessage = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
-}
+});

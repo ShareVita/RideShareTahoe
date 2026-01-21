@@ -1,14 +1,16 @@
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(nextReq.url);
     const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1'));
     const limit = Math.max(1, Number.parseInt(searchParams.get('limit') || '24'));
     const offset = (page - 1) * limit;
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
-
+    const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
@@ -94,4 +96,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

@@ -23,18 +23,3 @@ export function calculateDistance(lat1: number, lng1: number, lat2: number, lng2
 
   return distance; // distance in miles
 }
-
-/**
- * Format distance for display
- * @param {number} distance - Distance in miles
- * @returns {string} Formatted distance string
- */
-export function formatDistance(distance: number) {
-  if (distance < 0.1) {
-    return 'Less than 0.1 miles away';
-  } else if (distance < 1) {
-    return `${distance.toFixed(1)} miles away`;
-  } else {
-    return `${distance.toFixed(1)} miles away`;
-  }
-}

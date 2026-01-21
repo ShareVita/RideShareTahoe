@@ -17,6 +17,8 @@ interface SendConversationMessageOptions {
 }
 
 /**
+ * @internal
+ *
  * Compare function for reliable alphabetical sorting using localeCompare.
  *
  * @param a - First string to compare.
@@ -28,6 +30,8 @@ export function alphabeticalCompare(a: string, b: string): number {
 }
 
 /**
+ * @internal
+ *
  * Ensures there is a conversation between two participants for the given ride.
  *
  * @param supabase - Supabase client used for querying the conversations table.
@@ -79,6 +83,32 @@ export async function ensureConversationForRide(
 
   if (match2) {
     return match2;
+  }
+
+  // This allows users to message each other even when there isn't an active ride tying
+  // them together.
+  if (rideId) {
+    const { data: general1, error: genErr1 } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('participant1_id', participantA)
+      .eq('participant2_id', participantB)
+      .eq('ride_id', null)
+      .maybeSingle<ConversationRow>();
+
+    if (genErr1) throw genErr1;
+    if (general1) return general1;
+
+    const { data: general2, error: genErr2 } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('participant1_id', participantB)
+      .eq('participant2_id', participantA)
+      .eq('ride_id', null)
+      .maybeSingle<ConversationRow>();
+
+    if (genErr2) throw genErr2;
+    if (general2) return general2;
   }
 
   const [firstParticipant, secondParticipant] = [participantA, participantB].sort(

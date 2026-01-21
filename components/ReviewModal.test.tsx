@@ -14,6 +14,14 @@ jest.mock('@/libs/supabase/client', () => ({
 
 globalThis.fetch = jest.fn();
 
+const mockMutateAsync = jest.fn();
+
+jest.mock('@/hooks/useReviews', () => ({
+  useSubmitReview: () => ({
+    mutateAsync: mockMutateAsync,
+  }),
+}));
+
 const mockOnClose = jest.fn();
 const mockOnReviewSubmitted = jest.fn();
 const mockPendingReview = {
@@ -77,10 +85,7 @@ describe('ReviewModal', () => {
   });
 
   it('submits the form successfully with valid data', async () => {
-    (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ review: { id: '1' } }),
-    });
+    mockMutateAsync.mockResolvedValueOnce({ review: { id: '1' } });
 
     render(
       <ReviewModal
@@ -99,16 +104,10 @@ describe('ReviewModal', () => {
     fireEvent.click(screen.getByText('Submit Review'));
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/reviews', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bookingId: '1',
-          rating: 5,
-          comment: 'This was a great experience, really enjoyed it.',
-        }),
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        bookingId: '1',
+        rating: 5,
+        comment: 'This was a great experience, really enjoyed it.',
       });
     });
 

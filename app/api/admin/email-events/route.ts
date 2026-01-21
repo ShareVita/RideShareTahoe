@@ -1,20 +1,23 @@
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 
 /**
  * Retrieves a log of email events (sent, failed, etc.).
  * Supports filtering by type, status, and user.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (req?: Request | NextRequest) => {
+  const nextReq = req as NextRequest;
+
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(nextReq.url);
     const page = Number.parseInt(searchParams.get('page') || '1');
     const limit = Number.parseInt(searchParams.get('limit') || '50');
     const emailType = searchParams.get('emailType');
     const status = searchParams.get('status');
     const userId = searchParams.get('userId');
 
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(nextReq);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -95,4 +98,4 @@ export async function GET(request: NextRequest) {
       }
     );
   }
-}
+});

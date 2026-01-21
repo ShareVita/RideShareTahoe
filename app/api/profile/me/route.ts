@@ -1,6 +1,7 @@
 'use server';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '@/libs/errorHandler';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
 
 interface ProfileSocialsRow {
@@ -33,9 +34,10 @@ interface ProfileResponse {
  * Retrieves the authenticated user's profile and social links.
  * Used for populating the user dashboard.
  */
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandling(async (request?: Request | NextRequest) => {
+  const req = request as NextRequest;
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase } = await getAuthenticatedUser(req);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
@@ -76,4 +78,4 @@ export async function GET(request: NextRequest) {
     console.error('Unexpected error in /api/profile/me', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
