@@ -126,14 +126,15 @@ export function PassengerPostCard({
         </div>
       </div>
 
-      {/*Details button*/}
-      <div>
+      {/* View Details link */}
+      <div className="mb-2">
         <button
           onClick={onViewDetails}
-          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group"
           aria-label={`View full ride details for trip from ${post.start_location} to ${post.end_location}`}
         >
-          View Details &rarr;
+          View Details
+          <span className="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
         </button>
       </div>
 
@@ -168,20 +169,11 @@ export function PassengerPostCard({
 
       {/* Actions */}
       <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
-        {post.owner && (
-          <Link
-            href={`/profile/${post.owner.id}`}
-            className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors text-center flex-1"
-          >
-            View Profile
-          </Link>
-        )}
-
         {isOwner ? (
           <>
             <Link
               href={`/rides/edit/${post.id}`}
-              className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors text-center flex-1"
+              className="bg-gray-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-center flex-1"
             >
               Edit
             </Link>
@@ -189,7 +181,7 @@ export function PassengerPostCard({
               <button
                 onClick={() => onDelete(post.id)}
                 disabled={deleting}
-                className={`bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors flex-1 ${
+                className={`bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex-1 ${
                   deleting ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
@@ -200,21 +192,31 @@ export function PassengerPostCard({
         ) : (
           post.owner && (
             <>
+              {/* Primary action: Message */}
               <button
                 onClick={() =>
                   handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
                 }
-                className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
+                className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-1"
               >
                 Message
               </button>
 
+              {/* Conversion action: Invite */}
               <button
                 onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
-                className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors flex-1"
+                className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-1"
               >
                 Invite
               </button>
+
+              {/* Secondary action: View Profile */}
+              <Link
+                href={`/profile/${post.owner.id}`}
+                className="border-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-transparent px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-center flex-1"
+              >
+                View Profile
+              </Link>
             </>
           )
         )}
