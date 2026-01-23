@@ -1,20 +1,32 @@
 import React, { useState } from 'react';
 import type { RidePostType, Vehicle } from '@/app/community/types';
+import { normalizeTime } from '@/libs/dateTimeFormatters';
+import DatePicker from '@/components/ui/DatePicker';
+import TimeInput from '@/components/ui/TimeInput';
 
 interface RideFormProps {
-  initialData?: Partial<RidePostType>;
+  initialData?: Partial<RidePostType> | Partial<RidePostType>[];
   // eslint-disable-next-line no-unused-vars
-  onSave: (_data: Partial<RidePostType>) => Promise<void>;
+  onSave: (data: Partial<RidePostType> | Partial<RidePostType>[]) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
   isEditing?: boolean;
+  isSeriesEdit?: boolean;
   vehicles?: Vehicle[];
 }
 
+interface DateTimeEntry {
+  date: string;
+  departureTime: string;
+  isRoundTrip: boolean;
+  returnDate?: string;
+  returnTime?: string;
+  existingRideId?: string; // Track which rides already exist in DB
+}
+
 /**
- * Form component for creating or editing a ride offer or request.
- * Handles both driver (offering) and passenger (requesting) modes.
- * Includes vehicle selection for drivers and round-trip logic.
+ * Enhanced form component for creating or editing ride offers/requests.
+ * Supports both single ride editing and multi-date series editing.
  */
 export default function RideForm({
   initialData,
@@ -22,27 +34,94 @@ export default function RideForm({
   onCancel,
   isLoading = false,
   isEditing = false,
+  isSeriesEdit = false,
   vehicles = [],
 }: Readonly<RideFormProps>) {
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<Partial<RidePostType>>({
-    posting_type: 'driver',
-    title: '',
-    start_location: '',
-    end_location: '',
-    departure_date: '',
-    departure_time: '',
-    price_per_seat: 0,
-    total_seats: 1,
-    description: '',
-    special_instructions: '',
-    has_awd: false,
-    is_round_trip: false,
-    return_date: '',
-    return_time: '',
-    ...initialData,
+  // Initialize from either single ride or array of rides
+  const initializeFromData = () => {
+    if (!initialData) {
+      return {
+        dates: [],
+        entries: {},
+        formData: {
+          posting_type: 'driver' as const,
+          title: '',
+          start_location: '',
+          end_location: '',
+          price_per_seat: 0,
+          total_seats: 1,
+          description: '',
+          special_instructions: '',
+          has_awd: false,
+        },
+      };
+    }
+
+    const ridesArray = Array.isArray(initialData) ? initialData : [initialData];
+    const firstRide = ridesArray[0];
+
+    const dates: string[] = [];
+    const entries: Record<string, DateTimeEntry> = {};
+
+    for (const ride of ridesArray) {
+      if (ride.departure_date && !dates.includes(ride.departure_date)) {
+        dates.push(ride.departure_date);
+        entries[ride.departure_date] = {
+          date: ride.departure_date,
+          departureTime: normalizeTime(ride.departure_time),
+          isRoundTrip: ride.is_round_trip || false,
+          returnDate: ride.return_date ?? undefined,
+          returnTime: normalizeTime(ride.return_time),
+          existingRideId: ride.id, // Track existing rides
+        };
+      }
+    }
+
+    // Sort dates
+    dates.sort();
+
+    return {
+      dates,
+      entries,
+      formData: {
+        posting_type: (firstRide.posting_type || 'driver') as 'driver' | 'passenger' | 'flexible',
+        title: firstRide.title || '',
+        start_location: firstRide.start_location || '',
+        end_location: firstRide.end_location || '',
+        price_per_seat: firstRide.price_per_seat || 0,
+        total_seats: firstRide.total_seats || 1,
+        description: firstRide.description || '',
+        special_instructions: firstRide.special_instructions || '',
+        has_awd: firstRide.has_awd || false,
+        car_type: firstRide.car_type,
+      },
+    };
+  };
+
+  const initialized = initializeFromData();
+
+  const [selectedDates, setSelectedDates] = useState<string[]>(initialized.dates);
+  const [dateTimeEntries, setDateTimeEntries] = useState<Record<string, DateTimeEntry>>(
+    initialized.entries
+  );
+  const [formData, setFormData] = useState<Partial<RidePostType>>(initialized.formData);
+
+  /**
+   * Auto-select vehicle if editing.
+   * This is derived state and should be initialized, not synchronized in an effect.
+   */
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(() => {
+    if (!isEditing) return '';
+    if (!vehicles.length) return '';
+    if (!initialized.formData.car_type) return '';
+
+    const matchingVehicle = vehicles.find((v) =>
+      initialized.formData.car_type?.includes(`${v.year} ${v.make} ${v.model}`)
+    );
+
+    return matchingVehicle?.id ?? '';
   });
 
   const handleChange = (
@@ -75,7 +154,6 @@ export default function RideForm({
       const isAwd = vehicle.drivetrain === 'AWD' || vehicle.drivetrain === '4WD';
       setFormData((prev) => ({
         ...prev,
-        // Combine make, model, year, color, and drivetrain into a descriptive string
         car_type: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color}) ${
           vehicle.drivetrain ? `- ${vehicle.drivetrain}` : ''
         }`,
@@ -84,31 +162,205 @@ export default function RideForm({
     }
   };
 
+  const handleDatesChange = (dates: string[]) => {
+    setSelectedDates(dates);
+
+    const newEntries = { ...dateTimeEntries };
+
+    // Add new dates
+    for (const date of dates) {
+      if (!newEntries[date]) {
+        newEntries[date] = {
+          date,
+          departureTime: '',
+          isRoundTrip: false,
+        };
+      }
+    }
+
+    // Remove unselected dates
+    for (const date of Object.keys(newEntries)) {
+      if (!dates.includes(date)) {
+        delete newEntries[date];
+      }
+    }
+
+    setDateTimeEntries(newEntries);
+  };
+
+  // Remove individual date card (for series editing)
+  const removeDate = (dateToRemove: string) => {
+    if (selectedDates.length === 1) {
+      alert(
+        "You can't remove the last date. Use the main delete button to delete the entire ride."
+      );
+      return;
+    }
+
+    handleDatesChange(selectedDates.filter((d) => d !== dateToRemove));
+  };
+
+  const updateDateTime = (date: string, field: keyof DateTimeEntry, value: string | boolean) => {
+    setDateTimeEntries((prev) => ({
+      ...prev,
+      [date]: {
+        ...prev[date],
+        [field]: value,
+      },
+    }));
+  };
+
+  const copyTimeToAll = (sourceDate: string) => {
+    const sourceEntry = dateTimeEntries[sourceDate];
+    if (!sourceEntry?.departureTime) return;
+
+    const newEntries = { ...dateTimeEntries };
+    for (const date of selectedDates) {
+      if (date !== sourceDate) {
+        newEntries[date] = {
+          ...newEntries[date],
+          departureTime: sourceEntry.departureTime,
+        };
+      }
+    }
+    setDateTimeEntries(newEntries);
+  };
+
+  const calculateDefaultReturnDate = (departureDate: string): string => {
+    const date = new Date(departureDate + 'T00:00:00');
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+  };
+
+  /**
+   * Build ride objects from selected dates and form data.
+   * Handles both single rides and multi-date series with round trips.
+   */
+  const buildRidesFromDates = (
+    dates: string[],
+    entries: Record<string, DateTimeEntry>,
+    baseData: Partial<RidePostType>,
+    seriesGroupId?: string
+  ): Partial<RidePostType>[] => {
+    const rides: Partial<RidePostType>[] = [];
+    const isMultiDate = dates.length > 1;
+
+    for (const date of dates) {
+      const entry = entries[date];
+
+      if (entry.isRoundTrip) {
+        // Round trips get their own group ID (separate from series)
+        const roundTripGroupId = crypto.randomUUID();
+
+        // Departure leg
+        rides.push({
+          ...baseData,
+          departure_date: date,
+          departure_time: entry.departureTime,
+          is_round_trip: true,
+          trip_direction: 'departure',
+          round_trip_group_id: roundTripGroupId,
+          is_recurring: isMultiDate,
+        });
+
+        // Return leg (swap start/end locations)
+        rides.push({
+          ...baseData,
+          departure_date: entry.returnDate,
+          departure_time: entry.returnTime,
+          start_location: baseData.end_location,
+          end_location: baseData.start_location,
+          is_round_trip: true,
+          trip_direction: 'return',
+          round_trip_group_id: roundTripGroupId,
+          is_recurring: isMultiDate,
+        });
+      } else {
+        // Single-direction rides share series group ID
+        rides.push({
+          ...baseData,
+          departure_date: date,
+          departure_time: entry.departureTime,
+          is_round_trip: false,
+          round_trip_group_id: seriesGroupId,
+          is_recurring: isMultiDate,
+        });
+      }
+    }
+
+    return rides;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Validate that return date is after departure date + time
-    if (formData.is_round_trip && formData.return_date && formData.departure_date) {
-      const departureDateTime = new Date(
-        `${formData.departure_date}T${formData.departure_time || '00:00'}`
-      );
-      const returnDateTime = new Date(`${formData.return_date}T${formData.return_time || '00:00'}`);
+    if (selectedDates.length === 0) {
+      setError('Please select at least one date.');
+      return;
+    }
 
-      if (returnDateTime <= departureDateTime) {
-        setError('Return trip must be after the departure trip.');
+    // Validate all dates have times and round trip logic
+    for (const date of selectedDates) {
+      if (!dateTimeEntries[date]?.departureTime) {
+        setError(`Please set departure time for ${date}`);
         return;
+      }
+
+      const entry = dateTimeEntries[date];
+      if (entry.isRoundTrip) {
+        if (!entry.returnDate || !entry.returnTime) {
+          setError(`Please set return date and time for ${date}`);
+          return;
+        }
+
+        // Validate return is after departure
+        const departureDateTime = new Date(`${date}T${entry.departureTime}:00`);
+        const returnDateTime = new Date(`${entry.returnDate}T${entry.returnTime}:00`);
+
+        if (returnDateTime <= departureDateTime) {
+          setError(`Return trip must be after the departure trip for ${date}`);
+          return;
+        }
       }
     }
 
-    await onSave(formData);
+    // Single ride edit (non-series)
+    if (isEditing && !isSeriesEdit) {
+      const entry = dateTimeEntries[selectedDates[0]];
+      const updateData: Partial<RidePostType> = {
+        ...formData,
+        departure_date: selectedDates[0],
+        departure_time: entry.departureTime,
+        is_round_trip: entry.isRoundTrip,
+        return_date: entry.returnDate,
+        return_time: entry.returnTime,
+      };
+
+      await onSave(updateData);
+      return;
+    }
+
+    // Series edit or create mode - build all rides
+    const seriesGroupId = selectedDates.length > 1 ? crypto.randomUUID() : undefined;
+    const allRides = buildRidesFromDates(selectedDates, dateTimeEntries, formData, seriesGroupId);
+
+    if (allRides.length === 1) {
+      await onSave(allRides[0]);
+    } else {
+      await onSave(allRides);
+    }
   };
 
   let submitLabel = 'Post Ride';
   if (isLoading) {
     submitLabel = 'Saving...';
+  } else if (isSeriesEdit) {
+    submitLabel = `Update ${selectedDates.length} Rides`;
   } else if (isEditing) {
     submitLabel = 'Update Ride';
+  } else if (selectedDates.length > 1) {
+    submitLabel = `Post ${selectedDates.length} Rides`;
   }
 
   return (
@@ -196,101 +448,140 @@ export default function RideForm({
         </div>
       </div>
 
-      {/* Date and Time */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div>
-          <label
-            htmlFor="departure_date"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Departure Date
-          </label>
-          <input
-            type="date"
-            id="departure_date"
-            name="departure_date"
-            value={formData.departure_date}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-            required
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="departure_time"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Departure Time
-          </label>
-          <input
-            type="time"
-            id="departure_time"
-            name="departure_time"
-            value={formData.departure_time}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-            required
-          />
-        </div>
-      </div>
-
-      {/* Round Trip */}
-      <div className="flex items-center">
-        <input
-          id="is_round_trip"
-          name="is_round_trip"
-          type="checkbox"
-          checked={formData.is_round_trip}
-          onChange={handleChange}
-          className="h-4 w-4 rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800"
-        />
-        <label
-          htmlFor="is_round_trip"
-          className="ml-2 block text-sm text-gray-900 dark:text-gray-300"
-        >
-          This is a Round Trip
+      {/* Multi-Date Picker */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Select Dates <span className="text-red-500">*</span>
         </label>
+        <DatePicker
+          selectedDates={selectedDates}
+          onDatesChange={handleDatesChange}
+          placeholder="Click to select one or multiple dates"
+        />
+        {selectedDates.length > 0 && (
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            {selectedDates.length === 1
+              ? '1 date selected'
+              : `${selectedDates.length} dates selected`}
+          </p>
+        )}
       </div>
 
-      {/* Return Date and Time - Only if Round Trip */}
-      {formData.is_round_trip && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg border border-gray-100 dark:border-slate-800">
-          <div>
-            <label
-              htmlFor="return_date"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Return Date
-            </label>
-            <input
-              type="date"
-              id="return_date"
-              name="return_date"
-              value={formData.return_date || ''}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-              required={formData.is_round_trip}
-            />
-          </div>
+      {/* Trip Details - Individual Date Cards */}
+      {selectedDates.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Trip Details</h3>
 
-          <div>
-            <label
-              htmlFor="return_time"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Return Time
-            </label>
-            <input
-              type="time"
-              id="return_time"
-              name="return_time"
-              value={formData.return_time || ''}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
-              required={formData.is_round_trip}
-            />
-          </div>
+          {selectedDates.map((date, index) => {
+            const entry = dateTimeEntries[date];
+            const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+            });
+
+            return (
+              <div
+                key={date}
+                className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg border border-gray-200 dark:border-slate-700 space-y-4 relative"
+              >
+                {/* Delete button - show when multiple dates OR when editing series */}
+                {(selectedDates.length > 1 || isSeriesEdit) && (
+                  <button
+                    type="button"
+                    onClick={() => removeDate(date)}
+                    className="absolute top-3 right-3 px-3 py-1.5 text-xs font-semibold rounded-lg 
+                               bg-red-600 text-white hover:bg-red-700 
+                               dark:bg-red-600 dark:hover:bg-red-700
+                               transition-colors shadow-sm hover:shadow-md"
+                    title="Remove this date"
+                  >
+                    Delete
+                  </button>
+                )}
+
+                {/* Date Header */}
+                <div className="flex items-center justify-between pr-8">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                    {formattedDate}
+                  </h4>
+                </div>
+
+                {/* Departure Time */}
+                <TimeInput
+                  value={entry?.departureTime || ''}
+                  onChange={(time) => updateDateTime(date, 'departureTime', time)}
+                  label="Departure Time"
+                  required
+                />
+
+                {/* Copy time button - show below time input for first date only */}
+                {selectedDates.length > 1 && index === 0 && entry?.departureTime && (
+                  <button
+                    type="button"
+                    onClick={() => copyTimeToAll(date)}
+                    className="w-full px-3 py-2 text-sm bg-blue-50 dark:bg-blue-900/20 
+                               text-blue-700 dark:text-blue-300 rounded-lg 
+                               hover:bg-blue-100 dark:hover:bg-blue-900/30 
+                               transition-colors font-medium border border-blue-200 dark:border-blue-800"
+                  >
+                    Apply this time to all other dates
+                  </button>
+                )}
+
+                {/* Round Trip Toggle */}
+                <div className="flex items-start space-x-3 pt-2">
+                  <input
+                    id={`round_trip_${date}`}
+                    type="checkbox"
+                    checked={entry?.isRoundTrip || false}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      updateDateTime(date, 'isRoundTrip', isChecked);
+                      if (isChecked && !entry?.returnDate) {
+                        updateDateTime(date, 'returnDate', calculateDefaultReturnDate(date));
+                        updateDateTime(date, 'returnTime', '17:00');
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor={`round_trip_${date}`}
+                    className="text-sm text-gray-700 dark:text-gray-300"
+                  >
+                    Make this a round trip
+                  </label>
+                </div>
+
+                {/* Return Trip Details */}
+                {entry?.isRoundTrip && (
+                  <div className="ml-7 space-y-3 pt-2 border-t border-gray-200 dark:border-slate-600">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Return trip details</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <DatePicker
+                        selectedDates={entry?.returnDate ? [entry.returnDate] : []}
+                        onDatesChange={(dates) =>
+                          updateDateTime(date, 'returnDate', dates[0] || '')
+                        }
+                        minDate={date}
+                        label="Return Date"
+                        required
+                        placeholder="Select return date"
+                        singleSelect
+                      />
+                      <TimeInput
+                        value={entry?.returnTime || ''}
+                        onChange={(time) => updateDateTime(date, 'returnTime', time)}
+                        label="Return Time"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
