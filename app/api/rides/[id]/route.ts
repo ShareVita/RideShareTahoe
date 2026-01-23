@@ -33,9 +33,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     // Verify ownership of the ride
     const { data: ride, error: fetchError } = await supabase
       .from('rides')
-      .select(
-        'id, poster_id, round_trip_group_id, is_recurring, is_round_trip, recurring_days, departure_date'
-      )
+      .select('id, poster_id, round_trip_group_id, is_recurring, is_round_trip, recurring_days, departure_date')
       .eq('id', id)
       .single();
 
@@ -56,7 +54,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     // Handle different scopes for multi-date series
     // For round trips, series ID is stored in recurring_days[0]; for one-way trips, it's round_trip_group_id
-    const seriesGroupId = ride.is_round_trip ? ride.recurring_days?.[0] : ride.round_trip_group_id;
+    const seriesGroupId = ride.is_round_trip
+      ? ride.recurring_days?.[0]
+      : ride.round_trip_group_id;
 
     if (seriesGroupId && ride.is_recurring) {
       if (applyTo === 'series') {
@@ -163,9 +163,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     // Verify ownership of the ride
     const { data: ride, error: fetchError } = await supabase
       .from('rides')
-      .select(
-        'id, poster_id, round_trip_group_id, is_recurring, is_round_trip, recurring_days, departure_date'
-      )
+      .select('id, poster_id, round_trip_group_id, is_recurring, is_round_trip, recurring_days, departure_date')
       .eq('id', id)
       .single();
 
@@ -179,7 +177,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     // Handle different scopes for multi-date series
     // For round trips, series ID is stored in recurring_days[0]; for one-way trips, it's round_trip_group_id
-    const seriesGroupId = ride.is_round_trip ? ride.recurring_days?.[0] : ride.round_trip_group_id;
+    const seriesGroupId = ride.is_round_trip
+      ? ride.recurring_days?.[0]
+      : ride.round_trip_group_id;
 
     if (seriesGroupId && ride.is_recurring) {
       if (applyTo === 'series') {
