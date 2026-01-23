@@ -11,7 +11,7 @@ export const validateEmail = (email: string) => {
 
 export const validatePhoneNumber = (phone: string) => {
   const phoneRegex = /^\+?[1-9]\d{0,15}$/;
-  return phoneRegex.test(phone.replaceAll(/[()\s-]/g, ''));
+  return phoneRegex.test(phone.replaceAll(/[\s()-]/g, ''));
 };
 
 export const validateRequired = (value: unknown, fieldName: string) => {
@@ -55,7 +55,6 @@ export const validateFutureDate = (date: string | Date, fieldName: string) => {
   return dateObj;
 };
 
-<<<<<<< HEAD
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const isValidUUID = (uuid: unknown): uuid is string => {
@@ -64,12 +63,6 @@ export const isValidUUID = (uuid: unknown): uuid is string => {
 
 export const validateUUID = (uuid: string, fieldName: string) => {
   if (!isValidUUID(uuid)) {
-=======
-export const validateUUID = (uuid: string, fieldName: string = 'ID'): boolean => {
-  // Simple UUID regex that matches Supabase UUIDs
-  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-  if (!uuidRegex.test(uuid)) {
->>>>>>> 945b371 (chore: update UUID validation and dependencies)
     throw new Error(`${fieldName} must be a valid UUID`);
   }
   return true;

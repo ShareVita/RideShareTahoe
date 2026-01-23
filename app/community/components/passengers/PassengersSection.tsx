@@ -121,7 +121,6 @@ export function PassengersSection({
               post={post}
               currentUserId={user?.id}
               onMessage={openMessageModal}
-              onViewDetails={() => setSelectedPost(post)}
             />
           ))}
         </div>
