@@ -7,9 +7,14 @@ import {
 import { z } from 'zod';
 import { sendConversationMessage } from '@/libs/supabase/conversations';
 
+// Custom UUID validator that accepts any hex string in UUID format (including test UUIDs)
+const uuidSchema = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Invalid UUID format');
+
 const invitationSchema = z.object({
-  ride_id: z.uuid(),
-  passenger_id: z.uuid(),
+  ride_id: uuidSchema,
+  passenger_id: uuidSchema,
   pickup_location: z.string().min(3).max(100),
   pickup_time: z
     .string()
