@@ -3,14 +3,11 @@ import Image from 'next/image';
 import { useState } from 'react';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
-<<<<<<< HEAD
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
 import { sanitizeLocation } from '@/libs/sanitize/location';
-=======
->>>>>>> 51b839f (fix: resolve merge conflicts after rebase with upstream)
 
 interface PassengerPostCardProps {
   post: RidePostType;
@@ -20,23 +17,25 @@ interface PassengerPostCardProps {
   // eslint-disable-next-line no-unused-vars
   onDelete?: (id: string) => void;
   deleting?: boolean;
+  onViewDetails: () => void;
 }
 
 /**
  * Displays ride metadata and action buttons for a single passenger post.
  */
+
 export function PassengerPostCard({
   post,
   currentUserId,
   onMessage,
   onDelete,
   deleting,
+  onViewDetails,
 }: Readonly<PassengerPostCardProps>) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   const isOwner = currentUserId === post.poster_id;
 
-<<<<<<< HEAD
   // Clarified naming: this is relationship-level, NOT trip-level
   const { hasBooking: hasAnyActiveBookingWithUser } = useHasActiveBooking(
     currentUserId,
@@ -45,10 +44,25 @@ export function PassengerPostCard({
 
   const sanitizedStartLocation = sanitizeLocation(post.start_location);
   const sanitizedEndLocation = sanitizeLocation(post.end_location);
-=======
->>>>>>> 51b839f (fix: resolve merge conflicts after rebase with upstream)
   const badgeStyles = 'bg-green-100 text-green-800';
   const badgeLabel = '👋 Passenger';
+  const departureDateLabel = formatDateLabel(post.departure_date);
+  const departureTimeLabel = formatTimeLabel(post.departure_time);
+  const returnDateLabel = formatDateLabel(post.return_date);
+
+  const { data: profile } = useUserProfile();
+  const { showProfileCompletionPrompt, profileCompletionModal } = useProfileCompletionPrompt({
+    toastMessage: 'Please finish your profile before contacting other riders.',
+    closeRedirect: null,
+  });
+
+  const handleRestrictedAction = (action: () => void) => {
+    if (!profile?.first_name) {
+      showProfileCompletionPrompt();
+      return;
+    }
+    action();
+  };
 
   let directionLabel = '';
   const isCombinedRoundTrip = post.is_round_trip && post.return_date;
@@ -89,10 +103,9 @@ export function PassengerPostCard({
               </span>
             )}
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date(post.departure_date).toLocaleDateString()}
-              {isCombinedRoundTrip &&
-                post.return_date &&
-                ` - ${new Date(post.return_date).toLocaleDateString()}`}
+              {departureDateLabel ?? 'Date TBD'}
+              {departureTimeLabel && ` · ${departureTimeLabel}`}
+              {isCombinedRoundTrip && returnDateLabel && ` - ${returnDateLabel}`}
             </span>
           </div>
         </div>
@@ -114,15 +127,14 @@ export function PassengerPostCard({
       <div className="mb-4 grow">
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 mb-2">
           <span className="font-medium w-12 text-gray-500 dark:text-gray-400">From:</span>
-          <span className="truncate flex-1">{post.start_location}</span>
+          <span className="truncate flex-1">{sanitizedStartLocation}</span>
         </div>
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
           <span className="font-medium w-12 text-gray-500 dark:text-gray-400">To:</span>
-          <span className="truncate flex-1">{post.end_location}</span>
+          <span className="truncate flex-1">{sanitizedEndLocation}</span>
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* View Details link */}
       <div className="mb-2">
         <button
@@ -136,9 +148,6 @@ export function PassengerPostCard({
       </div>
 
       {/* Owner Info (if not owner) */}
-=======
-      {/* Owner Info */}
->>>>>>> 51b839f (fix: resolve merge conflicts after rebase with upstream)
       {!isOwner && post.owner && (
         <div className="flex items-center space-x-3 mb-4 pt-4 border-t border-gray-100 dark:border-slate-800">
           <Link href={`/profile/${post.owner.id}`} className="shrink-0">
@@ -167,6 +176,13 @@ export function PassengerPostCard({
         </div>
       )}
 
+      {/* Relationship context (UX improvement) */}
+      {!isOwner && hasAnyActiveBookingWithUser && (
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          You already have active trips together.
+        </div>
+      )}
+
       {/* Actions */}
       <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
         {isOwner ? (
@@ -192,31 +208,20 @@ export function PassengerPostCard({
         ) : (
           post.owner && (
             <>
-<<<<<<< HEAD
               {/* Primary action: Message */}
               <button
                 onClick={() =>
                   handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
                 }
                 className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-1"
-=======
-              <button
-                onClick={() => onMessage(post.owner!, post)}
-                className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
->>>>>>> 51b839f (fix: resolve merge conflicts after rebase with upstream)
               >
                 Message
               </button>
 
               {/* Conversion action: Invite */}
               <button
-<<<<<<< HEAD
                 onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
                 className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-1"
-=======
-                onClick={handleInviteClick}
-                className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors flex-1"
->>>>>>> 51b839f (fix: resolve merge conflicts after rebase with upstream)
               >
                 Invite
               </button>
@@ -242,6 +247,8 @@ export function PassengerPostCard({
           user={{ id: currentUserId }}
         />
       )}
+
+      {profileCompletionModal}
     </div>
   );
 }
