@@ -69,7 +69,6 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
-        onViewDetails={() => {}}
       />
     );
 
@@ -92,7 +91,6 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
-        onViewDetails={() => {}}
       />
     );
 
@@ -112,7 +110,6 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
-        onViewDetails={() => {}}
       />
     );
 
@@ -127,7 +124,6 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
-        onViewDetails={() => {}}
       />
     );
 
@@ -143,7 +139,6 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
-        onViewDetails={() => {}}
       />
     );
 
@@ -158,7 +153,6 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
-        onViewDetails={() => {}}
       />
     );
 
@@ -167,22 +161,5 @@ describe('PassengerPostCard', () => {
 
     fireEvent.click(screen.getByTestId('close-modal'));
     expect(screen.queryByTestId('invite-modal')).not.toBeInTheDocument();
-  });
-
-  it('calls onViewDetails when clicking View Details', () => {
-    const onViewDetails = jest.fn();
-
-    render(
-      <PassengerPostCard
-        post={mockPost}
-        currentUserId="u1"
-        onMessage={mockOnMessage}
-        onDelete={mockOnDelete}
-        onViewDetails={onViewDetails}
-      />
-    );
-
-    fireEvent.click(screen.getByText(/View Details/i));
-    expect(onViewDetails).toHaveBeenCalledTimes(1);
   });
 });

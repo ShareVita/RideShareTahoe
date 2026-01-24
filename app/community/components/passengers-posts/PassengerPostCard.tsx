@@ -3,73 +3,48 @@ import Image from 'next/image';
 import { useState } from 'react';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
-import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
-import { useUserProfile } from '@/hooks/useProfile';
-import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
-import { sanitizeLocation } from '@/libs/sanitize/location';
 
 interface PassengerPostCardProps {
   post: RidePostType;
   currentUserId?: string;
   // eslint-disable-next-line no-unused-vars
-  onMessage: (recipient: ProfileType, post: RidePostType) => void;
+  onMessage: (recipient: ProfileType, ridePost: RidePostType) => void;
   // eslint-disable-next-line no-unused-vars
-  onDelete?: (postId: string) => void;
+  onDelete?: (id: string) => void;
   deleting?: boolean;
-  onViewDetails: () => void;
 }
 
 /**
  * Displays ride metadata and action buttons for a single passenger post.
- *
- * @param props - The data to show and callbacks for messaging or hiding a post.
  */
-
 export function PassengerPostCard({
   post,
   currentUserId,
   onMessage,
   onDelete,
   deleting,
-  onViewDetails,
 }: Readonly<PassengerPostCardProps>) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
   const isOwner = currentUserId === post.poster_id;
 
-  const sanitizedStartLocation = sanitizeLocation(post.start_location);
-  const sanitizedEndLocation = sanitizeLocation(post.end_location);
   const badgeStyles = 'bg-green-100 text-green-800';
   const badgeLabel = '👋 Passenger';
-  const departureDateLabel = formatDateLabel(post.departure_date);
-  const departureTimeLabel = formatTimeLabel(post.departure_time);
-  const returnDateLabel = formatDateLabel(post.return_date);
 
-  const { data: profile } = useUserProfile();
-  const { showProfileCompletionPrompt, profileCompletionModal } = useProfileCompletionPrompt({
-    toastMessage: 'Please finish your profile before contacting other riders.',
-    closeRedirect: null,
-  });
-
-  const handleRestrictedAction = (action: () => void) => {
-    if (!profile?.first_name) {
-      showProfileCompletionPrompt();
-      return;
-    }
-    action();
-  };
-
-  // Add direction info if round trip
   let directionLabel = '';
-  // If we have a return date merged in, it's a full combined round trip display
   const isCombinedRoundTrip = post.is_round_trip && post.return_date;
 
   if (post.is_round_trip && !isCombinedRoundTrip && post.trip_direction) {
-    directionLabel = post.trip_direction === 'departure' ? '🛫 Outbound' : '🔙 Return';
+    directionLabel = post.trip_direction === 'departure' ? 'Outbound' : 'Return';
   } else if (isCombinedRoundTrip) {
-    directionLabel = '🔄 Round';
+    directionLabel = 'Round Trip';
   }
 
   const cardBackground = 'bg-white dark:bg-slate-900';
+
+  const handleInviteClick = () => {
+    setIsInviteModalOpen(true);
+  };
 
   return (
     <div
@@ -89,18 +64,24 @@ export function PassengerPostCard({
             </span>
             {directionLabel && (
               <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isCombinedRoundTrip ? 'bg-indigo-100 text-indigo-800' : 'bg-orange-100 text-orange-800'}`}
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  isCombinedRoundTrip
+                    ? 'bg-indigo-100 text-indigo-800'
+                    : 'bg-orange-100 text-orange-800'
+                }`}
               >
                 {directionLabel}
               </span>
             )}
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {departureDateLabel ?? 'Date TBD'}
-              {departureTimeLabel && ` · ${departureTimeLabel}`}
-              {isCombinedRoundTrip && returnDateLabel && ` - ${returnDateLabel}`}
+              {new Date(post.departure_date).toLocaleDateString()}
+              {isCombinedRoundTrip &&
+                post.return_date &&
+                ` - ${new Date(post.return_date).toLocaleDateString()}`}
             </span>
           </div>
         </div>
+
         {isOwner && (
           <span
             className={`text-xs px-2 py-1 rounded-full ${
@@ -118,26 +99,15 @@ export function PassengerPostCard({
       <div className="mb-4 grow">
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 mb-2">
           <span className="font-medium w-12 text-gray-500 dark:text-gray-400">From:</span>
-          <span className="truncate flex-1">{sanitizedStartLocation}</span>
+          <span className="truncate flex-1">{post.start_location}</span>
         </div>
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
           <span className="font-medium w-12 text-gray-500 dark:text-gray-400">To:</span>
-          <span className="truncate flex-1">{sanitizedEndLocation}</span>
+          <span className="truncate flex-1">{post.end_location}</span>
         </div>
       </div>
 
-      {/*Details button*/}
-      <div>
-        <button
-          onClick={onViewDetails}
-          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-          aria-label={`View full ride details for trip from ${post.start_location} to ${post.end_location}`}
-        >
-          View Details &rarr;
-        </button>
-      </div>
-
-      {/* Owner Info (if not owner) */}
+      {/* Owner Info */}
       {!isOwner && post.owner && (
         <div className="flex items-center space-x-3 mb-4 pt-4 border-t border-gray-100 dark:border-slate-800">
           <Link href={`/profile/${post.owner.id}`} className="shrink-0">
@@ -147,11 +117,11 @@ export function PassengerPostCard({
                 alt={`${post.owner.first_name} ${post.owner.last_name}`}
                 width={32}
                 height={32}
-                className="w-8 h-8 rounded-full object-cover hover:opacity-90 transition-opacity"
+                className="w-8 h-8 rounded-full object-cover"
                 unoptimized
               />
             ) : (
-              <div className="w-8 h-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs hover:opacity-90 transition-opacity">
+              <div className="w-8 h-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs">
                 👤
               </div>
             )}
@@ -201,16 +171,14 @@ export function PassengerPostCard({
           post.owner && (
             <>
               <button
-                onClick={() =>
-                  handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
-                }
+                onClick={() => onMessage(post.owner!, post)}
                 className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
               >
                 Message
               </button>
 
               <button
-                onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
+                onClick={handleInviteClick}
                 className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors flex-1"
               >
                 Invite
@@ -224,13 +192,11 @@ export function PassengerPostCard({
         <InviteToRideModal
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
-          passengerId={post.owner.id}
-          passengerName={post.owner.first_name || 'Passenger'}
+          passengerId={post.poster_id}
+          passengerName={post.owner.first_name || 'User'}
           user={{ id: currentUserId }}
         />
       )}
-
-      {profileCompletionModal}
     </div>
   );
 }
