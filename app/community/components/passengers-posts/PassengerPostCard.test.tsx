@@ -1,10 +1,28 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PassengerPostCard } from './PassengerPostCard';
+import { useUserProfile } from '@/hooks/useProfile';
 import type { RidePostType } from '../../types';
 
 // Mocks
 jest.mock('@/hooks/useIsBlocked', () => ({
   useIsBlocked: () => ({ isBlocked: false, loading: false }),
+}));
+
+jest.mock('@/hooks/useProfile', () => ({
+  useUserProfile: jest.fn(),
+}));
+
+jest.mock('@/hooks/useProfileCompletionPrompt', () => ({
+  useProfileCompletionPrompt: jest.fn(() => ({
+    showProfileCompletionPrompt: jest.fn(),
+    profileCompletionModal: null,
+  })),
+}));
+
+jest.mock('@/app/community/components/PostDetailModal', () => ({
+  __esModule: true,
+  default: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="post-detail-modal">Post Detail Modal</div> : null,
 }));
 
 jest.mock('@/components/trips/InviteToRideModal', () => ({
@@ -38,6 +56,10 @@ describe('PassengerPostCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (useUserProfile as jest.Mock).mockReturnValue({
+      data: { first_name: 'Test User' },
+      isLoading: false,
+    });
   });
 
   it('renders post details', () => {
@@ -47,6 +69,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -69,6 +92,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -88,6 +112,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -102,6 +127,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -117,6 +143,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -131,6 +158,7 @@ describe('PassengerPostCard', () => {
         currentUserId="u1"
         onMessage={mockOnMessage}
         onDelete={mockOnDelete}
+        onViewDetails={() => {}}
       />
     );
 
@@ -139,5 +167,22 @@ describe('PassengerPostCard', () => {
 
     fireEvent.click(screen.getByTestId('close-modal'));
     expect(screen.queryByTestId('invite-modal')).not.toBeInTheDocument();
+  });
+
+  it('calls onViewDetails when clicking View Details', () => {
+    const onViewDetails = jest.fn();
+
+    render(
+      <PassengerPostCard
+        post={mockPost}
+        currentUserId="u1"
+        onMessage={mockOnMessage}
+        onDelete={mockOnDelete}
+        onViewDetails={onViewDetails}
+      />
+    );
+
+    fireEvent.click(screen.getByText(/View Details/i));
+    expect(onViewDetails).toHaveBeenCalledTimes(1);
   });
 });
