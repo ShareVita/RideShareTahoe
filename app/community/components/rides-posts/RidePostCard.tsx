@@ -153,14 +153,15 @@ export function RidePostCard({
           </div>
         </div>
 
-        {/*Details button*/}
-        <div>
+        {/* View Details link */}
+        <div className="mb-2">
           <button
             onClick={onViewDetails}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group"
             aria-label={`View full ride details for trip from ${post.start_location} to ${post.end_location}`}
           >
-            View Details &rarr;
+            View Details
+            <span className="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
           </button>
         </div>
 
