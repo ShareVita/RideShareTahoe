@@ -4,8 +4,9 @@ Thanks for contributing to **RideShareTahoe**! This document covers the expectat
 
 ## Development environment
 
-- Follow the **Local development setup** steps in `README.md`, which rely on Node.js 22.x, `npm`, Supabase, Resend, and the Taskfile workflow (`task dev`).
+- Follow the **Local development setup** steps in `README.md`, which rely on Node.js 22.x, `npm`, Docker Desktop, and the Taskfile workflow (`task dev`).
 - The Taskfile scripts wire together `npx supabase start`, `.env.local` population, and `npm run dev`, so you can focus on building instead of wiring infrastructure.
+- If your setup is not working, make sure you ran `task dev` at least once!
 
 ## Verification commands
 
@@ -17,10 +18,10 @@ npm run test
 npm run build
 ```
 
-Optionally reset the local database when migrations change:
+Apply new database migrations to your local database when migration files change:
 
 ```bash
-task db:reset
+npx supabase migration up
 ```
 
 ## Code standards & expectations
@@ -37,6 +38,7 @@ task db:reset
 
 - Never commit directly to `main`. Create descriptive branches (e.g., `feat/add-location-filter`).
 - Keep your branch up to date with `main` to reduce merge conflicts.
+- Use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) conventions for pull request titles.
 
 2. **Committing**
 
@@ -52,6 +54,11 @@ task db:reset
 - Wait for at least one maintainer review before merging.
 - Testing the preview deployment before merge is encouraged.
 - Production deployments are restricted to the repository owner after approval.
+
+4. **Database Changes**
+
+- All changes to the database must be captured in migration files (`npx supabase migration new <description_of_changes>`).
+- Never use the dashboard to make changes to the database.
 
 ## Support resources
 
