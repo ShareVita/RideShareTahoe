@@ -105,6 +105,9 @@
     "supabase": "^2.72.8",
     "tailwindcss": "^4.1.16"
   },
+  "overrides": {
+    "tar": ">=7.5.4"
+  },
   "babel": {
     "presets": [
       "@babel/preset-env",
