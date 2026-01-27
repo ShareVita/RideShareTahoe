@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/libs/supabase/auth';
+import { z } from 'zod';
 import { sendEmail } from '@/libs/resend';
 import { strictRateLimit } from '@/libs/rateLimit';
 
@@ -31,6 +32,38 @@ const updateResultsWithBatch = (results: BulkEmailResult, batchResults: BatchRes
     }
   }
 };
+
+/**
+ * Parse an incoming `delayMs` value into a safe integer (or `NaN` if unparsable).
+ * Accepts numbers or strings; trims string input and prefers `Number()` parsing,
+ * falling back to `parseInt` when appropriate. Returns a floored integer.
+ */
+// zod schemas for parsing and validating incoming `delayMs` and `batchSize` values
+const delaySchema = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    const t = val.trim();
+    if (t === '') return undefined;
+    const n = Number(t);
+    if (Number.isFinite(n)) return Math.floor(n);
+    const p = parseInt(t, 10);
+    return Number.isNaN(p) ? undefined : p;
+  }
+  if (typeof val === 'number' && Number.isFinite(val)) return Math.floor(val);
+  return undefined;
+}, z.number().int().min(0).max(10000));
+
+const batchSizeSchema = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    const t = val.trim();
+    if (t === '') return undefined;
+    const n = Number(t);
+    if (Number.isFinite(n)) return Math.floor(n);
+    const p = parseInt(t, 10);
+    return Number.isNaN(p) ? undefined : p;
+  }
+  if (typeof val === 'number' && Number.isFinite(val)) return Math.floor(val);
+  return undefined;
+}, z.number().int().min(1).max(100).default(50));
 
 /**
  * Sends bulk emails to users.
@@ -83,7 +116,14 @@ export async function POST(request: NextRequest) {
       delayMs = 1000,
     } = await request.json();
 
-    const safeDelayMs = Number(delayMs);
+    const delayParsed = delaySchema.safeParse(delayMs);
+    if (!delayParsed.success) {
+      return NextResponse.json(
+        { error: 'Delay must be between 0 and 10000 milliseconds' },
+        { status: 400 }
+      );
+    }
+    const safeDelayMs = delayParsed.data;
 
     if (!subject || !htmlContent) {
       return NextResponse.json(
@@ -94,22 +134,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate batch size and delay
-    if (batchSize < 1 || batchSize > 100) {
-      return NextResponse.json(
-        {
-          error: 'Batch size must be between 1 and 100',
-        },
-        { status: 400 }
-      );
+    // Validate batch size using zod
+    const batchParsed = batchSizeSchema.safeParse(batchSize);
+    if (!batchParsed.success) {
+      return NextResponse.json({ error: 'Batch size must be between 1 and 100' }, { status: 400 });
     }
-
-    if (!Number.isFinite(safeDelayMs) || safeDelayMs < 0 || safeDelayMs > 10000) {
-      return NextResponse.json(
-        { error: 'Delay must be between 0 and 10000 milliseconds' },
-        { status: 400 }
-      );
-    }
+    const safeBatchSize = batchParsed.data;
 
     // Get all users with email addresses (email is in user_private_info)
     const { data: users, error: usersError } = await supabase
@@ -166,10 +196,10 @@ export async function POST(request: NextRequest) {
       errors: [],
     };
 
-    for (let i = 0; i < usersWithEmails.length; i += batchSize) {
-      const batch = usersWithEmails.slice(i, i + batchSize);
+    for (let i = 0; i < usersWithEmails.length; i += safeBatchSize) {
+      const batch = usersWithEmails.slice(i, i + safeBatchSize);
       console.log(
-        `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(usersWithEmails.length / batchSize)}`
+        `Processing batch ${Math.floor(i / safeBatchSize) + 1}/${Math.ceil(usersWithEmails.length / safeBatchSize)}`
       );
 
       // Process batch in parallel with retry logic
@@ -228,7 +258,7 @@ export async function POST(request: NextRequest) {
       updateResultsWithBatch(results, batchResults);
 
       // Add delay between batches to respect rate limits
-      if (i + batchSize < usersWithEmails.length) {
+      if (i + safeBatchSize < usersWithEmails.length) {
         await new Promise((resolve) => setTimeout(resolve, safeDelayMs));
       }
     }
