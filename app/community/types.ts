@@ -106,14 +106,14 @@ export interface RidePostType {
   trip_direction: 'departure' | 'return' | null;
   round_trip_group_id: string | null;
   is_recurring: boolean;
-  recurring_days: string[] | null;
   pricing_type: 'per_seat' | 'split_costs' | null;
   price_per_seat: number | null;
   gas_estimate: number | null;
-  total_seats: number | null;
   available_seats: number | null;
+  total_seats: number | null;
   car_type: string | null;
   has_awd: boolean;
+  recurring_days: string[] | null;
   driving_arrangement: string | null;
   music_preference: string | null;
   conversation_preference: string | null;
@@ -125,6 +125,8 @@ export interface RidePostType {
   owner: ProfileType | null;
   return_date: string | null;
   return_time: string | null;
+  vehicle_id: string | null;
+  vehicle?: Vehicle;
 }
 
 export type TripBookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'invited';
@@ -160,6 +162,8 @@ export interface Vehicle {
   color: string;
   license_plate?: string;
   drivetrain?: 'FWD' | 'RWD' | 'AWD' | '4WD';
+  body_type?: string;
+  capacity?: number;
   created_at?: string;
   updated_at?: string;
 }

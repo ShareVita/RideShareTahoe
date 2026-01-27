@@ -35,13 +35,13 @@ export default function RideForm({
     departure_date: '',
     departure_time: '',
     price_per_seat: 0,
-    total_seats: 1,
+    available_seats: 1,
     description: '',
     special_instructions: '',
-    has_awd: false,
     is_round_trip: false,
     return_date: '',
     return_time: '',
+    vehicle_id: '',
     ...initialData,
   });
 
@@ -67,21 +67,10 @@ export default function RideForm({
     const vehicleId = e.target.value;
     setSelectedVehicleId(vehicleId);
 
-    if (!vehicleId) return;
-
-    const vehicle = vehicles.find((v) => v.id === vehicleId);
-
-    if (vehicle) {
-      const isAwd = vehicle.drivetrain === 'AWD' || vehicle.drivetrain === '4WD';
-      setFormData((prev) => ({
-        ...prev,
-        // Combine make, model, year, color, and drivetrain into a descriptive string
-        car_type: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color}) ${
-          vehicle.drivetrain ? `- ${vehicle.drivetrain}` : ''
-        }`,
-        has_awd: isAwd,
-      }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      vehicle_id: vehicleId,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -321,16 +310,16 @@ export default function RideForm({
 
           <div>
             <label
-              htmlFor="total_seats"
+              htmlFor="available_seats"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
-              Total Seats Available
+              Seats Offered
             </label>
             <input
               type="number"
-              id="total_seats"
-              name="total_seats"
-              value={formData.total_seats ?? ''}
+              id="available_seats"
+              name="available_seats"
+              value={formData.available_seats ?? ''}
               onChange={handleChange}
               min="1"
               max="10"

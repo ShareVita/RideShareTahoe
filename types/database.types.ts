@@ -81,13 +81,13 @@ export interface Database {
           trip_direction: string | null;
           round_trip_group_id: string | null;
           is_recurring: boolean | null;
-          recurring_days: string[] | null;
           pricing_type: string | null;
           price_per_seat: number | null;
           gas_estimate: number | null;
           total_seats: number | null;
           car_type: string | null;
           has_awd: boolean | null;
+          recurring_days: string[] | null;
           driving_arrangement: string | null;
           music_preference: string | null;
           conversation_preference: string | null;
@@ -98,6 +98,7 @@ export interface Database {
           return_date: string | null;
           return_time: string | null;
           is_round_trip: boolean | null;
+          vehicle_id: string | null;
         };
         Insert: {
           id: string;
@@ -116,13 +117,13 @@ export interface Database {
           trip_direction?: string | null;
           round_trip_group_id?: string | null;
           is_recurring?: boolean | null;
-          recurring_days?: string[] | null;
           pricing_type?: string | null;
           price_per_seat?: number | null;
           gas_estimate?: number | null;
           total_seats?: number | null;
           car_type?: string | null;
           has_awd?: boolean | null;
+          recurring_days?: string[] | null;
           driving_arrangement?: string | null;
           music_preference?: string | null;
           conversation_preference?: string | null;
@@ -133,6 +134,7 @@ export interface Database {
           return_date?: string | null;
           return_time?: string | null;
           is_round_trip?: boolean | null;
+          vehicle_id?: string | null;
         };
         Update: {
           id?: string;
@@ -151,13 +153,13 @@ export interface Database {
           trip_direction?: string | null;
           round_trip_group_id?: string | null;
           is_recurring?: boolean | null;
-          recurring_days?: string[] | null;
           pricing_type?: string | null;
           price_per_seat?: number | null;
           gas_estimate?: number | null;
           total_seats?: number | null;
           car_type?: string | null;
           has_awd?: boolean | null;
+          recurring_days?: string[] | null;
           driving_arrangement?: string | null;
           music_preference?: string | null;
           conversation_preference?: string | null;
@@ -168,12 +170,19 @@ export interface Database {
           return_date?: string | null;
           return_time?: string | null;
           is_round_trip?: boolean | null;
+          vehicle_id?: string | null;
         };
         Relationships: [
           {
             foreignKeyName: 'rides_poster_id_fkey';
             columns: ['poster_id'];
             referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'rides_vehicle_id_fkey';
+            columns: ['vehicle_id'];
+            referencedRelation: 'vehicles';
             referencedColumns: ['id'];
           },
         ];
@@ -254,6 +263,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
           drivetrain: string | null;
+          body_type: string | null;
+          capacity: number | null;
         };
         Insert: {
           id?: string;
@@ -266,6 +277,8 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           drivetrain?: string | null;
+          body_type?: string | null;
+          capacity?: number | null;
         };
         Update: {
           id?: string;
@@ -278,6 +291,8 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           drivetrain?: string | null;
+          body_type?: string | null;
+          capacity?: number | null;
         };
         Relationships: [
           {
@@ -315,6 +330,68 @@ export interface Database {
           accepted_at?: string;
           ip_address?: string | null;
           user_agent?: string | null;
+        };
+        Relationships: [];
+      };
+
+      ride_recurrences: {
+        Row: {
+          id: string;
+          ride_id: string;
+          day_of_week: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          ride_id: string;
+          day_of_week: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          ride_id?: string;
+          day_of_week?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'ride_recurrences_ride_id_fkey';
+            columns: ['ride_id'];
+            referencedRelation: 'rides';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      emergency_contacts: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          phone_number: string | null;
+          email: string | null;
+          relation: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          phone_number?: string | null;
+          email?: string | null;
+          relation?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          phone_number?: string | null;
+          email?: string | null;
+          relation?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

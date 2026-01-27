@@ -75,7 +75,7 @@ export function RidePostCard({
   const returnTimeLabel = formatTimeLabel(post.return_time);
   const hasReturnInfo = isCombinedRoundTrip && !!returnTimeLabel;
 
-  const seatsAvailable = post.available_seats ?? post.total_seats ?? 0;
+  const seatsAvailable = post.available_seats ?? 0;
   const showBookingButton =
     !isOwner && post.posting_type === 'driver' && post.status === 'active' && seatsAvailable > 0;
 
@@ -123,7 +123,7 @@ export function RidePostCard({
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   {post.price_per_seat ? 'cost share · ' : ''}
-                  {post.available_seats ?? post.total_seats ?? 0} seats left
+                  {post.available_seats ?? 0} seats left
                 </span>
               </>
             )}

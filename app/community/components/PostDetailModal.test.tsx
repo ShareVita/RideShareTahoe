@@ -280,7 +280,14 @@ describe('PostDetailModal', () => {
     const driverPost = {
       ...mockPost,
       posting_type: 'driver',
-      car_type: 'Tesla Model 3',
+      vehicle: {
+        make: 'Tesla',
+        model: 'Model 3',
+        year: 2022,
+        color: 'Red',
+        id: 'v1',
+        owner_id: 'user-2',
+      },
       driving_arrangement: 'Pick up at location',
       music_preference: 'Jazz',
     } as unknown as RidePostType;
@@ -297,7 +304,7 @@ describe('PostDetailModal', () => {
     );
 
     expect(screen.getByText(/Vehicle:/)).toBeInTheDocument();
-    expect(screen.getByText('Tesla Model 3')).toBeInTheDocument();
+    expect(screen.getByText('Red 2022 Tesla Model 3')).toBeInTheDocument();
     expect(screen.getByText(/Pickup:/)).toBeInTheDocument();
   });
 

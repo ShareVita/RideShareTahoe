@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { createClient } from '@/libs/supabase/client';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
-import type { RidePostType } from '@/app/community/types';
+import type { RidePostType, Vehicle } from '@/app/community/types';
 import CreateRidePage from './page';
 
 const mockRouterPush = jest.fn();
@@ -25,10 +25,10 @@ const mockRidePost: Partial<RidePostType> = {
   departure_date: '2025-12-20',
   departure_time: '09:30',
   price_per_seat: 45,
-  total_seats: 3,
+  available_seats: 3,
   description: 'Heading up for the weekend',
   special_instructions: 'Bring snacks',
-  has_awd: true,
+  vehicle_id: 'v-123',
 };
 
 jest.mock('@/components/rides/RideForm', () => ({
@@ -36,14 +36,17 @@ jest.mock('@/components/rides/RideForm', () => ({
   default: function MockRideForm({
     onSave,
     onCancel,
+    vehicles,
   }: {
     // eslint-disable-next-line no-unused-vars
     onSave: (_data: Partial<RidePostType>) => void;
     onCancel: () => void;
+    vehicles: Vehicle[];
   }) {
     return (
       <div>
         <p>Mock Ride Form</p>
+        <p>Vehicles Loaded: {vehicles?.length || 0}</p>
         <button type="button" onClick={() => onSave(mockRidePost)}>
           Save Ride
         </button>
@@ -74,6 +77,26 @@ describe('CreateRidePage', () => {
     fromMock = jest.fn(() => ({ insert: insertMock }));
 
     mockedCreateClient.mockReturnValue({ from: fromMock });
+
+    // Mock global fetch for vehicles
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            vehicles: [
+              {
+                id: 'v-123',
+                make: 'Subaru',
+                model: 'Outback',
+                year: 2022,
+                color: 'Blue',
+                drivetrain: 'AWD',
+              },
+            ],
+          }),
+      })
+    ) as jest.Mock;
   });
 
   it('shows spinner while authentication is loading', () => {
@@ -97,6 +120,11 @@ describe('CreateRidePage', () => {
   it('inserts ride data and redirects on successful save', async () => {
     render(<CreateRidePage />);
 
+    // Wait for vehicles to be passed to the form
+    await waitFor(() => {
+      expect(screen.getByText('Vehicles Loaded: 1')).toBeInTheDocument();
+    });
+
     fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
 
     await waitFor(() => {
@@ -110,6 +138,10 @@ describe('CreateRidePage', () => {
           poster_id: mockUser.id,
           status: 'active',
           ...mockRidePost,
+          // Verify dual-write fields
+          total_seats: 3,
+          has_awd: true,
+          car_type: '2022 Subaru Outback (Blue)',
         }),
       ])
     );
