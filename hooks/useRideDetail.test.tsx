@@ -45,6 +45,8 @@ const mockRide: RidePostType = {
   status: 'active',
   created_at: '2025-11-25T12:00:00Z',
   owner: null,
+  vehicle_id: null,
+  vehicle: undefined,
 };
 
 const createQueryStub = () => {
