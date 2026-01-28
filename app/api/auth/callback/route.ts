@@ -3,6 +3,7 @@ import { createClient } from '@/libs/supabase/server';
 import { SupabaseClient, type UserMetadata } from '@supabase/supabase-js';
 import { getAppUrl, sanitizeForLog } from '@/libs/email/helpers';
 
+// Define types locally for safety (mirroring database schema)
 interface Profile {
   id: string;
   first_name: string | null;
@@ -11,25 +12,31 @@ interface Profile {
   role: string | null;
   display_lat: number | null;
   display_lng: number | null;
+  // Social fields
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  linkedin_url?: string | null;
+  airbnb_url?: string | null;
+  other_social_url?: string | null;
 }
 
 /**
  * Evaluates user state to determine the appropriate post-authentication destination.
  * * @param profile - The public profile record from the database.
  * @param isNewUser - Boolean indicating if the user has no record of a welcome email.
- * @param hasPhonePrivate - Boolean indicating if the user has a phone number in the private info table.
+ * @param hasSocial - Boolean indicating if the user has added at least one social link.
  * @returns A relative URL path.
  */
 export function determineRedirectStrategy(
   profile: Profile,
   isNewUser: boolean,
-  hasPhonePrivate: boolean
+  hasSocial: boolean
 ): string {
   if (isNewUser) return '/profile/edit';
 
   const hasRole = !!profile.role?.trim();
   const hasLocation = profile.display_lat !== null && profile.display_lng !== null;
-  const isComplete = hasRole && hasPhonePrivate && hasLocation;
+  const isComplete = hasRole && hasSocial && hasLocation;
 
   return isComplete ? '/community' : '/profile/edit';
 }
@@ -59,9 +66,8 @@ export function prepareProfileUpsert(
  * Aggregates user data from multiple tables to build the context for routing and synchronization.
  */
 async function getAuthProcessingContext(supabase: SupabaseClient, userId: string) {
-  const [profileRes, privateInfoRes, welcomeRecordRes] = await Promise.all([
+  const [profileRes, welcomeRecordRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('user_private_info').select('phone_number').eq('id', userId).maybeSingle(),
     supabase
       .from('email_events')
       .select('id')
@@ -70,9 +76,20 @@ async function getAuthProcessingContext(supabase: SupabaseClient, userId: string
       .maybeSingle(),
   ]);
 
+  const profile = profileRes.data as Profile | null;
+
+  // Check if any social link is present locally since we fetched the full profile
+  const hasSocial = !!(
+    profile?.facebook_url?.trim() ||
+    profile?.instagram_url?.trim() ||
+    profile?.linkedin_url?.trim() ||
+    profile?.airbnb_url?.trim() ||
+    profile?.other_social_url?.trim()
+  );
+
   return {
-    existingProfile: profileRes.data as Profile | null,
-    hasPhone: !!privateInfoRes.data?.phone_number?.trim(),
+    existingProfile: profile,
+    hasSocial,
     isNewUser: !welcomeRecordRes.data,
   };
 }
@@ -141,7 +158,7 @@ async function processCodeExchangeAndProfileUpdate(
 
   after(() => executeBackgroundTasks(user.id, user.email, context.isNewUser));
 
-  const path = determineRedirectStrategy(updatedProfile, context.isNewUser, context.hasPhone);
+  const path = determineRedirectStrategy(updatedProfile, context.isNewUser, context.hasSocial);
   const redirectUrl = new URL(path, origin);
   redirectUrl.searchParams.set('_t', Date.now().toString());
 
