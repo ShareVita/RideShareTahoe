@@ -47,8 +47,22 @@ jest.mock('@/components/rides/RideForm', () => ({
       <div>
         <p>Mock Ride Form</p>
         <p>Vehicles Loaded: {vehicles?.length || 0}</p>
-        <button type="button" onClick={() => onSave(mockRidePost)}>
+        <button type="button" onClick={() => onSave(mockRidePost)} data-testid="save-default">
           Save Ride
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            onSave({
+              ...mockRidePost,
+              is_round_trip: true,
+              return_date: '2025-12-22',
+              return_time: '14:00',
+            })
+          }
+          data-testid="save-roundtrip"
+        >
+          Save Round Trip
         </button>
         <button type="button" onClick={onCancel}>
           Cancel Ride
@@ -125,7 +139,7 @@ describe('CreateRidePage', () => {
       expect(screen.getByText('Vehicles Loaded: 1')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
+    fireEvent.click(screen.getByTestId('save-default'));
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith('/community');
@@ -142,8 +156,53 @@ describe('CreateRidePage', () => {
           total_seats: 3,
           has_awd: true,
           car_type: '2022 Subaru Outback (Blue)',
+          // Verify privacy fields
+          start_address_street: mockRidePost.start_location,
+          end_address_street: mockRidePost.end_location,
         }),
       ])
+    );
+  });
+
+  it('handles round trip creation correctly', async () => {
+    render(<CreateRidePage />);
+
+    // Wait for vehicles
+    await waitFor(() => {
+      expect(screen.getByText('Vehicles Loaded: 1')).toBeInTheDocument();
+    });
+
+    // Verify Round Trip Insertions
+    fireEvent.click(screen.getByTestId('save-roundtrip'));
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith('/community');
+    });
+
+    // Check last call to insert
+    const lastCallArgs = insertMock.mock.calls[insertMock.mock.calls.length - 1][0];
+    expect(lastCallArgs).toHaveLength(2); // Should be 2 records
+
+    const [departureTrip, returnTrip] = lastCallArgs;
+
+    // Verify Departure Trip has return info
+    expect(departureTrip).toEqual(
+      expect.objectContaining({
+        trip_direction: 'departure',
+        start_address_street: mockRidePost.start_location,
+        return_date: '2025-12-22',
+        return_time: '14:00',
+      })
+    );
+
+    // Verify Return Trip has swapped addresses
+    expect(returnTrip).toEqual(
+      expect.objectContaining({
+        trip_direction: 'return',
+        start_address_street: mockRidePost.end_location,
+        end_address_street: mockRidePost.start_location,
+        return_date: mockRidePost.departure_date, // Mapped correctly
+      })
     );
   });
 
@@ -151,7 +210,7 @@ describe('CreateRidePage', () => {
     insertMock.mockResolvedValueOnce({ error: new Error('boom') });
     render(<CreateRidePage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
+    fireEvent.click(screen.getByTestId('save-default'));
 
     await waitFor(() => {
       expect(screen.getByText(/Failed to create ride/i)).toBeInTheDocument();

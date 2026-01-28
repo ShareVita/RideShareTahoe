@@ -78,6 +78,9 @@ export default function CreateRidePage() {
         is_round_trip: data.is_round_trip,
         round_trip_group_id,
         is_recurring: false, // Default for now
+        // Privacy: Mapping exact addresses
+        start_address_street: data.start_location,
+        end_address_street: data.end_location,
       };
 
       const ridesToInsert = [];
@@ -88,6 +91,9 @@ export default function CreateRidePage() {
         departure_date: data.departure_date,
         departure_time: data.departure_time,
         trip_direction: data.is_round_trip ? 'departure' : null,
+        // Ensure return metadata is present on the departure leg
+        return_date: data.return_date || null,
+        return_time: data.return_time || null,
       });
 
       // 2. Return Trip (if applicable)
@@ -96,9 +102,15 @@ export default function CreateRidePage() {
           ...commonData,
           start_location: data.end_location, // Swap locations
           end_location: data.start_location,
+          // Swap addresses for return leg
+          start_address_street: data.end_location,
+          end_address_street: data.start_location,
           departure_date: data.return_date,
           departure_time: data.return_time,
           trip_direction: 'return',
+          // Return info for the return leg refers to the original departure
+          return_date: data.departure_date || null,
+          return_time: data.departure_time || null,
         });
       }
 

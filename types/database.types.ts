@@ -99,6 +99,8 @@ export interface Database {
           return_time: string | null;
           is_round_trip: boolean | null;
           vehicle_id: string | null;
+          start_address_street: string | null;
+          end_address_street: string | null;
         };
         Insert: {
           id: string;
@@ -135,6 +137,8 @@ export interface Database {
           return_time?: string | null;
           is_round_trip?: boolean | null;
           vehicle_id?: string | null;
+          start_address_street?: string | null;
+          end_address_street?: string | null;
         };
         Update: {
           id?: string;
@@ -171,6 +175,8 @@ export interface Database {
           return_time?: string | null;
           is_round_trip?: boolean | null;
           vehicle_id?: string | null;
+          start_address_street?: string | null;
+          end_address_street?: string | null;
         };
         Relationships: [
           {
