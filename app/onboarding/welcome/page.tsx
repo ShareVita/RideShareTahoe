@@ -6,9 +6,9 @@ import toast from 'react-hot-toast';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
 import { createClient } from '@/libs/supabase/client';
 import { fetchAllRides } from '@/libs/community/ridesData';
-import { RidePostCard } from '@/app/community/components/rides-posts/RidePostCard';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import PostDetailModal from '@/app/community/components/PostDetailModal';
+import { PostCard } from '@/app/community/components/post-card/PostCard.refactored';
 
 interface Profile {
   first_name: string;
@@ -21,7 +21,6 @@ export default function WelcomePage() {
   const [ridePosts, setRidePosts] = useState<RidePostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
-  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
 
   // 1. Wrap functions that use external state/router in useCallback to stabilize the dependency array
   const fetchCurrentProfile = useCallback(async () => {
@@ -72,6 +71,13 @@ export default function WelcomePage() {
     fetchNearbyRidePosts();
   }, [router, user, fetchCurrentProfile, fetchNearbyRidePosts]);
 
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  const selectedPost = useCallback(() => {
+    if (!selectedPostId) return null;
+    return ridePosts.find((ride) => ride.id === selectedPostId) || null;
+  }, [selectedPostId, ridePosts]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center transition-colors duration-300">
@@ -102,15 +108,12 @@ export default function WelcomePage() {
         {ridePosts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {ridePosts.map((post) => (
-              <RidePostCard
+              <PostCard
                 key={post.id}
                 post={post}
                 currentUserId={user?.id}
                 onMessage={handleMessage}
-                onViewDetails={() => {
-                  setSelectedPost(null);
-                  setTimeout(() => setSelectedPost(post), 0);
-                }}
+                onViewDetails={() => setSelectedPostId(post.id)}
               />
             ))}
           </div>
@@ -187,11 +190,11 @@ export default function WelcomePage() {
           </div>
         )}
       </div>
-      {selectedPost && (
+      {selectedPost() && (
         <PostDetailModal
-          isOpen={!!selectedPost}
-          onClose={() => setSelectedPost(null)}
-          post={selectedPost}
+          isOpen={!!selectedPost()}
+          onClose={() => setSelectedPostId(null)}
+          post={selectedPost()!}
           currentUserId={user?.id ?? ''}
           onMessage={handleMessage}
         />

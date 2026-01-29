@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { CommunitySupabaseClient } from '@/libs/community/ridesData';
 import { fetchPassengerRides } from '@/libs/community/ridesData';
-import { PassengerPostCard } from '../passengers-posts/PassengerPostCard';
 import { PaginationControls } from '../PaginationControls';
 import { LocationFilters } from '../LocationFilters';
 import { PassengersLoading } from './PassengersLoading';
@@ -12,6 +11,7 @@ import { SectionError } from '../common/SectionError';
 import { PASSENGERS_PAGE_SIZE } from '../../constants';
 import type { RidePostType, ProfileType, LocationFilterType } from '../../types';
 import PostDetailModal from '@/app/community/components/PostDetailModal';
+import { PostCard } from '@/app/community/components/post-card/PostCard.refactored';
 
 interface PassengersSectionProps {
   user: { id: string } | null;
@@ -116,7 +116,7 @@ export function PassengersSection({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {rides.map((post) => (
-            <PassengerPostCard
+            <PostCard
               key={post.id}
               post={post}
               currentUserId={user?.id}

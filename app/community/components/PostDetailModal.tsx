@@ -7,7 +7,7 @@ import Image from 'next/image';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
 import TripBookingModal from '@/components/trips/TripBookingModal';
-import { RidePostActions } from '@/app/community/components/rides-posts/RidePostActions';
+import { PostActions } from '@/app/community/components/post-card/PostActions';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
@@ -281,7 +281,7 @@ export default function PostDetailModal({
 
                 {/* Actions */}
                 {isOwner ? (
-                  <RidePostActions
+                  <PostActions
                     post={post}
                     isOwner={isOwner}
                     onMessage={(recipient, p) =>
@@ -294,7 +294,7 @@ export default function PostDetailModal({
                   />
                 ) : isDriver ? (
                   /* Non-owner viewing driver post */
-                  <RidePostActions
+                  <PostActions
                     post={post}
                     isOwner={isOwner}
                     onMessage={(recipient, p) =>
@@ -308,33 +308,30 @@ export default function PostDetailModal({
                 ) : (
                   /* Non-owner viewing passenger post */
                   <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
-                    {/* Primary action: Message */}
-                    <button
-                      onClick={() =>
-                        handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
-                      }
-                      className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-1"
-                    >
-                      Message
-                    </button>
-
-                    {/* Conversion action: Invite */}
-                    <button
-                      onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
-                      className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-1"
-                    >
-                      Invite
-                    </button>
-
-                    {/* Secondary action: View Profile */}
                     {post.owner && (
                       <Link
                         href={`/profile/${post.owner.id}`}
-                        className="border-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-transparent px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-center flex-1"
+                        className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors text-center flex-1"
                       >
                         View Profile
                       </Link>
                     )}
+
+                    <button
+                      onClick={() =>
+                        handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
+                      }
+                      className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
+                    >
+                      Message
+                    </button>
+
+                    <button
+                      onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
+                      className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors flex-1"
+                    >
+                      Invite
+                    </button>
                   </div>
                 )}
 

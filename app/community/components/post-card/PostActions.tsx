@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 
-interface RidePostActionsProps {
+interface PostActionsProps {
   post: RidePostType;
   isOwner: boolean;
   // eslint-disable-next-line no-unused-vars
@@ -15,7 +15,7 @@ interface RidePostActionsProps {
   showBookingButton: boolean;
 }
 
-export function RidePostActions({
+export function PostActions({
   post,
   isOwner,
   onMessage,
@@ -23,14 +23,23 @@ export function RidePostActions({
   deleting,
   onOpenBooking,
   showBookingButton,
-}: Readonly<RidePostActionsProps>) {
+}: Readonly<PostActionsProps>) {
   return (
     <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
+      {post.owner && (
+        <Link
+          href={`/profile/${post.owner.id}`}
+          className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors text-center flex-1 flex items-center justify-center"
+        >
+          View Profile
+        </Link>
+      )}
+
       {isOwner ? (
         <>
           <Link
             href={`/rides/edit/${post.id}`}
-            className="bg-gray-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-center flex-1 flex items-center justify-center"
+            className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors text-center flex-1 flex items-center justify-center"
           >
             Edit
           </Link>
@@ -38,7 +47,7 @@ export function RidePostActions({
             <button
               onClick={() => onDelete(post.id)}
               disabled={deleting}
-              className={`bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex-1 ${
+              className={`bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors flex-1 ${
                 deleting ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -48,32 +57,21 @@ export function RidePostActions({
         </>
       ) : (
         <>
-          {/* Primary action: Message */}
           {post.owner && (
             <button
               onClick={() => post.owner && onMessage(post.owner, post)}
-              className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-1"
+              className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
             >
               Message
             </button>
           )}
-          {/* Conversion action: Request */}
           {showBookingButton && (
             <button
               onClick={onOpenBooking}
-              className="bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex-1"
+              className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors flex-1"
             >
               Request
             </button>
-          )}
-          {/* Secondary action: View Profile */}
-          {post.owner && (
-            <Link
-              href={`/profile/${post.owner.id}`}
-              className="border-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-transparent px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-center flex-1 flex items-center justify-center"
-            >
-              View Profile
-            </Link>
           )}
         </>
       )}

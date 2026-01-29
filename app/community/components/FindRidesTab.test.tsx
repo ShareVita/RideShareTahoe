@@ -38,22 +38,29 @@ jest.mock('./LocationFilters', () => ({
   ),
 }));
 
-jest.mock('./rides-posts/RidePostCard', () => ({
-  RidePostCard: ({
-    post,
-    onMessage,
-  }: {
-    post: RidePostType;
-    // eslint-disable-next-line no-unused-vars
-    onMessage: (_reply: CommunityUser, _postKey: keyof RidePostType) => void;
-  }) => (
-    <div data-testid="ride-card">
-      {post.id}
-      <button onClick={() => onMessage({ id: 'owner' }, post.id as keyof RidePostType)}>
-        Message
+// Mock PostCard instead of RidePostCard
+jest.mock('@/app/community/components/post-card/PostCard.refactored', () => ({
+  PostCard: ({ post, onViewDetails }: { post: RidePostType; onViewDetails: () => void }) => (
+    <div data-testid="post-card">
+      <span data-testid={`post-${post.id}`}>{post.id}</span>
+      <button onClick={onViewDetails} data-testid={`view-details-${post.id}`}>
+        View Details
       </button>
     </div>
   ),
+}));
+
+// Mock PostDetailModal
+jest.mock('@/app/community/components/PostDetailModal', () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+    isOpen ? (
+      <div data-testid="post-detail-modal">
+        <button onClick={onClose} data-testid="close-modal">
+          Close
+        </button>
+      </div>
+    ) : null,
 }));
 
 jest.mock('./PaginationControls', () => ({
@@ -130,7 +137,7 @@ describe('RidesTab', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByTestId('ride-card')).toHaveLength(2);
+      expect(screen.getAllByTestId('post-card')).toHaveLength(2);
     });
     expect(screen.getByText('ride-1')).toBeInTheDocument();
   });
@@ -231,9 +238,34 @@ describe('RidesTab', () => {
     );
 
     await waitFor(() => {
-      const cards = screen.getAllByTestId('ride-card');
+      const cards = screen.getAllByTestId('post-card');
       // Should result in 2 cards: group-1 (merged) and ride-3
       expect(cards).toHaveLength(2);
     });
+  });
+
+  it('should open post detail modal when view details clicked', async () => {
+    const rides = [
+      { id: 'ride-1', departure_date: '2023-01-01', trip_direction: 'departure' },
+    ] as unknown as RidePostType[];
+    mockRidesSuccess(rides);
+
+    render(
+      <RidesTab user={mockUser} supabase={mockSupabase} openMessageModal={mockOpenMessageModal} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('post-card')).toBeInTheDocument();
+    });
+
+    // Modal should not be visible initially
+    expect(screen.queryByTestId('post-detail-modal')).not.toBeInTheDocument();
+
+    // Click view details
+    fireEvent.click(screen.getByTestId('view-details-ride-1'));
+
+    // Wait for modal to appear (uses setTimeout)
+    await screen.findByTestId('post-detail-modal');
+    expect(screen.getByTestId('post-detail-modal')).toBeInTheDocument();
   });
 });
