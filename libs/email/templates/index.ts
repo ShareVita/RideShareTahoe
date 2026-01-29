@@ -83,11 +83,6 @@ const TEMPLATE_REGISTRY = {
       return `Welcome to RideShareTahoe${nameSuffix}!`;
     },
   },
-  community_growth_day30: {
-    html: 'community-growth-30days.html',
-    text: 'community-growth-30days.txt',
-    subject: () => `One month with RideShareTahoe — help us grow!`,
-  },
 };
 
 /**

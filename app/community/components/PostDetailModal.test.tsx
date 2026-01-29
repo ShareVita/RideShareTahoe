@@ -46,8 +46,8 @@ jest.mock('@/components/trips/TripBookingModal', () => ({
     ) : null,
 }));
 
-jest.mock('@/app/community/components/rides-posts/RidePostActions', () => ({
-  RidePostActions: ({
+jest.mock('@/app/community/components/post-card/PostActions', () => ({
+  PostActions: ({
     onDelete,
     isOwner,
     post,

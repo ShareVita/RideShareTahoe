@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { RidePostCard } from '@/app/community/components/rides-posts/RidePostCard';
 import type { RidePostType, ProfileType } from '../types';
 import PostDetailModal from '@/app/community/components/PostDetailModal';
+import { PostCard } from '@/app/community/components/post-card/PostCard.refactored';
 
 interface MyRidesTabProps {
   myRides: RidePostType[];
@@ -21,7 +21,6 @@ export function MyPostsTab({
   deletePost,
   deletingPost,
 }: Readonly<MyRidesTabProps>) {
-  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
   // Group round trips together
   const groupedRides = useMemo(() => {
     const groups: { [key: string]: RidePostType[] } = {};
@@ -66,6 +65,12 @@ export function MyPostsTab({
 
   const postsSummary = `${groupedRides.length} ${groupedRides.length === 1 ? 'post' : 'posts'}`;
 
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  const selectedPost = useMemo(() => {
+    return groupedRides.find((post) => post.id === selectedPostId) || null;
+  }, [selectedPostId, groupedRides]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
@@ -75,17 +80,14 @@ export function MyPostsTab({
       {groupedRides.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {groupedRides.map((post) => (
-            <RidePostCard
+            <PostCard
               key={post.id}
               post={post}
               currentUserId={user.id}
               onMessage={openMessageModal}
               onDelete={deletePost}
               deleting={deletingPost === post.id}
-              onViewDetails={() => {
-                setSelectedPost(null);
-                setTimeout(() => setSelectedPost(post), 0);
-              }}
+              onViewDetails={() => setSelectedPostId(post.id)}
             />
           ))}
         </div>
@@ -109,13 +111,13 @@ export function MyPostsTab({
       {selectedPost && (
         <PostDetailModal
           isOpen={!!selectedPost}
-          onClose={() => setSelectedPost(null)}
+          onClose={() => setSelectedPostId(null)}
           post={selectedPost}
           currentUserId={user?.id ?? ''}
           onMessage={openMessageModal}
           onDelete={async (postId) => {
             await deletePost(postId);
-            setSelectedPost(null);
+            setSelectedPostId(null);
           }}
           deleting={deletingPost === selectedPost.id}
         />

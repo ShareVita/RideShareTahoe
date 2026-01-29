@@ -72,7 +72,11 @@ export async function processScheduledEmails(): Promise<{
         // Get user email from user_private_info (parallel queries for efficiency)
         const [{ data: profile }, { data: privateInfo }] = await Promise.all([
           supabase.from('profiles').select('first_name').eq('id', scheduledEmail.user_id).single(),
-          supabase.from('user_private_info').select('email').eq('id', scheduledEmail.user_id).single(),
+          supabase
+            .from('user_private_info')
+            .select('email')
+            .eq('id', scheduledEmail.user_id)
+            .single(),
         ]);
 
         if (!profile || !privateInfo?.email) {
@@ -170,28 +174,6 @@ export async function scheduleNurtureEmail(userId: string): Promise<void> {
   }
 
   console.log(`Nurture email scheduled for user ${userId} at ${nurtureTime.toISOString()}`);
-}
-
-/**
- * Schedule community growth email for 30 days after signup
- */
-export async function scheduleCommunityGrowthEmail(userId: string): Promise<void> {
-  const growthEmailTime = new Date();
-  growthEmailTime.setDate(growthEmailTime.getDate() + 30);
-
-  const supabase = await createClient('service_role');
-  const { error } = await supabase.from('scheduled_emails').insert({
-    user_id: userId,
-    email_type: 'community_growth_day30',
-    run_after: growthEmailTime.toISOString(),
-    payload: {},
-  });
-
-  if (error) {
-    throw new Error(`Failed to schedule community growth email: ${error.message}`);
-  }
-
-  console.log(`Community growth email scheduled for user ${userId} at ${growthEmailTime.toISOString()}`);
 }
 
 /**
