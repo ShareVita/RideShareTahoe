@@ -26,8 +26,7 @@ export default function InviteToRideModal({
   const [loading, setLoading] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [selectedRideId, setSelectedRideId] = useState<string | null>(null);
-  const supabase = createClient();
-
+  const supabase = createClient()
   useEffect(() => {
     if (isOpen && user) {
       const loadRides = async () => {
@@ -52,7 +51,6 @@ export default function InviteToRideModal({
       loadRides();
     }
   }, [isOpen, user, supabase]);
-
   const handleInvite = async () => {
     if (!selectedRideId) return;
 
@@ -133,8 +131,13 @@ export default function InviteToRideModal({
 
                 <div className="mt-4">
                   {loading && (
-                    <div className="flex justify-center py-4">
+                    <div
+                      className="flex justify-center py-4"
+                      role="status"
+                      aria-label="Loading rides"
+                    >
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      <span className="sr-only">Loading your rides...</span>
                     </div>
                   )}
                   {!loading && myRides.length === 0 && (
