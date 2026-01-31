@@ -3,6 +3,7 @@ import {
   getUserWithEmail,
   recordUserActivity,
   sanitizeForLog,
+  scheduleCommunityGrowthEmail,
   scheduleNurtureEmail,
   sendEmail,
 } from '@/libs/email';
@@ -75,11 +76,14 @@ export const POST = internalOnly(async (request) => {
     // Schedule nurture email for 3 days later
     await scheduleNurtureEmail(userId);
 
+    // Schedule community growth email for 30 days later
+    await scheduleCommunityGrowthEmail(userId);
+
     console.log(`✅ Welcome email sent to user ${sanitizeForLog(userId)}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Welcome email sent and nurture email scheduled',
+      message: 'Welcome email sent and follow-up emails scheduled',
     });
   } catch (error) {
     console.error('Error sending welcome email:', error);
