@@ -52,7 +52,7 @@ Only 2 magic link emails per hour per user meant users couldn't retry if they di
 
 Set **Site URL** to:
 
-```
+```text
 https://www.ridesharetahoe.com
 ```
 
@@ -60,7 +60,7 @@ https://www.ridesharetahoe.com
 
 Under **Redirect URLs**, add these exact URLs (one per line):
 
-```
+```text
 https://www.ridesharetahoe.com/api/auth/callback
 https://www.ridesharetahoe.com/**
 ```
