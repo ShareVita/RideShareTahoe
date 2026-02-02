@@ -12,8 +12,7 @@ export type EmailType =
   | 'new_message'
   | 'review_request'
   | 'bulk_announcement'
-  | 'welcome_bulk'
-  | 'community_growth_day30';
+  | 'welcome_bulk';
 
 export interface SendEmailParams {
   userId: string;

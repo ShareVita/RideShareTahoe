@@ -7,7 +7,7 @@ import {
   type CommunitySupabaseClient,
 } from '@/libs/community/ridesData';
 import { LocationFilters } from './LocationFilters';
-import { RidePostCard } from './rides-posts/RidePostCard';
+import { PostCard } from '@/app/community/components/post-card/PostCard.refactored';
 import { PaginationControls } from './PaginationControls';
 import { SectionEmpty } from './common/SectionEmpty';
 import { SectionError } from './common/SectionError';
@@ -43,7 +43,6 @@ export function RidesTab({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
 
   // Location filter state
   const [departureFilter, setDepartureFilter] = useState<LocationFilterType | null>(null);
@@ -148,6 +147,13 @@ export function RidesTab({
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  const selectedPost = useMemo(() => {
+    if (!selectedPostId) return null;
+    return rides.find((ride) => ride.id === selectedPostId) || null;
+  }, [selectedPostId, rides]);
+
   const renderRidesSection = () => {
     if (loading) {
       return (
@@ -202,15 +208,12 @@ export function RidesTab({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groupedRides.map((post) => (
-            <RidePostCard
+            <PostCard
               key={post.id}
               post={post}
               currentUserId={user?.id}
               onMessage={openMessageModal}
-              onViewDetails={() => {
-                setSelectedPost(null);
-                setTimeout(() => setSelectedPost(post), 0);
-              }}
+              onViewDetails={() => setSelectedPostId(post.id)}
             />
           ))}
         </div>
@@ -228,7 +231,7 @@ export function RidesTab({
         {selectedPost && (
           <PostDetailModal
             isOpen={!!selectedPost}
-            onClose={() => setSelectedPost(null)}
+            onClose={() => setSelectedPostId(null)}
             post={selectedPost}
             currentUserId={user?.id ?? ''}
             onMessage={openMessageModal}
