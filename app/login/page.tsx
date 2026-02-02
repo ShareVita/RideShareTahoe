@@ -87,7 +87,12 @@ function LoginContent() {
           toast.error('Failed to sign in with Google. Please try again.');
         }
       } else if (type === 'magic_link') {
-        console.log('Magic link redirect URL:', redirectURL);
+        console.log('Sending magic link:', {
+          email,
+          redirectURL,
+          origin: globalThis.location.origin,
+          hostname: globalThis.location.hostname,
+        });
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {

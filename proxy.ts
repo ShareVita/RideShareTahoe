@@ -5,6 +5,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCookieOptions } from '@/libs/cookieOptions';
 
 export default async function proxy(request: NextRequest) {
+  // Force www in production to ensure consistent redirect URLs for auth
+  const hostname = request.headers.get('host') || '';
+  if (process.env.VERCEL_ENV === 'production' && hostname === 'ridesharetahoe.com') {
+    const url = request.nextUrl.clone();
+    url.host = 'www.ridesharetahoe.com';
+    return NextResponse.redirect(url, 301);
+  }
+
   let response = NextResponse.next({
     request,
   });

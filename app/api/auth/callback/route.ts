@@ -92,14 +92,23 @@ async function processCodeExchangeAndProfileUpdate(
   };
 
   if (exchangeError) {
-    console.error('Session exchange error:', exchangeError);
+    console.error('Session exchange error:', {
+      error: exchangeError,
+      code: code?.substring(0, 10) + '...', // Log partial code for debugging
+      origin: requestUrl.origin,
+      fullUrl: requestUrl.href,
+    });
     return NextResponse.redirect(
       new URL('/login?error=session_exchange_failed', requestUrl.origin)
     );
   }
 
   if (!data.session || !data.user) {
-    console.error('No session or user created after code exchange');
+    console.error('No session or user created after code exchange', {
+      hasSession: !!data.session,
+      hasUser: !!data.user,
+      origin: requestUrl.origin,
+    });
     return NextResponse.redirect(new URL('/login?error=no_session', requestUrl.origin));
   }
 
@@ -136,10 +145,7 @@ async function processCodeExchangeAndProfileUpdate(
       const supabaseAdmin = await createClient('service_role');
       const { error: privateInfoError } = await supabaseAdmin
         .from('user_private_info')
-        .upsert(
-          { id: user.id, email: user.email },
-          { onConflict: 'id' }
-        );
+        .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
       if (privateInfoError) {
         console.error('❌ Failed to upsert user_private_info:', JSON.stringify(privateInfoError));
       } else {
