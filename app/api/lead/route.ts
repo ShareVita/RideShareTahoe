@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit } from '@/libs/middlewareRateLimit';
-import { generateRequestFingerprint } from '@/libs/botDetection';
+import { rateLimit } from '@/lib/ratelimit';
 
 // This route is used to store the leads that are generated from the landing page.
 // The API call is initiated by <ButtonLead /> component
@@ -8,34 +7,35 @@ import { generateRequestFingerprint } from '@/libs/botDetection';
 // BOT PROTECTION: Rate limited to prevent spam submissions
 export async function POST(req: NextRequest) {
   // 1. RATE LIMITING - Prevent bot spam
-  let ip =
+  // Using in-memory rate limiting (fast, low-volume endpoint)
+  // No need for Upstash overhead (20-50ms) on lead form
+  const ip =
     (req as NextRequest & { ip?: string }).ip ||
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req.headers.get('x-real-ip') ||
     'unknown';
 
-  // If IP is unknown, use request fingerprinting as fallback
-  if (ip === 'unknown') {
-    ip = generateRequestFingerprint(req.headers);
-    console.warn('[API] Lead submission - unknown IP, using fingerprint', { fingerprint: ip });
-  }
+  // Skip rate limiting if IP unknown (rare edge case)
+  if (ip !== 'unknown') {
+    // Allow 3 lead submissions per IP per hour (3600 seconds)
+    const isAllowed = await rateLimit(ip, 'lead:submit', 3, 3600);
 
-  // Allow 3 lead submissions per IP/fingerprint per hour (3600000ms = 1 hour)
-  const rateLimitResult = await checkRateLimit(`${ip}:lead:submit`, 3, 3600000);
-
-  if (!rateLimitResult.allowed) {
-    console.warn('[API] Lead submission rate limit exceeded', { identifier: ip });
-    return NextResponse.json(
-      { error: 'Too many submissions. Please try again later.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(rateLimitResult.retryAfter || 3600),
-          'X-RateLimit-Limit': '3',
-          'X-RateLimit-Remaining': '0',
-        },
-      }
-    );
+    if (!isAllowed) {
+      console.warn('[API] Lead submission rate limit exceeded', { ip });
+      return NextResponse.json(
+        { error: 'Too many submissions. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': '3600',
+            'X-RateLimit-Limit': '3',
+            'X-RateLimit-Remaining': '0',
+          },
+        }
+      );
+    }
+  } else {
+    console.warn('[API] Lead submission - unknown IP, rate limit skipped');
   }
 
   // 2. REQUEST VALIDATION

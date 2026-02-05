@@ -13,8 +13,43 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCookieOptions } from '@/libs/cookieOptions';
-import { isMaliciousBot, getClientIp, generateRequestFingerprint } from '@/libs/botDetection';
+import { isMaliciousBot, getClientIp } from '@/libs/botDetection';
 import { checkRateLimit } from '@/libs/middlewareRateLimit';
+
+/**
+ * Parse allowed origins once at module load for performance.
+ * Supports comma-separated ALLOWED_ORIGINS or fallback to NEXT_PUBLIC_APP_URL.
+ */
+const ALLOWED_ORIGINS = (() => {
+  const origins: string[] = [];
+
+  // Support comma-separated list of origins
+  if (process.env.ALLOWED_ORIGINS) {
+    origins.push(
+      ...process.env.ALLOWED_ORIGINS.split(',')
+        .map((o) => o.trim())
+        .filter(Boolean)
+    );
+  }
+  // Fallback to NEXT_PUBLIC_APP_URL
+  else if (process.env.NEXT_PUBLIC_APP_URL) {
+    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  }
+
+  // In development, always allow localhost
+  if (process.env.NODE_ENV === 'development') {
+    origins.push('http://localhost:3000', 'http://localhost:3001');
+  }
+
+  // Parse to origins (just the protocol + host) for fast string comparison
+  return origins.map((url) => {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return url; // Keep as-is if not a valid URL
+    }
+  });
+})();
 
 /**
  * Check if a route requires Supabase session management.
@@ -87,28 +122,18 @@ export default async function middleware(request: NextRequest) {
   if (!isAuthRoute && isApiRoute && isMutatingRequest) {
     const origin = request.headers.get('origin');
     const referer = request.headers.get('referer');
-
-    // Get allowed origins from env or use defaults
-    const allowedOrigins = process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : [];
-
-    // In development, allow localhost
-    if (process.env.NODE_ENV === 'development') {
-      allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
-    }
+    const hasApiAuth = request.headers.get('authorization')?.startsWith('Bearer ');
 
     // Check origin header (preferred for CORS requests)
     if (origin) {
-      const originUrl = new URL(origin);
-      const isAllowed = allowedOrigins.some((allowed) => {
-        const allowedUrl = new URL(allowed);
-        return originUrl.origin === allowedUrl.origin;
-      });
+      const isAllowed = ALLOWED_ORIGINS.includes(origin);
 
-      if (!isAllowed && allowedOrigins.length > 0) {
+      if (!isAllowed && ALLOWED_ORIGINS.length > 0) {
         console.warn('[MIDDLEWARE] Blocked CSRF attempt - invalid origin', {
           origin,
           path: pathname,
           ip: getClientIp(request.headers),
+          allowedOrigins: ALLOWED_ORIGINS,
         });
         return NextResponse.json(
           { error: 'Forbidden - Invalid origin' },
@@ -118,30 +143,50 @@ export default async function middleware(request: NextRequest) {
     }
     // Check referer as fallback (for same-site requests)
     else if (referer) {
-      const refererUrl = new URL(referer);
-      const isAllowed = allowedOrigins.some((allowed) => {
-        const allowedUrl = new URL(allowed);
-        return refererUrl.origin === allowedUrl.origin;
-      });
+      try {
+        const refererOrigin = new URL(referer).origin;
+        const isAllowed = ALLOWED_ORIGINS.includes(refererOrigin);
 
-      if (!isAllowed && allowedOrigins.length > 0) {
-        console.warn('[MIDDLEWARE] Blocked CSRF attempt - invalid referer', {
-          referer,
-          path: pathname,
-          ip: getClientIp(request.headers),
-        });
+        if (!isAllowed && ALLOWED_ORIGINS.length > 0) {
+          console.warn('[MIDDLEWARE] Blocked CSRF attempt - invalid referer', {
+            referer,
+            refererOrigin,
+            path: pathname,
+            ip: getClientIp(request.headers),
+            allowedOrigins: ALLOWED_ORIGINS,
+          });
+          return NextResponse.json(
+            { error: 'Forbidden - Invalid referer' },
+            { status: 403, headers: { 'X-Blocked-Reason': 'csrf-invalid-referer' } }
+          );
+        }
+      } catch {
+        // Invalid referer URL format
+        console.warn('[MIDDLEWARE] Invalid referer URL format', { referer, path: pathname });
         return NextResponse.json(
-          { error: 'Forbidden - Invalid referer' },
-          { status: 403, headers: { 'X-Blocked-Reason': 'csrf-invalid-referer' } }
+          { error: 'Forbidden - Invalid referer format' },
+          { status: 403, headers: { 'X-Blocked-Reason': 'csrf-invalid-referer-format' } }
         );
       }
     }
-    // No origin or referer (suspicious but allow with warning for API clients)
+    // No origin or referer - ONLY allow if authenticated with API key
     else {
-      console.warn('[MIDDLEWARE] No origin/referer header', {
+      if (!hasApiAuth) {
+        // Browser requests MUST have origin or referer for CSRF protection
+        console.warn('[MIDDLEWARE] Blocked CSRF attempt - missing origin/referer', {
+          path: pathname,
+          method: request.method,
+          userAgent: request.headers.get('user-agent'),
+          ip: getClientIp(request.headers),
+        });
+        return NextResponse.json(
+          { error: 'Forbidden - CSRF protection requires Origin or Referer header' },
+          { status: 403, headers: { 'X-Blocked-Reason': 'csrf-missing-headers' } }
+        );
+      }
+      // Has API auth - allow (e.g., server-to-server webhooks)
+      console.log('[MIDDLEWARE] Allowing authenticated API request without origin/referer', {
         path: pathname,
-        method: request.method,
-        userAgent: request.headers.get('user-agent'),
       });
     }
   }
@@ -169,56 +214,37 @@ export default async function middleware(request: NextRequest) {
 
   if (!isAuthRoute && (isApiRoute || isPublicRoute)) {
     // Prefer Vercel-provided ip when available (request.ip in middleware), else headers
-    let ip = (request as NextRequest & { ip?: string }).ip || getClientIp(request.headers);
+    const ip = (request as NextRequest & { ip?: string }).ip || getClientIp(request.headers);
 
-    // If IP is unknown, use request fingerprinting as fallback
+    // If IP is unknown, skip rate limiting (rare edge case, better than false positives)
     if (!ip || ip === 'unknown') {
-      ip = generateRequestFingerprint(request.headers);
-      console.warn('[MIDDLEWARE] Unknown IP - using fingerprint for rate limiting', {
+      console.error('[MIDDLEWARE] Unknown IP detected - rate limiting skipped', {
         path: pathname,
-        fingerprint: ip,
+        userAgent: request.headers.get('user-agent'),
+        note: 'Set up monitoring/alerting for this - indicates infrastructure issue',
       });
-    }
-
-    {
-      // FEATURE FLAG: Use grouped rate limiting to prevent route-switching bypass
-      // Default to 'true' for security; set USE_GROUPED_RATE_LIMITS=false to disable
-      const useGroupedLimits = process.env.USE_GROUPED_RATE_LIMITS !== 'false';
-
-      let rateLimitKey: string;
-      let limit: number;
+      // Skip rate limiting rather than using unreliable fingerprinting
+      // This is a rare edge case (Vercel infrastructure issue)
+    } else {
+      // Use grouped rate limiting to prevent route-switching bypass
+      // Routes are grouped by feature area to share rate limits
+      const routeGroup = getRouteGroup(pathname);
+      const rateLimitKey = `${ip}:api:${routeGroup}`;
       const windowMs = 60 * 1000; // 1 minute window
 
-      if (useGroupedLimits) {
-        // Smart grouping: Group routes by feature area to prevent bypass
-        const routeGroup = getRouteGroup(pathname);
-        rateLimitKey = `${ip}:api:${routeGroup}`;
+      // Limits per group (customize based on route expense)
+      const groupLimits: Record<string, number> = {
+        community: 100, // Discovery/search endpoints
+        reviews: 60, // Review operations
+        trips: 80, // Booking operations
+        messages: 100, // Messaging
+        matches: 20, // Expensive distance calculations
+        admin: 30, // Admin operations
+        public: 30, // Public routes (sitemap, robots, rss)
+        other: 100, // Default for ungrouped routes
+      };
 
-        // Limits per group (customize based on route expense)
-        const groupLimits: Record<string, number> = {
-          community: 100, // Discovery/search endpoints
-          reviews: 60, // Review operations
-          trips: 80, // Booking operations
-          messages: 100, // Messaging
-          matches: 20, // Expensive distance calculations
-          admin: 30, // Admin operations
-          public: 30, // Public routes (sitemap, robots, rss)
-          other: 100, // Default for ungrouped routes
-        };
-
-        limit = groupLimits[routeGroup] || 100;
-
-        console.log('[MIDDLEWARE] Using grouped rate limits', {
-          ip,
-          pathname,
-          routeGroup,
-          limit,
-        });
-      } else {
-        // Legacy: Per-route rate limiting (vulnerable to bypass)
-        rateLimitKey = `${ip}:${pathname}`;
-        limit = isPublicRoute ? 30 : 100;
-      }
+      const limit = groupLimits[routeGroup] || 100;
 
       const rateLimitResult = await checkRateLimit(rateLimitKey, limit, windowMs);
 
@@ -226,9 +252,10 @@ export default async function middleware(request: NextRequest) {
         console.warn('[MIDDLEWARE] Rate limit exceeded', {
           ip,
           path: pathname,
+          routeGroup,
           userAgent: request.headers.get('user-agent'),
           retryAfter: rateLimitResult.retryAfter,
-          grouped: useGroupedLimits,
+          limit,
         });
 
         return NextResponse.json(
