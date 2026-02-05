@@ -11,10 +11,10 @@ const BLOCKED_USER_AGENTS = [
   /python-requests/i,
   /curl/i,
   /wget/i,
-  /ahrefs/i,
-  /semrush/i,
+  /ahrefsbot/i, // More specific than /ahrefs/i
+  /semrushbot/i, // More specific than /semrush/i
 
-  // Known bad bots
+  // Known bad bots (specific patterns only)
   /mj12bot/i,
   /dotbot/i,
   /rogerbot/i,
@@ -22,16 +22,24 @@ const BLOCKED_USER_AGENTS = [
   /facebot/i,
   /ia_archiver/i,
 
-  // Generic scanners
-  /scanner/i,
-  /spider/i,
-  /crawler/i,
-  /bot/i,
+  // Specific scanner patterns
+  /zgrab/i,
+  /masscan/i,
+  /nmap/i,
 
   // HTTP libraries often used by bots
   /axios/i,
   /node-fetch/i,
   /got/i,
+  /httpx/i,
+
+  // REMOVED overly broad patterns:
+  // /scanner/i  - Too broad, could match legitimate tools
+  // /spider/i   - Too broad, many legitimate crawlers
+  // /crawler/i  - Too broad, many legitimate crawlers
+  // /bot/i      - Too broad, matches "robot", "Abbott", etc.
+  // /ahrefs/i   - Replaced with /ahrefsbot/i for specificity
+  // /semrush/i  - Replaced with /semrushbot/i for specificity
 ];
 
 const ALLOWED_BOTS = [
