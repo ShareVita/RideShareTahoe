@@ -232,6 +232,8 @@ async function processCodeExchangeAndProfileUpdate(
 /**
  * Handles the OAuth callback from the authentication provider.
  * Exchanges the code for a session and sets up the user profile.
+ *
+ * BOT PROTECTION: Rate limited in middleware.ts
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const requestUrl = new URL(req.url);
