@@ -6,12 +6,15 @@ import { NextRequest, NextResponse } from 'next/server';
  * Vercel Cron: When CRON_SECRET is set in the project, Vercel automatically
  * sends "Authorization: Bearer <CRON_SECRET>" when invoking cron paths.
  *
- * This helper also accepts:
- * - Authorization: Bearer <CRON_SECRET> (header)
- * - ?cron_secret=<CRON_SECRET> (query param, for manual triggers or if headers are not sent)
+ * This helper accepts:
+ * - Authorization: Bearer <CRON_SECRET> (header) - REQUIRED for production
+ * - ?cron_secret=<CRON_SECRET> (query param) - ONLY allowed in development (insecure)
  *
  * Environment variables:
- * - CRON_SECRET: Required in production; used for both header and query auth.
+ * - CRON_SECRET: Required in production; used for header auth.
+ *
+ * Security Note: Query param auth is disabled in production because secrets
+ * in URLs appear in logs, browser history, and referrer headers.
  */
 
 // eslint-disable-next-line no-unused-vars
@@ -31,13 +34,23 @@ export function cronAuth(handler: RouteHandler): RouteHandler {
     } else {
       const expectedAuth = `Bearer ${vercelCronSecret}`;
       const headerOk = authHeader === expectedAuth;
-      const querySecret = request.nextUrl.searchParams.get('cron_secret');
-      const queryOk = querySecret === vercelCronSecret;
+
+      // Query param auth: ONLY allowed in development (insecure - appears in logs)
+      let queryOk = false;
+      if (process.env.NODE_ENV === 'development') {
+        const querySecret = request.nextUrl.searchParams.get('cron_secret');
+        queryOk = querySecret === vercelCronSecret;
+        if (queryOk) {
+          console.warn('[CRON] Query param auth used - INSECURE, only use in development!');
+        }
+      }
+
       if (!headerOk && !queryOk) {
         console.warn('[CRON] Unauthorized cron access attempt', {
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
           userAgent: request.headers.get('user-agent'),
           path: request.nextUrl.pathname,
+          hasQueryParam: !!request.nextUrl.searchParams.get('cron_secret'),
         });
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }

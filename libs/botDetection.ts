@@ -136,3 +136,29 @@ export function hasSuspiciousCharacteristics(request: Request): boolean {
 
   return false;
 }
+
+/**
+ * Generate a fingerprint for a request based on multiple headers.
+ * Used as fallback when IP address is unknown.
+ *
+ * Note: This is not cryptographically secure, just a simple hash for rate limiting.
+ */
+export function generateRequestFingerprint(headers: Headers): string {
+  const factors = [
+    headers.get('user-agent') || 'unknown',
+    headers.get('accept-language') || 'unknown',
+    headers.get('accept') || 'unknown',
+    headers.get('accept-encoding') || 'unknown',
+    headers.get('sec-ch-ua') || 'unknown',
+  ].join('|');
+
+  // Simple hash function (not cryptographically secure, but fine for rate limiting)
+  let hash = 0;
+  for (let i = 0; i < factors.length; i++) {
+    const char = factors.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  return `fingerprint_${Math.abs(hash).toString(16)}`;
+}

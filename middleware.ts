@@ -13,8 +13,33 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCookieOptions } from '@/libs/cookieOptions';
-import { isMaliciousBot, getClientIp } from '@/libs/botDetection';
+import { isMaliciousBot, getClientIp, generateRequestFingerprint } from '@/libs/botDetection';
 import { checkRateLimit } from '@/libs/middlewareRateLimit';
+
+/**
+ * Check if a route requires Supabase session management.
+ * Only these routes will have session refresh in middleware.
+ */
+function requiresAuth(pathname: string): boolean {
+  // Auth routes always need session
+  if (pathname.startsWith('/api/auth/')) return true;
+
+  // Protected API routes that require authentication
+  const protectedPrefixes = [
+    '/api/profile/',
+    '/api/messages',
+    '/api/matches',
+    '/api/users/',
+    '/api/account/',
+    '/api/admin/',
+    '/api/trips/',
+    '/api/reviews/',
+    '/dashboard',
+    '/profile',
+  ];
+
+  return protectedPrefixes.some((prefix) => pathname.startsWith(prefix));
+}
 
 /**
  * Group routes by feature area to prevent rate limit bypass via route switching.
@@ -55,7 +80,73 @@ export default async function middleware(request: NextRequest) {
     // Don't return early - let session refresh happen
   }
 
-  // 1. BOT DETECTION (skip for auth routes)
+  // 1. CSRF PROTECTION (for API routes with mutating methods)
+  const isMutatingRequest = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method);
+  const isApiRoute = pathname.startsWith('/api/');
+
+  if (!isAuthRoute && isApiRoute && isMutatingRequest) {
+    const origin = request.headers.get('origin');
+    const referer = request.headers.get('referer');
+
+    // Get allowed origins from env or use defaults
+    const allowedOrigins = process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : [];
+
+    // In development, allow localhost
+    if (process.env.NODE_ENV === 'development') {
+      allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
+    }
+
+    // Check origin header (preferred for CORS requests)
+    if (origin) {
+      const originUrl = new URL(origin);
+      const isAllowed = allowedOrigins.some((allowed) => {
+        const allowedUrl = new URL(allowed);
+        return originUrl.origin === allowedUrl.origin;
+      });
+
+      if (!isAllowed && allowedOrigins.length > 0) {
+        console.warn('[MIDDLEWARE] Blocked CSRF attempt - invalid origin', {
+          origin,
+          path: pathname,
+          ip: getClientIp(request.headers),
+        });
+        return NextResponse.json(
+          { error: 'Forbidden - Invalid origin' },
+          { status: 403, headers: { 'X-Blocked-Reason': 'csrf-invalid-origin' } }
+        );
+      }
+    }
+    // Check referer as fallback (for same-site requests)
+    else if (referer) {
+      const refererUrl = new URL(referer);
+      const isAllowed = allowedOrigins.some((allowed) => {
+        const allowedUrl = new URL(allowed);
+        return refererUrl.origin === allowedUrl.origin;
+      });
+
+      if (!isAllowed && allowedOrigins.length > 0) {
+        console.warn('[MIDDLEWARE] Blocked CSRF attempt - invalid referer', {
+          referer,
+          path: pathname,
+          ip: getClientIp(request.headers),
+        });
+        return NextResponse.json(
+          { error: 'Forbidden - Invalid referer' },
+          { status: 403, headers: { 'X-Blocked-Reason': 'csrf-invalid-referer' } }
+        );
+      }
+    }
+    // No origin or referer (suspicious but allow with warning for API clients)
+    else {
+      console.warn('[MIDDLEWARE] No origin/referer header', {
+        path: pathname,
+        method: request.method,
+        userAgent: request.headers.get('user-agent'),
+      });
+    }
+  }
+
+  // 2. BOT DETECTION (skip for auth routes)
   if (!isAuthRoute) {
     const userAgent = request.headers.get('user-agent');
 
@@ -73,21 +164,26 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // 2. RATE LIMITING (skip for auth routes)
-  const isApiRoute = pathname.startsWith('/api/');
+  // 3. RATE LIMITING (skip for auth routes)
   const isPublicRoute = pathname.match(/\/(sitemap\.xml|robots\.txt|rss\.xml)/);
 
   if (!isAuthRoute && (isApiRoute || isPublicRoute)) {
     // Prefer Vercel-provided ip when available (request.ip in middleware), else headers
-    const ip = (request as NextRequest & { ip?: string }).ip || getClientIp(request.headers);
+    let ip = (request as NextRequest & { ip?: string }).ip || getClientIp(request.headers);
 
-    // If IP is unknown, allow but log (don't block everyone)
+    // If IP is unknown, use request fingerprinting as fallback
     if (!ip || ip === 'unknown') {
-      console.warn('[MIDDLEWARE] Rate limit skipped - unknown IP', { path: pathname });
-      // Continue without rate limiting to avoid blocking all users
-    } else {
+      ip = generateRequestFingerprint(request.headers);
+      console.warn('[MIDDLEWARE] Unknown IP - using fingerprint for rate limiting', {
+        path: pathname,
+        fingerprint: ip,
+      });
+    }
+
+    {
       // FEATURE FLAG: Use grouped rate limiting to prevent route-switching bypass
-      const useGroupedLimits = process.env.USE_GROUPED_RATE_LIMITS === 'true';
+      // Default to 'true' for security; set USE_GROUPED_RATE_LIMITS=false to disable
+      const useGroupedLimits = process.env.USE_GROUPED_RATE_LIMITS !== 'false';
 
       let rateLimitKey: string;
       let limit: number;
@@ -153,38 +249,44 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // 3. SUPABASE SESSION REFRESH
-  let response = NextResponse.next({
-    request,
-  });
+  // 4. SUPABASE SESSION REFRESH (only for routes that need auth)
+  // Skip for public routes to improve performance (15-30ms savings per request)
+  if (requiresAuth(pathname)) {
+    let response = NextResponse.next({
+      request,
+    });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookieOptions: getCookieOptions() as CookieOptions,
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        cookieOptions: getCookieOptions() as CookieOptions,
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+
+            response = NextResponse.next({
+              request,
+            });
+
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
         },
-        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+      }
+    );
 
-          response = NextResponse.next({
-            request,
-          });
+    await supabase.auth.getSession();
 
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+    return response;
+  }
 
-  await supabase.auth.getSession();
-
-  return response;
+  // For public routes, just pass through
+  return NextResponse.next({ request });
 }
 
 export const config = {
