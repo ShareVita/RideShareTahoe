@@ -4,20 +4,28 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * Retrieves aggregate review statistics for a user.
  * Includes average rating, total count, and rating distribution.
+ *
+ * BOT PROTECTION: Requires authentication to prevent bot scraping of review data.
+ * Previously allowed unauthenticated access with userId param - SECURITY ISSUE FIXED.
  */
+
+// Cache for 5 minutes to reduce database load
+export const revalidate = 300;
+
 export async function GET(request: NextRequest) {
   try {
     const { user, authError, supabase } = await getAuthenticatedUser(request);
 
-    const { searchParams } = new URL(request.url);
-    const userIdParam = searchParams.get('userId');
-
-    // If authentication failed, only allow access when userId is explicitly provided
-    if ((authError || !user) && !userIdParam) {
+    // SECURITY FIX: Always require authentication (removed public userId access)
+    if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
-    const userId = userIdParam || user?.id;
+    const { searchParams } = new URL(request.url);
+    const userIdParam = searchParams.get('userId');
+
+    // Allow viewing own stats or other users' stats (but must be authenticated)
+    const userId = userIdParam || user.id;
 
     if (!userId) {
       return NextResponse.json(
@@ -86,11 +94,18 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
-      averageRating: avgRating,
-      reviewCount: reviewCount,
-      ratingDistribution: distribution,
-    });
+    return NextResponse.json(
+      {
+        averageRating: avgRating,
+        reviewCount: reviewCount,
+        ratingDistribution: distribution,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching review stats:', error);
     return NextResponse.json(
