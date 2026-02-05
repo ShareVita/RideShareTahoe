@@ -1,5 +1,4 @@
 import { processScheduledEmails } from '@/libs/email';
-import { NextRequest } from 'next/server';
 import { cronAuth } from '@/libs/cronAuth';
 
 /**
@@ -13,7 +12,7 @@ import { cronAuth } from '@/libs/cronAuth';
  *
  * Or use Vercel's built-in cron authentication via vercel.json
  */
-export const GET = cronAuth(async (_request: NextRequest) => {
+export const GET = cronAuth(async () => {
   try {
     console.log('[CRON] Starting scheduled email processing...');
 

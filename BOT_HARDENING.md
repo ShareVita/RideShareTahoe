@@ -186,7 +186,7 @@ All bot blocks and rate limits are logged with:
 - Timestamp
 
 **Example log output:**
-```
+```log
 [MIDDLEWARE] Blocked malicious bot { ip: '1.2.3.4', userAgent: 'curl/7.68.0', path: '/api/lead' }
 [MIDDLEWARE] Rate limit exceeded { ip: '5.6.7.8', path: '/api/cron/process-scheduled-emails', retryAfter: 45 }
 [CRON] Unauthorized cron access attempt { ip: '9.10.11.12', path: '/api/cron/process-scheduled-emails' }
