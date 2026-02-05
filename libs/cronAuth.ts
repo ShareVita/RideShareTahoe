@@ -3,21 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * Authentication wrapper for cron job endpoints.
  *
- * Vercel Cron jobs can be protected with:
- * 1. Vercel's own Authorization header (vercel.json cron secret)
- * 2. Custom CRON_SECRET environment variable
+ * Vercel Cron: When CRON_SECRET is set in the project, Vercel automatically
+ * sends "Authorization: Bearer <CRON_SECRET>" when invoking cron paths.
  *
- * Usage:
- * ```typescript
- * import { cronAuth } from '@/libs/cronAuth';
- *
- * export const GET = cronAuth(async (request) => {
- *   // Your cron logic here
- * });
- * ```
+ * This helper also accepts:
+ * - Authorization: Bearer <CRON_SECRET> (header)
+ * - ?cron_secret=<CRON_SECRET> (query param, for manual triggers or if headers are not sent)
  *
  * Environment variables:
- * - CRON_SECRET: Your custom secret for cron endpoints
+ * - CRON_SECRET: Required in production; used for both header and query auth.
  */
 
 // eslint-disable-next-line no-unused-vars
@@ -31,17 +25,15 @@ export function cronAuth(handler: RouteHandler): RouteHandler {
 
     if (!vercelCronSecret) {
       console.warn('[CRON] CRON_SECRET not configured - cron routes are unprotected!');
-      // In development or if not configured, allow through with warning
       if (process.env.NODE_ENV === 'production') {
-        return NextResponse.json(
-          { error: 'CRON_SECRET not configured' },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
       }
     } else {
-      // Check authorization header
       const expectedAuth = `Bearer ${vercelCronSecret}`;
-      if (authHeader !== expectedAuth) {
+      const headerOk = authHeader === expectedAuth;
+      const querySecret = request.nextUrl.searchParams.get('cron_secret');
+      const queryOk = querySecret === vercelCronSecret;
+      if (!headerOk && !queryOk) {
         console.warn('[CRON] Unauthorized cron access attempt', {
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
           userAgent: request.headers.get('user-agent'),

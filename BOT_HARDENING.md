@@ -2,6 +2,17 @@
 
 This document describes the bot protection measures implemented to prevent function invocation spikes from malicious bot traffic.
 
+---
+
+## TODO (continue later)
+
+- [ ] **GET audit checklist**: Add to this doc a short table of all GET endpoints (e.g. `/api/community/profiles`, `/api/matches`, …) with how each is protected (auth required / rate limit only / cached). Ensure any public or expensive GET has `revalidate` or protection.
+- [ ] **Test instructions**: Add "How to test locally and on preview deploy" (curl examples for cron with `?cron_secret=`, rate limit, auth allowlist).
+- [ ] **Upstash**: Run `npm install` after pull; verify `libs/middlewareRateLimit.ts` Upstash path (e.g. `reset` vs `pending` on limit result) against @upstash/ratelimit types once deps are installed.
+- [ ] **Optional**: Add `revalidate` or cache headers to any public GET route that does DB reads, if not already auth-protected.
+
+---
+
 ## 📋 Summary of Changes
 
 ### 🛡️ 1. New Middleware with Bot Detection (`middleware.ts`)
@@ -9,11 +20,13 @@ This document describes the bot protection measures implemented to prevent funct
 **File:** `/middleware.ts`
 
 **What it does:**
+
 - **Bot Detection**: Blocks malicious bots (scrapers, crawlers) while allowing legitimate search engines
 - **Rate Limiting**: Per-instance rate limiting (100 req/min for API routes, 30 req/min for public routes)
 - **Supabase Auth**: Maintains session refresh functionality from previous `proxy.ts`
 
 **Key Features:**
+
 - Blocks known bad user agents (scrapy, curl, wget, generic scanners)
 - Allows legitimate bots (Googlebot, Bingbot, social media crawlers)
 - Returns 403 for blocked bots with `X-Blocked-Reason` header
@@ -28,6 +41,7 @@ This document describes the bot protection measures implemented to prevent funct
 **File:** `/libs/botDetection.ts`
 
 **Functions:**
+
 - `isMaliciousBot(userAgent)` - Checks if user agent is malicious
 - `getClientIp(headers)` - Extracts IP from Vercel headers
 - `hasSuspiciousCharacteristics(request)` - Additional heuristics
@@ -44,12 +58,14 @@ Edit the `BLOCKED_USER_AGENTS` and `ALLOWED_BOTS` arrays to adjust bot filtering
 **Purpose:** Fast, in-memory rate limiting for middleware
 
 **Limitations:**
+
 - ⚠️ **Per-instance only** - Resets on cold starts
 - ⚠️ **Not shared across Vercel instances**
 - ✅ **Good for basic bot storm protection**
 - ✅ **Very low latency overhead**
 
 **For production-grade rate limiting:**
+
 - Consider upgrading to **Upstash Redis** (see Upgrade Path section below)
 - The existing `libs/rateLimit.ts` (Supabase-backed) is more persistent but slower
 
@@ -62,6 +78,7 @@ Edit the `BLOCKED_USER_AGENTS` and `ALLOWED_BOTS` arrays to adjust bot filtering
 **Purpose:** Authenticates cron job endpoints
 
 **Usage:**
+
 ```typescript
 import { cronAuth } from '@/libs/cronAuth';
 
@@ -71,6 +88,7 @@ export const GET = cronAuth(async (request) => {
 ```
 
 **Security:**
+
 - Requires `Authorization: Bearer <CRON_SECRET>` header
 - Enforces GET method only
 - Logs unauthorized access attempts
@@ -82,6 +100,7 @@ export const GET = cronAuth(async (request) => {
 #### a) `/api/lead` - Lead Capture (CRITICAL)
 
 **Changes:**
+
 - ✅ Rate limited: 3 submissions per IP per hour
 - ✅ Email validation (regex check)
 - ✅ Method restrictions (POST only, blocks GET/PUT/DELETE/PATCH)
@@ -94,6 +113,7 @@ export const GET = cronAuth(async (request) => {
 #### b) `/api/cron/process-scheduled-emails` (HIGH RISK)
 
 **Changes:**
+
 - ✅ Wrapped with `cronAuth()` - Requires `CRON_SECRET`
 - ✅ Method restriction (GET only)
 - ✅ Blocks POST and other methods
@@ -106,6 +126,7 @@ export const GET = cronAuth(async (request) => {
 #### c) `/api/cron/process-reengage-emails` (HIGH RISK)
 
 **Changes:**
+
 - ✅ Wrapped with `cronAuth()` - Requires `CRON_SECRET`
 - ✅ Method restriction (GET only)
 - ✅ Blocks POST and other methods
@@ -157,11 +178,13 @@ vercel env add CRON_SECRET
 ```
 
 **In Vercel Dashboard:**
+
 1. Go to Project Settings → Environment Variables
 2. Add: `CRON_SECRET` = `<your-generated-secret>`
 3. Select: Production, Preview, Development (or as needed)
 
 **Note:** If `CRON_SECRET` is not set:
+
 - Development: Cron routes will work with a warning
 - Production: Cron routes will return 500 error
 
@@ -180,12 +203,14 @@ vercel env add CRON_SECRET
 ### What's Logged
 
 All bot blocks and rate limits are logged with:
+
 - IP address
 - User agent
 - Requested path
 - Timestamp
 
 **Example log output:**
+
 ```log
 [MIDDLEWARE] Blocked malicious bot { ip: '1.2.3.4', userAgent: 'curl/7.68.0', path: '/api/lead' }
 [MIDDLEWARE] Rate limit exceeded { ip: '5.6.7.8', path: '/api/cron/process-scheduled-emails', retryAfter: 45 }
@@ -196,6 +221,7 @@ All bot blocks and rate limits are logged with:
 ### Vercel Logs
 
 Check Vercel Dashboard → Your Project → Logs to monitor:
+
 - Bot blocks (403 responses)
 - Rate limit hits (429 responses)
 - Unauthorized cron attempts (401 responses)
@@ -227,6 +253,7 @@ done
 ```
 
 After 3 requests, you should get:
+
 ```json
 {
   "error": "Too many submissions. Please try again later."
@@ -252,13 +279,13 @@ The current in-memory rate limiter works but has limitations. For production-gra
 
 ### Why Upgrade?
 
-| Feature | In-Memory | Upstash Redis |
-|---------|-----------|---------------|
-| Persistent across instances | ❌ No | ✅ Yes |
-| Survives cold starts | ❌ No | ✅ Yes |
-| Shared across regions | ❌ No | ✅ Yes |
-| Latency | ~1ms | ~5-20ms |
-| Cost | Free | Free tier: 10k req/day |
+| Feature                     | In-Memory | Upstash Redis          |
+| --------------------------- | --------- | ---------------------- |
+| Persistent across instances | ❌ No     | ✅ Yes                 |
+| Survives cold starts        | ❌ No     | ✅ Yes                 |
+| Shared across regions       | ❌ No     | ✅ Yes                 |
+| Latency                     | ~1ms      | ~5-20ms                |
+| Cost                        | Free      | Free tier: 10k req/day |
 
 ### How to Upgrade
 
@@ -267,17 +294,20 @@ The current in-memory rate limiter works but has limitations. For production-gra
    - Create a new Redis database (Global recommended)
 
 2. **Install Package**
+
    ```bash
    npm install @upstash/ratelimit @upstash/redis
    ```
 
 3. **Add Environment Variables**
+
    ```bash
    UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
    UPSTASH_REDIS_REST_TOKEN=your_token
    ```
 
 4. **Update `libs/middlewareRateLimit.ts`**
+
    ```typescript
    import { Ratelimit } from '@upstash/ratelimit';
    import { Redis } from '@upstash/redis';
@@ -292,11 +322,7 @@ The current in-memory rate limiter works but has limitations. For production-gra
      limiter: Ratelimit.slidingWindow(100, '1 m'),
    });
 
-   export async function checkRateLimit(
-     identifier: string,
-     limit: number,
-     windowMs: number
-   ) {
+   export async function checkRateLimit(identifier: string, limit: number, windowMs: number) {
      const { success, pending } = await ratelimit.limit(identifier);
      await pending; // Wait for response
      return { allowed: success };
@@ -310,6 +336,7 @@ The current in-memory rate limiter works but has limitations. For production-gra
 ## 📝 Files Changed
 
 ### New Files
+
 - ✅ `middleware.ts` - Main middleware with bot detection and rate limiting
 - ✅ `libs/botDetection.ts` - Bot user agent detection
 - ✅ `libs/cronAuth.ts` - Cron authentication wrapper
@@ -318,12 +345,14 @@ The current in-memory rate limiter works but has limitations. For production-gra
 - ✅ `BOT_HARDENING.md` - This documentation
 
 ### Modified Files
+
 - ✅ `app/api/lead/route.ts` - Added rate limiting and validation
 - ✅ `app/api/cron/process-scheduled-emails/route.ts` - Added auth protection
 - ✅ `app/api/cron/process-reengage-emails/route.ts` - Added auth protection
 - ✅ `app/api/auth/callback/route.ts` - Added comment about middleware protection
 
 ### Files to Remove
+
 - ⚠️ `proxy.ts` - Replaced by `middleware.ts` (can be deleted after testing)
 
 ---
@@ -331,6 +360,7 @@ The current in-memory rate limiter works but has limitations. For production-gra
 ## 🎯 Next Steps
 
 1. **Deploy and Test**
+
    ```bash
    git add .
    git commit -m "feat: Add bot storm hardening"
@@ -375,6 +405,7 @@ The current in-memory rate limiter works but has limitations. For production-gra
 ## 📞 Support
 
 If you encounter issues:
+
 1. Check Vercel logs for error messages
 2. Verify environment variables are set correctly
 3. Test with `curl` to isolate the issue

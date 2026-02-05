@@ -136,10 +136,7 @@ async function processCodeExchangeAndProfileUpdate(
       const supabaseAdmin = await createClient('service_role');
       const { error: privateInfoError } = await supabaseAdmin
         .from('user_private_info')
-        .upsert(
-          { id: user.id, email: user.email },
-          { onConflict: 'id' }
-        );
+        .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
       if (privateInfoError) {
         console.error('❌ Failed to upsert user_private_info:', JSON.stringify(privateInfoError));
       } else {
@@ -233,7 +230,7 @@ async function processCodeExchangeAndProfileUpdate(
  * Handles the OAuth callback from the authentication provider.
  * Exchanges the code for a session and sets up the user profile.
  *
- * BOT PROTECTION: Rate limited in middleware.ts
+ * BOT PROTECTION: Excluded from rate limiting in middleware (auth routes are allowlisted).
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const requestUrl = new URL(req.url);

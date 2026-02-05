@@ -6,20 +6,26 @@ import { rateLimit } from '@/lib/ratelimit';
 //
 // BOT PROTECTION: Rate limited to prevent spam submissions
 export async function POST(req: NextRequest) {
-  // 1. RATE LIMITING - Prevent bot spam
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ||
-             req.headers.get('x-real-ip') ||
-             'unknown';
+  // 1. RATE LIMITING - Prevent bot spam (skip when IP unknown to avoid blocking everyone)
+  const ip =
+    (req as NextRequest & { ip?: string }).ip ||
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown';
 
-  // Allow 3 lead submissions per IP per hour
-  const isAllowed = await rateLimit(ip, 'lead:submit', 3, 3600);
+  if (ip === 'unknown') {
+    console.warn('[API] Lead submission - unknown IP, rate limit skipped');
+  } else {
+    // Allow 3 lead submissions per IP per hour
+    const isAllowed = await rateLimit(ip, 'lead:submit', 3, 3600);
 
-  if (!isAllowed) {
-    console.warn('[API] Lead submission rate limit exceeded', { ip });
-    return NextResponse.json(
-      { error: 'Too many submissions. Please try again later.' },
-      { status: 429 }
-    );
+    if (!isAllowed) {
+      console.warn('[API] Lead submission rate limit exceeded', { ip });
+      return NextResponse.json(
+        { error: 'Too many submissions. Please try again later.' },
+        { status: 429 }
+      );
+    }
   }
 
   // 2. REQUEST VALIDATION
@@ -37,10 +43,7 @@ export async function POST(req: NextRequest) {
   // Basic email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(body.email)) {
-    return NextResponse.json(
-      { error: 'Invalid email format' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
   }
 
   try {

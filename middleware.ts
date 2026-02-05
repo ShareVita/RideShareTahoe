@@ -19,10 +19,21 @@ import { checkRateLimit } from '@/libs/middlewareRateLimit';
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // IMPORTANT: Exclude auth routes and static assets from bot detection and rate limiting.
+  // Do NOT block: /api/auth/* (OAuth callback, logout), /_next/*, /favicon.ico, static assets.
+  const isAuthRoute = pathname.startsWith('/api/auth/');
+  const isStaticAsset = pathname.match(/\/_next|\/favicon\.ico|\/.*\.(svg|png|jpg|jpeg|gif|webp)$/);
+
+  if (isAuthRoute || isStaticAsset) {
+    // Skip all middleware checks for auth and static assets
+    const response = NextResponse.next({ request });
+    return response;
+  }
+
   // 1. BOT DETECTION
   const userAgent = request.headers.get('user-agent');
 
-  // Block malicious bots early
+  // Block malicious bots early (but NOT on auth routes - checked above)
   if (isMaliciousBot(userAgent)) {
     console.warn('[MIDDLEWARE] Blocked malicious bot', {
       ip: getClientIp(request.headers),
@@ -41,36 +52,43 @@ export default async function middleware(request: NextRequest) {
   const isPublicRoute = pathname.match(/\/(sitemap\.xml|robots\.txt|rss\.xml)/);
 
   if (isApiRoute || isPublicRoute) {
-    const ip = getClientIp(request.headers);
+    // Prefer Vercel-provided ip when available (request.ip in middleware), else headers
+    const ip = (request as NextRequest & { ip?: string }).ip || getClientIp(request.headers);
 
-    // More aggressive limits for public routes that can be hammered
-    const limit = isPublicRoute ? 30 : 100; // 30/min for public, 100/min for API
-    const windowMs = 60 * 1000; // 1 minute window
+    // If IP is unknown, allow but log (don't block everyone)
+    if (!ip || ip === 'unknown') {
+      console.warn('[MIDDLEWARE] Rate limit skipped - unknown IP', { path: pathname });
+      // Continue without rate limiting to avoid blocking all users
+    } else {
+      // More aggressive limits for public routes that can be hammered
+      const limit = isPublicRoute ? 30 : 100; // 30/min for public, 100/min for API
+      const windowMs = 60 * 1000; // 1 minute window
 
-    const rateLimitResult = checkRateLimit(`${ip}:${pathname}`, limit, windowMs);
+      const rateLimitResult = await checkRateLimit(`${ip}:${pathname}`, limit, windowMs);
 
-    if (!rateLimitResult.allowed) {
-      console.warn('[MIDDLEWARE] Rate limit exceeded', {
-        ip,
-        path: pathname,
-        userAgent,
-        retryAfter: rateLimitResult.retryAfter,
-      });
-
-      return NextResponse.json(
-        {
-          error: 'Too many requests. Please slow down.',
+      if (!rateLimitResult.allowed) {
+        console.warn('[MIDDLEWARE] Rate limit exceeded', {
+          ip,
+          path: pathname,
+          userAgent,
           retryAfter: rateLimitResult.retryAfter,
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(rateLimitResult.retryAfter || 60),
-            'X-RateLimit-Limit': String(limit),
-            'X-RateLimit-Remaining': '0',
+        });
+
+        return NextResponse.json(
+          {
+            error: 'Too many requests. Please slow down.',
+            retryAfter: rateLimitResult.retryAfter,
+          },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(rateLimitResult.retryAfter || 60),
+              'X-RateLimit-Limit': String(limit),
+              'X-RateLimit-Remaining': '0',
+            },
           }
-        }
-      );
+        );
+      }
     }
   }
 

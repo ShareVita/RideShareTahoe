@@ -1,72 +1,110 @@
 /**
- * Lightweight in-memory rate limiter for middleware.
+ * Rate limiter for middleware.
  *
- * WARNING: This is per-instance only and resets on cold starts.
- * For persistent rate limiting across instances, use Upstash Redis.
- *
- * This is meant as a first line of defense in middleware to block
- * obvious bot storms before they hit your API routes.
+ * When UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set, uses
+ * Upstash Redis for durable, cross-instance rate limiting. Otherwise falls
+ * back to in-memory (best-effort only; resets on cold start, not shared).
  */
+
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
 interface RateLimitRecord {
   count: number;
   resetAt: number;
 }
 
-const cache = new Map<string, RateLimitRecord>();
+const memoryCache = new Map<string, RateLimitRecord>();
 
 // Clean up expired entries every minute
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, record] of cache.entries()) {
+    for (const [key, record] of memoryCache.entries()) {
       if (record.resetAt < now) {
-        cache.delete(key);
+        memoryCache.delete(key);
       }
     }
   }, 60000);
 }
 
-/**
- * Simple sliding window rate limiter.
- * Returns true if request should be allowed, false if rate limit exceeded.
- *
- * @param identifier - Unique identifier (e.g., IP address)
- * @param limit - Maximum requests per window
- * @param windowMs - Time window in milliseconds
- */
-export function checkRateLimit(
+function checkRateLimitMemory(
   identifier: string,
   limit: number,
   windowMs: number
 ): { allowed: boolean; retryAfter?: number } {
   const now = Date.now();
-  const cacheKey = identifier;
-  const record = cache.get(cacheKey);
+  const record = memoryCache.get(identifier);
 
-  // No record or expired window - allow and create new record
   if (!record || record.resetAt < now) {
-    cache.set(cacheKey, {
+    memoryCache.set(identifier, {
       count: 1,
       resetAt: now + windowMs,
     });
     return { allowed: true };
   }
 
-  // Limit exceeded
   if (record.count >= limit) {
     const retryAfter = Math.ceil((record.resetAt - now) / 1000);
     return { allowed: false, retryAfter };
   }
 
-  // Increment and allow
   record.count += 1;
   return { allowed: true };
 }
 
+// Upstash: lazy init only when env is set
+let upstashLimiters: Map<string, Ratelimit> | null = null;
+
+function getUpstashLimiter(limit: number, windowMs: number): Ratelimit | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  if (!upstashLimiters) {
+    upstashLimiters = new Map();
+  }
+  const key = `${limit}:${windowMs}`;
+  if (!upstashLimiters.has(key)) {
+    const redis = new Redis({ url, token });
+    const windowSec = Math.max(1, Math.round(windowMs / 1000));
+    upstashLimiters.set(
+      key,
+      new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
+      })
+    );
+  }
+  return upstashLimiters.get(key)!;
+}
+
 /**
- * Reset the rate limit cache (useful for testing)
+ * Returns true if request should be allowed, false if rate limit exceeded.
+ * Uses Upstash Redis when env vars are set; otherwise in-memory (best-effort).
+ */
+export async function checkRateLimit(
+  identifier: string,
+  limit: number,
+  windowMs: number
+): Promise<{ allowed: boolean; retryAfter?: number }> {
+  const limiter = getUpstashLimiter(limit, windowMs);
+  if (limiter) {
+    try {
+      const { success, reset } = await limiter.limit(identifier);
+      const retryAfter = success ? undefined : Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+      return { allowed: success, retryAfter };
+    } catch (e) {
+      console.warn('[MIDDLEWARE] Upstash rate limit error, falling back to allow', e);
+      return { allowed: true };
+    }
+  }
+  return checkRateLimitMemory(identifier, limit, windowMs);
+}
+
+/**
+ * Reset the in-memory rate limit cache (useful for testing). Does not clear Upstash.
  */
 export function resetRateLimitCache(): void {
-  cache.clear();
+  memoryCache.clear();
 }
