@@ -5,6 +5,7 @@ import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
+import { useHasActiveBooking } from '@/hooks/useHasActiveBooking';
 import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
 import { sanitizeLocation } from '@/libs/sanitize/location';
 
@@ -12,17 +13,15 @@ interface PassengerPostCardProps {
   post: RidePostType;
   currentUserId?: string;
   // eslint-disable-next-line no-unused-vars
-  onMessage: (recipient: ProfileType, post: RidePostType) => void;
+  onMessage: (recipient: ProfileType, ridePost: RidePostType) => void;
   // eslint-disable-next-line no-unused-vars
-  onDelete?: (postId: string) => void;
+  onDelete?: (id: string) => void;
   deleting?: boolean;
   onViewDetails: () => void;
 }
 
 /**
  * Displays ride metadata and action buttons for a single passenger post.
- *
- * @param props - The data to show and callbacks for messaging or hiding a post.
  */
 
 export function PassengerPostCard({
@@ -34,7 +33,14 @@ export function PassengerPostCard({
   onViewDetails,
 }: Readonly<PassengerPostCardProps>) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
   const isOwner = currentUserId === post.poster_id;
+
+  // Clarified naming: this is relationship-level, NOT trip-level
+  const { hasBooking: hasAnyActiveBookingWithUser } = useHasActiveBooking(
+    currentUserId,
+    post.owner?.id
+  );
 
   const sanitizedStartLocation = sanitizeLocation(post.start_location);
   const sanitizedEndLocation = sanitizeLocation(post.end_location);
@@ -58,15 +64,13 @@ export function PassengerPostCard({
     action();
   };
 
-  // Add direction info if round trip
   let directionLabel = '';
-  // If we have a return date merged in, it's a full combined round trip display
   const isCombinedRoundTrip = post.is_round_trip && post.return_date;
 
   if (post.is_round_trip && !isCombinedRoundTrip && post.trip_direction) {
-    directionLabel = post.trip_direction === 'departure' ? '🛫 Outbound' : '🔙 Return';
+    directionLabel = post.trip_direction === 'departure' ? 'Outbound' : 'Return';
   } else if (isCombinedRoundTrip) {
-    directionLabel = '🔄 Round';
+    directionLabel = 'Round Trip';
   }
 
   const cardBackground = 'bg-white dark:bg-slate-900';
@@ -89,7 +93,11 @@ export function PassengerPostCard({
             </span>
             {directionLabel && (
               <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isCombinedRoundTrip ? 'bg-indigo-100 text-indigo-800' : 'bg-orange-100 text-orange-800'}`}
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  isCombinedRoundTrip
+                    ? 'bg-indigo-100 text-indigo-800'
+                    : 'bg-orange-100 text-orange-800'
+                }`}
               >
                 {directionLabel}
               </span>
@@ -101,6 +109,7 @@ export function PassengerPostCard({
             </span>
           </div>
         </div>
+
         {isOwner && (
           <span
             className={`text-xs px-2 py-1 rounded-full ${
@@ -148,11 +157,11 @@ export function PassengerPostCard({
                 alt={`${post.owner.first_name} ${post.owner.last_name}`}
                 width={32}
                 height={32}
-                className="w-8 h-8 rounded-full object-cover hover:opacity-90 transition-opacity"
+                className="w-8 h-8 rounded-full object-cover"
                 unoptimized
               />
             ) : (
-              <div className="w-8 h-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs hover:opacity-90 transition-opacity">
+              <div className="w-8 h-8 bg-gray-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-xs">
                 👤
               </div>
             )}
@@ -164,6 +173,13 @@ export function PassengerPostCard({
               </p>
             </Link>
           </div>
+        </div>
+      )}
+
+      {/* Relationship context (UX improvement) */}
+      {!isOwner && hasAnyActiveBookingWithUser && (
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          You already have active trips together.
         </div>
       )}
 
@@ -226,8 +242,8 @@ export function PassengerPostCard({
         <InviteToRideModal
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
-          passengerId={post.owner.id}
-          passengerName={post.owner.first_name || 'Passenger'}
+          passengerId={post.poster_id}
+          passengerName={post.owner.first_name || 'User'}
           user={{ id: currentUserId }}
         />
       )}

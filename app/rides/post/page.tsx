@@ -1,105 +1,69 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/libs/supabase/client';
 import RideForm from '@/components/rides/RideForm';
+import SeriesCreatedModal from '@/components/rides/SeriesCreatedModal';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
-import type { RidePostType, Vehicle } from '@/app/community/types';
+import { useVehicles } from '@/hooks/useVehicles';
+import type { RidePostType } from '@/app/community/types';
 
 /**
  * Page for creating new ride posts.
- * Handles form submission for both one-way and round-trip rides.
+ * Supports single rides, round trips, and multi-date series.
  */
 export default function CreateRidePage() {
   const router = useRouter();
   const { user, isLoading } = useProtectedRoute();
+  const { vehicles } = useVehicles(user?.id || null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [createdRides, setCreatedRides] = useState<Partial<RidePostType>[]>([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchVehicles = async () => {
-      try {
-        const response = await fetch('/api/community/vehicles');
-        if (response.ok) {
-          const data = await response.json();
-          setVehicles(data.vehicles || []);
-        }
-      } catch (err) {
-        console.error('Failed to fetch vehicles', err);
-        // Don't simplify error state; vehicle selection is optional
-      }
-    };
-
-    fetchVehicles();
-  }, [user]);
-
-  const handleSave = async (data: Partial<RidePostType>) => {
+  /**
+   * Handles saving single or multiple rides.
+   * Now accepts both single ride object and array of rides for multi-date posts.
+   */
+  const handleSave = async (data: Partial<RidePostType> | Partial<RidePostType>[]) => {
     if (!user) return;
     setSaving(true);
     setError(null);
 
     try {
-      const supabase = createClient();
-
-      // Generate a client-side UUID for grouping round trips if needed
-      const round_trip_group_id = data.is_round_trip ? crypto.randomUUID() : null;
-
-      const commonData = {
-        poster_id: user.id,
-        posting_type: data.posting_type,
-        title: data.title,
-        start_location: data.start_location,
-        end_location: data.end_location,
-        price_per_seat: data.price_per_seat,
-        total_seats: data.total_seats,
-        available_seats: data.posting_type === 'driver' ? data.total_seats : null,
-        description: data.description,
-        special_instructions: data.special_instructions,
-        has_awd: data.has_awd,
-        car_type: data.car_type,
-        status: 'active',
-        is_round_trip: data.is_round_trip,
-        round_trip_group_id,
-        is_recurring: false, // Default for now
-      };
-
-      const ridesToInsert = [];
-
-      // 1. Departure Trip
-      ridesToInsert.push({
-        ...commonData,
-        departure_date: data.departure_date,
-        departure_time: data.departure_time,
-        trip_direction: data.is_round_trip ? 'departure' : null,
+      // Use the new API route for bulk creation
+      const response = await fetch('/api/rides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
       });
 
-      // 2. Return Trip (if applicable)
-      if (data.is_round_trip && data.return_date && data.return_time) {
-        ridesToInsert.push({
-          ...commonData,
-          start_location: data.end_location, // Swap locations
-          end_location: data.start_location,
-          departure_date: data.return_date,
-          departure_time: data.return_time,
-          trip_direction: 'return',
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create ride(s)');
       }
 
-      const { error: insertError } = await supabase.from('rides').insert(ridesToInsert);
+      const responseData = await response.json();
 
-      if (insertError) throw insertError;
+      // Normalize response to array for the modal
+      const ridesArray = Array.isArray(responseData) ? responseData : [responseData];
+      setCreatedRides(ridesArray);
 
-      router.push('/community');
+      // Show success modal
+      setShowSuccessModal(true);
     } catch (err) {
       console.error('Error creating ride:', err);
-      setError('Failed to create ride. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to create ride(s). Please try again.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleViewRides = () => {
+    setShowSuccessModal(false);
+    router.push('/community?view=my-posts');
   };
 
   if (isLoading) {
@@ -120,7 +84,8 @@ export default function CreateRidePage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Post a Ride</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Share your journey or find a ride with the community.
+            Share your journey or find a ride with the community. Select multiple dates for
+            recurring trips!
           </p>
         </div>
 
@@ -152,6 +117,14 @@ export default function CreateRidePage() {
           />
         </div>
       </div>
+
+      {/* Success Modal */}
+      <SeriesCreatedModal
+        isOpen={showSuccessModal}
+        onClose={handleViewRides}
+        rides={createdRides}
+        onViewRides={handleViewRides}
+      />
     </div>
   );
 }

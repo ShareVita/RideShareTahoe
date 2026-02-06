@@ -138,12 +138,9 @@ export default function MessageModal({
                 >
                   Send Message
                 </DialogTitle>
-                <div className="mt-4 space-y-1">
+                <div className="mt-4">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     To: {recipient?.first_name ?? 'Guest'}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {ridePost ? `Re: Ride post ${ridePost.id}` : 'General Message'}
                   </p>
                 </div>
 

@@ -11,7 +11,7 @@ export const validateEmail = (email: string) => {
 
 export const validatePhoneNumber = (phone: string) => {
   const phoneRegex = /^\+?[1-9]\d{0,15}$/;
-  return phoneRegex.test(phone.replaceAll(/[()\s-]/g, ''));
+  return phoneRegex.test(phone.replaceAll(/[\s()-]/g, ''));
 };
 
 export const validateRequired = (value: unknown, fieldName: string) => {

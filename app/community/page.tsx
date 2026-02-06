@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { createClient } from '@/libs/supabase/client';
 import MessageModal from '@/components/MessageModal';
+import ScopeSelectionModal, { ScopeType } from '@/components/rides/ScopeSelectionModal';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { useCommunityRides } from '@/app/community/hooks/useCommunityRides';
 import { useMessageModal } from '@/app/community/hooks/useMessageModal';
@@ -16,23 +17,42 @@ import CommunityMembersList from '@/app/community/components/members/CommunityMe
 import MyTripsView from '@/components/trips/MyTripsView';
 import { BlockedUsersProvider } from '@/contexts/BlockedUsersContext';
 
-/**
- * The main community page.
- * Displays tabs for finding rides, drivers, and managing user's own posts and trips.
- * Handles initial data fetching and network status monitoring.
- */
 export default function CommunityPage() {
   const { user, isLoading: authLoading } = useProtectedRoute();
   const supabase = useMemo(() => createClient(), []);
-  const { dataLoading, myRides, setMyRides } = useCommunityRides(supabase, user);
+  const { dataLoading, myRides, setMyRides, fetchRidesData } = useCommunityRides(supabase, user);
   const { messageModal, openMessageModal, closeMessageModal } = useMessageModal();
-  const { deletePost, deletingPost } = useRideActions(supabase, user, setMyRides);
+  const { deletePost, deletingPost, pendingDeletion, cancelDelete, confirmDelete } = useRideActions(
+    user,
+    setMyRides,
+    myRides
+  );
 
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>(() => {
     const view = searchParams.get('view');
     return view === 'my-posts' ? 'my-posts' : 'driver-rides';
   });
+
+  // Get series rides for the scope modal
+  const getSeriesRides = (rideId: string) => {
+    const ride = myRides.find((r) => r.id === rideId);
+    if (!ride?.round_trip_group_id || !ride.is_recurring) {
+      return ride ? [ride] : [];
+    }
+    return myRides
+      .filter(
+        (r) =>
+          r.round_trip_group_id === ride.round_trip_group_id &&
+          r.is_recurring &&
+          (!r.trip_direction || r.trip_direction === 'departure')
+      )
+      .sort((a, b) => a.departure_date.localeCompare(b.departure_date));
+  };
+
+  const handleDeleteConfirm = async (scope: ScopeType) => {
+    await confirmDelete(scope);
+  };
 
   if (authLoading || dataLoading) {
     return (
@@ -140,10 +160,10 @@ export default function CommunityPage() {
           {activeTab === 'my-posts' && (
             <MyPostsTab
               myRides={myRides}
-              user={user}
-              openMessageModal={openMessageModal}
+              setMyRides={setMyRides}
               deletePost={deletePost}
               deletingPost={deletingPost}
+              onRefresh={fetchRidesData}
             />
           )}
 
@@ -171,6 +191,18 @@ export default function CommunityPage() {
             }
             ridePost={messageModal.ridePost ?? null}
           />
+
+          {/* Delete Scope Selection Modal */}
+          {pendingDeletion && (
+            <ScopeSelectionModal
+              isOpen={!!pendingDeletion}
+              onClose={cancelDelete}
+              ride={pendingDeletion.rideToDelete}
+              seriesRides={getSeriesRides(pendingDeletion.postId)}
+              onConfirm={handleDeleteConfirm}
+              variant="delete"
+            />
+          )}
         </div>
       </div>
     </BlockedUsersProvider>
