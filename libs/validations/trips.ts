@@ -7,7 +7,9 @@ export const createRideSchema = z.object({
   start_location: z.string().min(3, 'Start location must be at least 3 characters').max(100),
   end_location: z.string().min(3, 'End location must be at least 3 characters').max(100),
   departure_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
-  departure_time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
+  departure_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time format (HH:MM or HH:MM:SS)'),
   return_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -15,14 +17,14 @@ export const createRideSchema = z.object({
     .nullable(),
   return_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/)
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional()
     .nullable(),
   is_round_trip: z.boolean().default(false),
   trip_direction: z.enum(['departure', 'return']).optional().nullable(),
   round_trip_group_id: z.string().uuid().optional().nullable(), // Used for both round trips AND multi-date series
   is_recurring: z.boolean().default(false), // Set to true for multi-date series
-  recurring_days: z.array(z.number()).optional().nullable(),
+  recurring_days: z.array(z.string()).optional().nullable(),
   price_per_seat: z.number().min(0).default(0),
   total_seats: z.number().min(1).max(10).default(1),
   available_seats: z.number().min(0).max(10).optional(),
@@ -49,7 +51,7 @@ export const updateRideSchema = z.object({
     .optional(),
   departure_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/)
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional(),
   return_date: z
     .string()
@@ -58,7 +60,7 @@ export const updateRideSchema = z.object({
     .nullable(),
   return_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/)
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional()
     .nullable(),
   is_round_trip: z.boolean().optional(),
@@ -82,7 +84,7 @@ export const createTripBookingSchema = z.object({
     ),
   pickup_location: z.string().min(3, 'Pickup location must be at least 3 characters').max(100),
   pickup_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
-  pickup_time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+  pickup_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time format'),
   passenger_notes: z.string().max(500).optional(),
 });
 
@@ -91,7 +93,7 @@ export const updateTripBookingSchema = z.object({
   pickup_location: z.string().min(3).max(100).optional(),
   pickup_time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/)
+    .regex(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional(),
   driver_notes: z.string().max(500).optional(),
 });

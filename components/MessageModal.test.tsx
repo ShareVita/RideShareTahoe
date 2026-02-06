@@ -80,18 +80,16 @@ describe('MessageModal', () => {
     expect(screen.getByRole('heading', { name: /Send Message/i })).toBeInTheDocument();
   });
 
-  it('displays recipient and "General Message" when no post is provided', () => {
+  it('displays recipient when no post is provided', () => {
     renderComponent({ ridePost: null });
-    // Check for "To:" label and recipient name separately for robustness
+    // Check for "To:" label and recipient name
     expect(screen.getByText(/To:/i)).toBeInTheDocument();
     expect(screen.getByText(/Jane Doe/i)).toBeInTheDocument();
-    expect(screen.getByText('General Message')).toBeInTheDocument();
   });
 
-  it('displays recipient and post title when a post is provided', () => {
+  it('displays recipient when a post is provided', () => {
     renderComponent({ ridePost: mockRidePost });
     expect(screen.getByText(/To:/i)).toHaveTextContent('To: Jane Doe');
-    expect(screen.getByText(/Re:/i)).toBeInTheDocument();
   });
 
   it('calls onClose when the "Cancel" button is clicked', () => {

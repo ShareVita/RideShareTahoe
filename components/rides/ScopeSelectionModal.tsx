@@ -34,13 +34,14 @@ interface VariantConfig {
   confirmButtonRing: string;
   confirmText: string;
   loadingText: string;
-  // eslint-disable-next-line no-unused-vars
+  /* eslint-disable no-unused-vars */
   getInfoText: (
     scope: ScopeType,
     futureCount: number,
     totalCount: number,
     rideDate: string
   ) => ReactNode;
+  /* eslint-enable no-unused-vars */
 }
 
 const variantConfigs: Record<'delete' | 'edit', VariantConfig> = {
@@ -155,7 +156,14 @@ export default function ScopeSelectionModal({
   isLoading = false,
   variant,
 }: Readonly<ScopeSelectionModalProps>) {
+  // Reset selected scope when ride or variant changes by using key-based state reset
+  const resetKey = `${ride.id}-${variant}`;
   const [selectedScope, setSelectedScope] = useState<ScopeType>('single');
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey);
+    setSelectedScope('single');
+  }
   const config = variantConfigs[variant];
 
   const rideDate = formatDateMedium(ride.departure_date);

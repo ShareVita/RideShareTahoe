@@ -1,6 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { createClient } from '@/libs/supabase/client';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import type { RidePostType } from '@/app/community/types';
 import CreateRidePage from './page';
@@ -16,7 +15,15 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('@/hooks/useProtectedRoute');
-jest.mock('@/libs/supabase/client');
+
+// Mock useVehicles hook
+jest.mock('@/hooks/useVehicles', () => ({
+  useVehicles: jest.fn(() => ({
+    vehicles: [],
+    loading: false,
+    error: null,
+  })),
+}));
 
 const mockRidePost: Partial<RidePostType> = {
   posting_type: 'driver',
@@ -26,9 +33,6 @@ const mockRidePost: Partial<RidePostType> = {
   departure_time: '09:30',
   price_per_seat: 45,
   total_seats: 3,
-  description: 'Heading up for the weekend',
-  special_instructions: 'Bring snacks',
-  has_awd: true,
 };
 
 jest.mock('@/components/rides/RideForm', () => ({
@@ -55,84 +59,110 @@ jest.mock('@/components/rides/RideForm', () => ({
   },
 }));
 
+// Mock SeriesCreatedModal to auto-navigate on success
+jest.mock('@/components/rides/SeriesCreatedModal', () => ({
+  __esModule: true,
+  default: function MockSeriesCreatedModal({
+    isOpen,
+    onViewRides,
+  }: {
+    isOpen: boolean;
+    onViewRides: () => void;
+  }) {
+    if (!isOpen) return null;
+    // Auto-click view rides on render to simulate user clicking
+    setTimeout(() => onViewRides(), 0);
+    return <div data-testid="success-modal">Success Modal</div>;
+  },
+}));
+
 const mockedUseProtectedRoute = useProtectedRoute as jest.Mock;
-const mockedCreateClient = createClient as jest.Mock;
 
 describe('CreateRidePage', () => {
   const mockUser = { id: 'user-123' };
-  let fromMock: jest.Mock;
-  let insertMock: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRouterPush.mockReset();
-    mockRouterBack.mockReset();
-
     mockedUseProtectedRoute.mockReturnValue({ user: mockUser, isLoading: false });
-
-    insertMock = jest.fn().mockResolvedValue({ error: null });
-    fromMock = jest.fn(() => ({ insert: insertMock }));
-
-    mockedCreateClient.mockReturnValue({ from: fromMock });
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, id: 'ride-1' }),
+    });
   });
 
-  it('shows spinner while authentication is loading', () => {
+  it('shows loading spinner while authenticating', () => {
     mockedUseProtectedRoute.mockReturnValue({ user: null, isLoading: true });
     const { container } = render(<CreateRidePage />);
 
     expect(container.querySelector('.animate-spin')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Post a Ride/i })).not.toBeInTheDocument();
   });
 
-  it('renders the form after auth resolves', () => {
+  it('renders form after auth resolves', () => {
     render(<CreateRidePage />);
 
     expect(screen.getByRole('heading', { name: /Post a Ride/i })).toBeInTheDocument();
-    expect(
-      screen.getByText(/Share your journey or find a ride with the community./i)
-    ).toBeInTheDocument();
     expect(screen.getByText(/Mock Ride Form/i)).toBeInTheDocument();
   });
 
-  it('inserts ride data and redirects on successful save', async () => {
+  it('posts ride and shows success modal', async () => {
     render(<CreateRidePage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
 
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith('/community');
+      expect(screen.getByTestId('success-modal')).toBeInTheDocument();
     });
 
-    expect(fromMock).toHaveBeenCalledWith('rides');
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          poster_id: mockUser.id,
-          status: 'active',
-          ...mockRidePost,
-        }),
-      ])
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/rides',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(mockRidePost),
+      })
     );
+
+    // The mock modal auto-navigates
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith('/community?view=my-posts');
+    });
   });
 
-  it('shows an error message when saving fails', async () => {
-    insertMock.mockResolvedValueOnce({ error: new Error('boom') });
-    render(<CreateRidePage />);
+  it('shows error message when save fails', async () => {
+    (globalThis.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Database error' }),
+    });
 
+    render(<CreateRidePage />);
     fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to create ride/i)).toBeInTheDocument();
+      expect(screen.getByText(/Database error/i)).toBeInTheDocument();
     });
-
-    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
-  it('calls router.back when cancel is clicked', () => {
-    render(<CreateRidePage />);
+  it('handles network errors', async () => {
+    (globalThis.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
 
+    render(<CreateRidePage />);
+    fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Network error/i)).toBeInTheDocument();
+    });
+  });
+
+  it('calls router.back when cancel clicked', () => {
+    render(<CreateRidePage />);
     fireEvent.click(screen.getByRole('button', { name: /Cancel Ride/i }));
 
     expect(mockRouterBack).toHaveBeenCalled();
+  });
+
+  it('returns null when user not authenticated', () => {
+    mockedUseProtectedRoute.mockReturnValue({ user: null, isLoading: false });
+    const { container } = render(<CreateRidePage />);
+
+    expect(container.firstChild).toBeNull();
   });
 });

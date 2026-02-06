@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 
 interface TimeInputProps {
   value: string; // 24-hour format "HH:MM"
@@ -23,6 +23,7 @@ export default function TimeInput({
   error,
   required = false,
 }: Readonly<TimeInputProps>) {
+  const inputId = useId();
   // Local draft state while typing
   const [draftValue, setDraftValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -123,7 +124,10 @@ export default function TimeInput({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label
+          htmlFor={inputId}
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -132,6 +136,7 @@ export default function TimeInput({
       <div className="flex gap-2 items-center">
         <div className="flex-1 relative">
           <input
+            id={inputId}
             type="text"
             value={displayValue}
             onChange={(e) => setDraftValue(e.target.value)}
