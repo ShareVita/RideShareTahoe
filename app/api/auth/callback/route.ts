@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
 import {
   getAppUrl,
@@ -141,7 +141,7 @@ async function processCodeExchangeAndProfileUpdate(
   console.log(`[Auth] User email from OAuth: ${user.email || 'NOT AVAILABLE'}`);
   if (user.email) {
     try {
-      const supabaseAdmin = await createClient('service_role');
+      const supabaseAdmin = createAdminClient();
       const { error: privateInfoError } = await supabaseAdmin
         .from('user_private_info')
         .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
@@ -199,7 +199,7 @@ async function processCodeExchangeAndProfileUpdate(
   if (isNewUser) {
     try {
       // Create service role client to access user_private_info
-      const adminSupabase = await createClient('service_role');
+      const adminSupabase = createAdminClient();
 
       // Get user data with email from user_private_info
       const userWithEmail = await getUserWithEmail(adminSupabase, user.id);

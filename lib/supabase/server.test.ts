@@ -1,4 +1,4 @@
-import { createClient } from './server';
+import { createClient, createAdminClient } from './server';
 
 type CookieHelpers = {
   getAll?: () => Array<{ name: string; value: string }>;
@@ -7,10 +7,15 @@ type CookieHelpers = {
 };
 
 const mockCreateServerClient = jest.fn();
+const mockCreateSupabaseClient = jest.fn();
 const mockCookiesFactory = jest.fn();
 
 jest.mock('@supabase/ssr', () => ({
   createServerClient: (...args: unknown[]) => mockCreateServerClient(...args),
+}));
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: (...args: unknown[]) => mockCreateSupabaseClient(...args),
 }));
 
 jest.mock('next/headers', () => ({
@@ -83,7 +88,7 @@ describe('createClient', () => {
     expect(cookieStore.set).toHaveBeenCalled();
   });
 
-  test('uses publishable key by default', async () => {
+  test('uses publishable key', async () => {
     const originalEnv = process.env;
     process.env = {
       ...originalEnv,
@@ -109,31 +114,81 @@ describe('createClient', () => {
 
     process.env = originalEnv;
   });
+});
 
-  test('uses service role key when type is service_role', async () => {
+describe('createAdminClient', () => {
+  beforeEach(() => {
+    mockCreateSupabaseClient.mockReset();
+  });
+
+  test('uses service role key', () => {
     const originalEnv = process.env;
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
       SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
     };
 
-    const cookieStore = {
-      getAll: jest.fn(() => []),
-      set: jest.fn(),
-    };
+    mockCreateSupabaseClient.mockImplementation(() => ({ adminClient: true }));
 
-    mockCookiesFactory.mockImplementation(() => cookieStore);
-    mockCreateServerClient.mockImplementation(() => ({ client: true }));
+    const client = createAdminClient();
 
-    await createClient('service_role');
-
-    expect(mockCreateServerClient).toHaveBeenCalledWith(
+    expect(client).toEqual({ adminClient: true });
+    expect(mockCreateSupabaseClient).toHaveBeenCalledWith(
       'https://test.supabase.co',
       'service-role-key',
-      expect.any(Object)
+      expect.objectContaining({
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      })
     );
+
+    process.env = originalEnv;
+  });
+
+  test('does not use cookies', () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+    };
+
+    mockCreateSupabaseClient.mockImplementation((...args: unknown[]) => {
+      const opts = args[2] as { cookies?: unknown } | undefined;
+      // Verify that cookies are NOT passed to the admin client
+      expect(opts?.cookies).toBeUndefined();
+      return { adminClient: true };
+    });
+
+    createAdminClient();
+
+    expect(mockCreateSupabaseClient).toHaveBeenCalled();
+
+    process.env = originalEnv;
+  });
+
+  test('disables session persistence', () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+    };
+
+    mockCreateSupabaseClient.mockImplementation((...args: unknown[]) => {
+      const opts = args[2] as { auth?: { persistSession?: boolean } } | undefined;
+      // Verify that session persistence is disabled
+      expect(opts?.auth?.persistSession).toBe(false);
+      expect(opts?.auth?.autoRefreshToken).toBe(false);
+      return { adminClient: true };
+    });
+
+    createAdminClient();
+
+    expect(mockCreateSupabaseClient).toHaveBeenCalled();
 
     process.env = originalEnv;
   });

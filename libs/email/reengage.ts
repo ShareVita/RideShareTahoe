@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { scheduleEmail, sendEmail } from './sendEmail';
 
 export interface ReengageResult {
@@ -12,7 +12,7 @@ export interface ReengageResult {
  * Process re-engagement emails for inactive users
  */
 export async function processReengageEmails(): Promise<ReengageResult> {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
   const errors: Array<{ userId: string; error: string }> = [];
   let sent = 0;
   let skipped = 0;
@@ -116,7 +116,7 @@ export async function processReengageEmails(): Promise<ReengageResult> {
  * Check if user should receive re-engagement email
  */
 async function shouldSendReengageEmail(userId: string): Promise<boolean> {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
 
   // Check if re-engagement email was sent in the last 21 days
   const twentyOneDaysAgo = new Date();
@@ -146,7 +146,7 @@ export async function getReengageCandidates(): Promise<
     days_since_login: number;
   }>
 > {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
 
   // Get users with their last login activity (email from user_private_info)
   const { data: users, error } = await supabase

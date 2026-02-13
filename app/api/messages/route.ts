@@ -4,7 +4,7 @@ import {
   createUnauthorizedResponse,
   ensureProfileComplete,
 } from '@/lib/supabase/auth';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
 import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       // Don't send email to self
       if (recipient_id !== user.id) {
         // Create service role client to access user_private_info
-        const adminSupabase = await createClient('service_role');
+        const adminSupabase = createAdminClient();
 
         // Get recipient data with email from user_private_info
         const recipient = await getUserWithEmail(adminSupabase, recipient_id);

@@ -1,12 +1,14 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-
-type SupabaseKeyType = 'PUBLISHABLE' | 'service_role';
 
 /**
  * Create a Supabase server client wired to the current request's cookie
  * store. This helper is intended for use in Next.js server components and
  * API routes where server-side cookie access is required.
+ *
+ * Use this for user-authenticated operations where you need access to the
+ * current user's session via cookies.
  *
  * Notes:
  * - A per-request client is created to avoid reusing global clients in
@@ -15,33 +17,59 @@ type SupabaseKeyType = 'PUBLISHABLE' | 'service_role';
  *   throw; that case is intentionally ignored because session refreshes are
  *   typically handled in middleware.
  *
- * @param type - Specifies which key to use: 'PUBLISHABLE' (default) for client operations,
- *               or 'service_role' for backend administrative tasks that bypass RLS.
  * @returns A Supabase server client instance configured to read and write
  * cookies from the Next.js cookie store.
  */
-export async function createClient(type: SupabaseKeyType = 'PUBLISHABLE') {
+export async function createClient() {
   const cookieStore = await cookies();
 
-  // Determine which key to use based on the 'type' argument
-  const supabaseKey =
-    type === 'service_role'
-      ? process.env.SUPABASE_SERVICE_ROLE_KEY!
-      : process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Ignore failures when called from a Server Component; middleware
+            // should handle session refresh in that case.
+          }
+        },
+      },
+    }
+  );
+}
 
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, supabaseKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
+/**
+ * Create a Supabase admin client with service role privileges.
+ * This client bypasses Row Level Security (RLS) policies and should only
+ * be used for trusted server-side operations.
+ *
+ * Use this for:
+ * - Accessing user_private_info table
+ * - Administrative operations that need to bypass RLS
+ * - Internal email sending operations
+ *
+ * IMPORTANT: Never use this client with user-provided input without
+ * proper validation. The service role key grants full database access.
+ *
+ * @returns A Supabase client with admin privileges (no cookie authentication)
+ */
+export function createAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-        } catch {
-          // Ignore failures when called from a Server Component; middleware
-          // should handle session refresh in that case.
-        }
-      },
-    },
-  });
+    }
+  );
 }

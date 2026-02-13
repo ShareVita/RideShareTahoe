@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail as resendSendEmail } from '@/libs/resend';
 import { EmailPayload, loadEmailTemplate, ResendSendResult } from './templates';
 
@@ -50,7 +50,7 @@ export async function sendEmail({
   text,
   payload = {},
 }: SendEmailParams): Promise<EmailEvent> {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
 
   // 1. Check idempotency
   const existingEvent = await checkIdempotency(supabase, userId, emailType);
@@ -113,7 +113,7 @@ export async function sendEmail({
   }
 }
 
-type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+type SupabaseClient = ReturnType<typeof createAdminClient>;
 
 async function checkIdempotency(
   supabase: SupabaseClient,
@@ -256,7 +256,7 @@ export async function scheduleEmail({
   runAfter: Date;
   payload?: EmailPayload;
 }): Promise<void> {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
 
   const { error } = await supabase.from('scheduled_emails').insert({
     user_id: userId,
@@ -284,7 +284,7 @@ export async function recordUserActivity({
   event: string;
   metadata?: EmailPayload;
 }): Promise<void> {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
 
   const { error } = await supabase.from('user_activity').insert({
     user_id: userId,
@@ -302,7 +302,7 @@ export async function recordUserActivity({
  * Get user's last activity for a specific event
  */
 export async function getUserLastActivity(userId: string, event: string): Promise<Date | null> {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
 
   const { data } = await supabase
     .from('user_activity')
@@ -320,7 +320,7 @@ export async function getUserLastActivity(userId: string, event: string): Promis
  * Check if user should receive re-engagement email
  */
 export async function shouldSendReengageEmail(userId: string): Promise<boolean> {
-  const supabase = await createClient('service_role');
+  const supabase = createAdminClient();
 
   // Check if user has been inactive for 7+ days
   const lastLogin = await getUserLastActivity(userId, 'login');

@@ -57,6 +57,7 @@ const mockCreateServiceClient = jest.fn(() => ({ from: mockFrom }));
  */
 jest.mock('@/lib/supabase/server', () => ({
   createClient: () => mockCreateServiceClient(),
+  createAdminClient: () => mockCreateServiceClient(),
 }));
 
 /**
