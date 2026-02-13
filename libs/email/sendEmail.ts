@@ -220,7 +220,7 @@ async function updateEventStatus(
   externalMessageId?: string,
   errorMessage?: string
 ) {
-  const updateData: { status: string; external_message_id?: string; error?: string } = {
+  const updateData: { status: 'sent' | 'failed'; external_message_id?: string; error?: string } = {
     status,
   };
 

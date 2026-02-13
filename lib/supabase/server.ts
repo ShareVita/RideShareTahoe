@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import type { Database } from '@/types/database.types';
 
 /**
  * Create a Supabase server client wired to the current request's cookie
@@ -51,7 +52,7 @@ export async function createClient() {
  * Using globalThis ensures true singleton behavior across serverless invocations.
  */
 declare global {
-  var _supabaseAdminClient: ReturnType<typeof createSupabaseClient> | undefined;
+  var _supabaseAdminClient: ReturnType<typeof createSupabaseClient<Database>> | undefined;
 }
 
 /**
@@ -82,7 +83,7 @@ export function _resetAdminClient() {
  */
 export function createAdminClient() {
   if (!global._supabaseAdminClient) {
-    global._supabaseAdminClient = createSupabaseClient(
+    global._supabaseAdminClient = createSupabaseClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {

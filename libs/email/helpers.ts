@@ -1,6 +1,5 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
-type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 type AdminClient = ReturnType<typeof createAdminClient>;
 
 export interface UserWithEmail {
@@ -43,7 +42,7 @@ export function sanitizeForLog(value: string | undefined | null): string {
  * @returns User data with email, or null if not found
  */
 export async function getUserWithEmail(
-  supabase: AdminClient | SupabaseClient,
+  supabase: AdminClient,
   userId: string
 ): Promise<UserWithEmail | null> {
   const [profileResult, privateInfoResult] = await Promise.all([
@@ -72,7 +71,7 @@ export async function getUserWithEmail(
  * Returns users that have valid email addresses.
  */
 export async function getUsersWithEmails(
-  supabase: SupabaseClient,
+  supabase: AdminClient,
   options?: { excludeBanned?: boolean }
 ): Promise<UserWithEmail[]> {
   let query = supabase
@@ -114,10 +113,7 @@ export async function getUsersWithEmails(
  * Get email address for a user by their ID.
  * Returns null if user not found or has no email.
  */
-export async function getUserEmail(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<string | null> {
+export async function getUserEmail(supabase: AdminClient, userId: string): Promise<string | null> {
   const { data } = await supabase
     .from('user_private_info')
     .select('email')

@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import { sendEmail } from './sendEmail';
+import { sendEmail, EmailType } from './sendEmail';
 import { EmailPayload } from './templates';
 
 export interface ScheduledEmail {
@@ -91,8 +91,8 @@ export async function processScheduledEmails(): Promise<{
         await sendEmail({
           userId: scheduledEmail.user_id,
           to: user.email,
-          emailType: scheduledEmail.email_type,
-          payload: scheduledEmail.payload,
+          emailType: scheduledEmail.email_type as EmailType,
+          payload: scheduledEmail.payload as EmailPayload,
         });
 
         processed++;
@@ -215,7 +215,7 @@ export async function getUserScheduledEmails(userId: string): Promise<ScheduledE
     throw new Error(`Failed to get scheduled emails: ${error.message}`);
   }
 
-  return data || [];
+  return (data || []) as ScheduledEmail[];
 }
 
 /**
