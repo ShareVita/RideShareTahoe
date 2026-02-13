@@ -1,7 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
-import { getAppUrl, sanitizeForLog } from '@/libs/email';
+import {
+  getAppUrl,
+  getUserWithEmail,
+  recordUserActivity,
+  sanitizeForLog,
+  scheduleCommunityGrowthEmail,
+  scheduleNurtureEmail,
+  sendEmail,
+} from '@/libs/email';
 
 // Define types locally for safety (mirroring database schema)
 interface Profile {
@@ -190,23 +198,40 @@ async function processCodeExchangeAndProfileUpdate(
   // 5. Welcome Email (only for new users who haven't received one yet)
   if (isNewUser) {
     try {
-      const appUrl = getAppUrl();
-      const emailResponse = await fetch(`${appUrl}/api/emails/send-welcome`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-api-key': process.env.INTERNAL_API_KEY || '',
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
+      // Create service role client to access user_private_info
+      const adminSupabase = await createClient('service_role');
 
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        console.error(
-          `❌ Welcome email API error: ${emailResponse.status} - ${sanitizeForLog(errorText)}`
-        );
+      // Get user data with email from user_private_info
+      const userWithEmail = await getUserWithEmail(adminSupabase, user.id);
+
+      if (userWithEmail && userWithEmail.email) {
+        // Record user login activity
+        await recordUserActivity({
+          userId: user.id,
+          event: 'login',
+          metadata: { source: 'welcome_email_trigger' },
+        });
+
+        // Send welcome email (sendEmail handles idempotency internally)
+        await sendEmail({
+          userId: user.id,
+          to: userWithEmail.email,
+          emailType: 'welcome',
+          payload: {
+            userName: userWithEmail.first_name || '',
+            appUrl: getAppUrl(),
+          },
+        });
+
+        // Schedule nurture email for 3 days later
+        await scheduleNurtureEmail(user.id);
+
+        // Schedule community growth email for 30 days later
+        await scheduleCommunityGrowthEmail(user.id);
+
+        console.log(`✅ Welcome email sent to user ${sanitizeForLog(user.id)}`);
       } else {
-        console.log(`✅ Welcome email sent for user ${sanitizeForLog(user.id)}`);
+        console.error(`❌ User email not found for ${sanitizeForLog(user.id)}`);
       }
     } catch (emailError) {
       // Don't block the auth flow if email fails - log and continue

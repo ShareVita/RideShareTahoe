@@ -4,9 +4,10 @@ import {
   createUnauthorizedResponse,
   ensureProfileComplete,
 } from '@/lib/supabase/auth';
+import { createClient } from '@/lib/supabase/server';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
-import { getAppUrl } from '@/libs/email';
+import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
 
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -177,22 +178,44 @@ export async function POST(request: NextRequest) {
 
     if (messageError) throw messageError;
 
-    // Send email notification to recipient using centralized email system
+    // Send email notification to recipient
     try {
-      await fetch(`${getAppUrl()}/api/emails/send-new-message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-api-key': process.env.INTERNAL_API_KEY || '',
-        },
-        body: JSON.stringify({
-          recipientId: recipient_id,
-          senderId: user.id,
-          messagePreview: trimmedContent.substring(0, 100),
-          messageId: message.id,
-          threadId: conversationId,
-        }),
-      });
+      // Don't send email to self
+      if (recipient_id !== user.id) {
+        // Create service role client to access user_private_info
+        const adminSupabase = await createClient('service_role');
+
+        // Get recipient data with email from user_private_info
+        const recipient = await getUserWithEmail(adminSupabase, recipient_id);
+
+        if (recipient && recipient.email) {
+          // Get sender data (email not needed for sender)
+          const { data: sender } = await adminSupabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .single();
+
+          if (sender) {
+            // Send new message notification
+            await sendEmail({
+              userId: recipient_id,
+              to: recipient.email,
+              emailType: 'new_message',
+              payload: {
+                recipientName: recipient.first_name || '',
+                senderName: `${sender.first_name} ${sender.last_name}`.trim(),
+                senderInitial: (sender.first_name || 'U')[0].toUpperCase(),
+                messagePreview:
+                  trimmedContent.substring(0, 100) + (trimmedContent.length > 100 ? '...' : ''),
+                messageTime: new Date().toLocaleString(),
+                messageUrl: `${getAppUrl()}/messages/${message.id}`,
+                threadId: conversationId,
+              },
+            });
+          }
+        }
+      }
     } catch (emailError: unknown) {
       console.error('Error sending message notification email:', emailError);
       // Don't fail the message creation if email fails
