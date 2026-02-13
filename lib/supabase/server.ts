@@ -47,17 +47,19 @@ export async function createClient() {
 }
 
 /**
- * Singleton Supabase admin client with service role privileges.
- * Created once and reused across all operations for efficiency.
+ * Global type augmentation for admin client singleton.
+ * Using globalThis ensures true singleton behavior across serverless invocations.
  */
-let _adminClient: ReturnType<typeof createSupabaseClient> | null = null;
+declare global {
+  var _supabaseAdminClient: ReturnType<typeof createSupabaseClient> | undefined;
+}
 
 /**
  * Reset the admin client singleton. Only used for testing.
  * @internal
  */
 export function _resetAdminClient() {
-  _adminClient = null;
+  global._supabaseAdminClient = undefined;
 }
 
 /**
@@ -65,8 +67,8 @@ export function _resetAdminClient() {
  * This client bypasses Row Level Security (RLS) policies and should only
  * be used for trusted server-side operations.
  *
- * The client is created once on first access and reused for all subsequent
- * calls, eliminating unnecessary client instantiation overhead.
+ * Uses globalThis for true singleton behavior in serverless environments,
+ * preventing connection pool exhaustion and ensuring consistent client reuse.
  *
  * Use this for:
  * - Accessing user_private_info table
@@ -79,8 +81,8 @@ export function _resetAdminClient() {
  * @returns A Supabase client with admin privileges (no cookie authentication)
  */
 export function createAdminClient() {
-  if (!_adminClient) {
-    _adminClient = createSupabaseClient(
+  if (!global._supabaseAdminClient) {
+    global._supabaseAdminClient = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
@@ -91,5 +93,5 @@ export function createAdminClient() {
       }
     );
   }
-  return _adminClient;
+  return global._supabaseAdminClient;
 }
