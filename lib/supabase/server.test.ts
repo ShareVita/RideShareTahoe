@@ -82,4 +82,59 @@ describe('createClient', () => {
     }).not.toThrow();
     expect(cookieStore.set).toHaveBeenCalled();
   });
+
+  test('uses publishable key by default', async () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
+    };
+
+    const cookieStore = {
+      getAll: jest.fn(() => []),
+      set: jest.fn(),
+    };
+
+    mockCookiesFactory.mockImplementation(() => cookieStore);
+    mockCreateServerClient.mockImplementation(() => ({ client: true }));
+
+    await createClient();
+
+    expect(mockCreateServerClient).toHaveBeenCalledWith(
+      'https://test.supabase.co',
+      'publishable-key',
+      expect.any(Object)
+    );
+
+    process.env = originalEnv;
+  });
+
+  test('uses service role key when type is service_role', async () => {
+    const originalEnv = process.env;
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'publishable-key',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+    };
+
+    const cookieStore = {
+      getAll: jest.fn(() => []),
+      set: jest.fn(),
+    };
+
+    mockCookiesFactory.mockImplementation(() => cookieStore);
+    mockCreateServerClient.mockImplementation(() => ({ client: true }));
+
+    await createClient('service_role');
+
+    expect(mockCreateServerClient).toHaveBeenCalledWith(
+      'https://test.supabase.co',
+      'service-role-key',
+      expect.any(Object)
+    );
+
+    process.env = originalEnv;
+  });
 });
