@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from './server';
+import { createClient, createAdminClient, _resetAdminClient } from './server';
 
 type CookieHelpers = {
   getAll?: () => Array<{ name: string; value: string }>;
@@ -119,6 +119,7 @@ describe('createClient', () => {
 describe('createAdminClient', () => {
   beforeEach(() => {
     mockCreateSupabaseClient.mockReset();
+    _resetAdminClient(); // Reset singleton between tests
   });
 
   test('uses service role key', () => {

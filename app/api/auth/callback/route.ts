@@ -3,7 +3,6 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
 import {
   getAppUrl,
-  getUserWithEmail,
   recordUserActivity,
   sanitizeForLog,
   scheduleCommunityGrowthEmail,
@@ -196,43 +195,33 @@ async function processCodeExchangeAndProfileUpdate(
   }
 
   // 5. Welcome Email (only for new users who haven't received one yet)
-  if (isNewUser) {
+  if (isNewUser && user.email) {
     try {
-      // Create service role client to access user_private_info
-      const adminSupabase = createAdminClient();
+      // Record user login activity
+      await recordUserActivity({
+        userId: user.id,
+        event: 'login',
+        metadata: { source: 'welcome_email_trigger' },
+      });
 
-      // Get user data with email from user_private_info
-      const userWithEmail = await getUserWithEmail(adminSupabase, user.id);
+      // Send welcome email using data from OAuth (no DB query needed!)
+      await sendEmail({
+        userId: user.id,
+        to: user.email,
+        emailType: 'welcome',
+        payload: {
+          userName: googleGivenName || '',
+          appUrl: getAppUrl(),
+        },
+      });
 
-      if (userWithEmail && userWithEmail.email) {
-        // Record user login activity
-        await recordUserActivity({
-          userId: user.id,
-          event: 'login',
-          metadata: { source: 'welcome_email_trigger' },
-        });
+      // Schedule nurture email for 3 days later
+      await scheduleNurtureEmail(user.id);
 
-        // Send welcome email (sendEmail handles idempotency internally)
-        await sendEmail({
-          userId: user.id,
-          to: userWithEmail.email,
-          emailType: 'welcome',
-          payload: {
-            userName: userWithEmail.first_name || '',
-            appUrl: getAppUrl(),
-          },
-        });
+      // Schedule community growth email for 30 days later
+      await scheduleCommunityGrowthEmail(user.id);
 
-        // Schedule nurture email for 3 days later
-        await scheduleNurtureEmail(user.id);
-
-        // Schedule community growth email for 30 days later
-        await scheduleCommunityGrowthEmail(user.id);
-
-        console.log(`✅ Welcome email sent to user ${sanitizeForLog(user.id)}`);
-      } else {
-        console.error(`❌ User email not found for ${sanitizeForLog(user.id)}`);
-      }
+      console.log(`✅ Welcome email sent to user ${sanitizeForLog(user.id)}`);
     } catch (emailError) {
       // Don't block the auth flow if email fails - log and continue
       console.error('❌ Error sending welcome email:', emailError);

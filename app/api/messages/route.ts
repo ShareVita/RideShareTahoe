@@ -182,38 +182,31 @@ export async function POST(request: NextRequest) {
     try {
       // Don't send email to self
       if (recipient_id !== user.id) {
-        // Create service role client to access user_private_info
         const adminSupabase = createAdminClient();
 
-        // Get recipient data with email from user_private_info
-        const recipient = await getUserWithEmail(adminSupabase, recipient_id);
+        // Fetch both recipient (with email) and sender data in parallel
+        const [recipient, senderResult] = await Promise.all([
+          getUserWithEmail(adminSupabase, recipient_id),
+          adminSupabase.from('profiles').select('first_name, last_name').eq('id', user.id).single(),
+        ]);
 
-        if (recipient && recipient.email) {
-          // Get sender data (email not needed for sender)
-          const { data: sender } = await adminSupabase
-            .from('profiles')
-            .select('first_name, last_name')
-            .eq('id', user.id)
-            .single();
-
-          if (sender) {
-            // Send new message notification
-            await sendEmail({
-              userId: recipient_id,
-              to: recipient.email,
-              emailType: 'new_message',
-              payload: {
-                recipientName: recipient.first_name || '',
-                senderName: `${sender.first_name} ${sender.last_name}`.trim(),
-                senderInitial: (sender.first_name || 'U')[0].toUpperCase(),
-                messagePreview:
-                  trimmedContent.substring(0, 100) + (trimmedContent.length > 100 ? '...' : ''),
-                messageTime: new Date().toLocaleString(),
-                messageUrl: `${getAppUrl()}/messages/${message.id}`,
-                threadId: conversationId,
-              },
-            });
-          }
+        if (recipient?.email && senderResult.data) {
+          const sender = senderResult.data;
+          await sendEmail({
+            userId: recipient_id,
+            to: recipient.email,
+            emailType: 'new_message',
+            payload: {
+              recipientName: recipient.first_name || '',
+              senderName: `${sender.first_name} ${sender.last_name}`.trim(),
+              senderInitial: (sender.first_name || 'U')[0].toUpperCase(),
+              messagePreview:
+                trimmedContent.substring(0, 100) + (trimmedContent.length > 100 ? '...' : ''),
+              messageTime: new Date().toLocaleString(),
+              messageUrl: `${getAppUrl()}/messages/${message.id}`,
+              threadId: conversationId,
+            },
+          });
         }
       }
     } catch (emailError: unknown) {

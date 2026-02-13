@@ -47,9 +47,26 @@ export async function createClient() {
 }
 
 /**
- * Create a Supabase admin client with service role privileges.
+ * Singleton Supabase admin client with service role privileges.
+ * Created once and reused across all operations for efficiency.
+ */
+let _adminClient: ReturnType<typeof createSupabaseClient> | null = null;
+
+/**
+ * Reset the admin client singleton. Only used for testing.
+ * @internal
+ */
+export function _resetAdminClient() {
+  _adminClient = null;
+}
+
+/**
+ * Get the singleton Supabase admin client with service role privileges.
  * This client bypasses Row Level Security (RLS) policies and should only
  * be used for trusted server-side operations.
+ *
+ * The client is created once on first access and reused for all subsequent
+ * calls, eliminating unnecessary client instantiation overhead.
  *
  * Use this for:
  * - Accessing user_private_info table
@@ -62,14 +79,17 @@ export async function createClient() {
  * @returns A Supabase client with admin privileges (no cookie authentication)
  */
 export function createAdminClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  );
+  if (!_adminClient) {
+    _adminClient = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+  }
+  return _adminClient;
 }

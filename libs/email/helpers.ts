@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+type AdminClient = ReturnType<typeof createAdminClient>;
 
 export interface UserWithEmail {
   id: string;
@@ -10,14 +11,19 @@ export interface UserWithEmail {
 }
 
 /**
+ * Cached application URL. Computed once on module load for efficiency.
+ */
+const APP_URL = process.env.APP_URL || 'https://www.ridesharetahoe.com';
+
+/**
  * Get the application URL for server-side operations.
  * For internal API calls, always use the production URL to avoid
  * issues with Vercel preview deployment URLs.
+ *
+ * This function returns a cached constant for optimal performance.
  */
 export function getAppUrl(): string {
-  // Always use production URL for internal API calls
-  // This ensures email routes are called on the correct domain
-  return process.env.APP_URL || 'https://www.ridesharetahoe.com';
+  return APP_URL;
 }
 
 /**
@@ -31,9 +37,13 @@ export function sanitizeForLog(value: string | undefined | null): string {
 /**
  * Fetch a user's profile data along with their email from user_private_info.
  * Uses parallel queries for efficiency.
+ *
+ * @param supabase - Admin client with service role access to read user_private_info
+ * @param userId - The user's UUID
+ * @returns User data with email, or null if not found
  */
 export async function getUserWithEmail(
-  supabase: SupabaseClient,
+  supabase: AdminClient | SupabaseClient,
   userId: string
 ): Promise<UserWithEmail | null> {
   const [profileResult, privateInfoResult] = await Promise.all([
