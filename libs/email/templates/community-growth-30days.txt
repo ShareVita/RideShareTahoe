@@ -1,0 +1,34 @@
+One Month with RideShareTahoe!
+
+Hey {{userName}}!
+
+It's been a month since you joined RideShareTahoe, and we're glad you're here. Our community is growing, and every member makes a difference.
+
+Help us grow — spread the word!
+- Tell a friend who drives to Tahoe
+- Share RideShareTahoe with your ski crew
+- Post about us on your socials
+
+Copy & share this blurb:
+"I've been using RideShareTahoe to find rides to the mountains — it's a great way to share costs and meet fellow travelers. Check it out at {{appUrl}}"
+
+Follow us on social media!
+- Instagram: https://www.instagram.com/ridesharetahoe/
+- Facebook: https://www.facebook.com/people/Ridesharetahoe/61585689170017/
+- TikTok: https://www.tiktok.com/@ridesharetahoe
+- LinkedIn: https://www.linkedin.com/company/ridesharetahoe
+
+Browse Rides: {{appUrl}}/community
+
+We'd love your feedback! What's working? What could be better? Just reply to this email or reach out to our team at support@ridesharetahoe.com.
+
+Thanks for riding with us!
+
+See you on the road,
+The RideShareTahoe Team
+
+FAQ: {{appUrl}}/faq
+Safety: {{appUrl}}/safety
+Unsubscribe: {{unsubscribeUrl}}
+
+RideShareTahoe is a community platform connecting the Bay Area to Lake Tahoe.

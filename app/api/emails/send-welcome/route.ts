@@ -2,13 +2,16 @@ import {
   getAppUrl,
   getUserWithEmail,
   recordUserActivity,
+  sanitizeForLog,
+  scheduleCommunityGrowthEmail,
   scheduleNurtureEmail,
   sendEmail,
 } from '@/libs/email';
 import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { internalOnly } from '@/libs/api/internalOnly';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export const POST = internalOnly(async (request) => {
   try {
     const { userId } = await request.json();
 
@@ -21,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = await createClient('service_role');
 
     // Check if welcome email was already sent (idempotent check)
     const { data: existingWelcomeEmail } = await supabase
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existingWelcomeEmail) {
-      console.log(`Welcome email already sent to user ${userId}, skipping`);
+      console.log(`Welcome email already sent to user ${sanitizeForLog(userId)}, skipping`);
       return NextResponse.json({
         success: true,
         message: 'Welcome email already sent (skipped duplicate)',
@@ -73,11 +76,14 @@ export async function POST(request: NextRequest) {
     // Schedule nurture email for 3 days later
     await scheduleNurtureEmail(userId);
 
-    console.log(`✅ Welcome email sent to user ${userId}`);
+    // Schedule community growth email for 30 days later
+    await scheduleCommunityGrowthEmail(userId);
+
+    console.log(`✅ Welcome email sent to user ${sanitizeForLog(userId)}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Welcome email sent and nurture email scheduled',
+      message: 'Welcome email sent and follow-up emails scheduled',
     });
   } catch (error) {
     console.error('Error sending welcome email:', error);
@@ -88,4 +94,4 @@ export async function POST(request: NextRequest) {
       }
     );
   }
-}
+});

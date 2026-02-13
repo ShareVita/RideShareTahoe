@@ -128,6 +128,27 @@ async function processCodeExchangeAndProfileUpdate(
       : `👤 EXISTING USER - ${sanitizeForLog(user.id)}`
   );
 
+  // Upsert user's email into user_private_info (required for email sending)
+  // Uses service_role to bypass RLS policies on this protected table
+  console.log(`[Auth] User email from OAuth: ${user.email || 'NOT AVAILABLE'}`);
+  if (user.email) {
+    try {
+      const supabaseAdmin = await createClient('service_role');
+      const { error: privateInfoError } = await supabaseAdmin
+        .from('user_private_info')
+        .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
+      if (privateInfoError) {
+        console.error('❌ Failed to upsert user_private_info:', JSON.stringify(privateInfoError));
+      } else {
+        console.log(`✅ User email stored in user_private_info for ${sanitizeForLog(user.id)}`);
+      }
+    } catch (err) {
+      console.error('❌ Exception upserting user_private_info:', err);
+    }
+  } else {
+    console.error('❌ No email available from OAuth user object');
+  }
+
   // Fetch private info for checking completeness (phone)
   const { data: privateInfo } = await supabase
     .from('user_private_info')
@@ -172,7 +193,10 @@ async function processCodeExchangeAndProfileUpdate(
       const appUrl = getAppUrl();
       const emailResponse = await fetch(`${appUrl}/api/emails/send-welcome`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': process.env.INTERNAL_API_KEY || '',
+        },
         body: JSON.stringify({ userId: user.id }),
       });
 

@@ -11,9 +11,9 @@ import { RidePostCard } from './rides-posts/RidePostCard';
 import { PaginationControls } from './PaginationControls';
 import { SectionEmpty } from './common/SectionEmpty';
 import { SectionError } from './common/SectionError';
-import CommunityMembersList from './members/CommunityMembersList';
 import { RIDES_PAGE_SIZE } from '../constants';
 import type { RidePostType, CommunityUser, LocationFilterType, ProfileType } from '../types';
+import PostDetailModal from '@/app/community/components/PostDetailModal';
 
 interface RidesTabProps {
   user: CommunityUser | null;
@@ -35,7 +35,6 @@ export function RidesTab({
   initialPage = 1,
   pageSize = RIDES_PAGE_SIZE,
   openMessageModal,
-  hideCommunityMembers = false,
 }: Readonly<RidesTabProps>) {
   const tabRef = useRef<HTMLDivElement>(null);
   const [rides, setRides] = useState<RidePostType[]>([]);
@@ -44,6 +43,7 @@ export function RidesTab({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
 
   // Location filter state
   const [departureFilter, setDepartureFilter] = useState<LocationFilterType | null>(null);
@@ -75,17 +75,13 @@ export function RidesTab({
     }
 
     const mergeGroup = (groupRides: RidePostType[]): RidePostType => {
-      if (groupRides.length <= 1) {
-        return groupRides[0];
-      }
+      if (groupRides.length <= 1) return groupRides[0];
 
       const departureLeg =
         groupRides.find((r) => r.trip_direction === 'departure') || groupRides[0];
       const returnLeg = groupRides.find((r) => r.trip_direction === 'return');
 
-      if (!returnLeg) {
-        return departureLeg;
-      }
+      if (!returnLeg) return departureLeg;
 
       return {
         ...departureLeg,
@@ -111,10 +107,7 @@ export function RidesTab({
   const ridesFoundLabel = useMemo(() => {
     const hasFilters = Boolean(departureFilter || destinationFilter);
     const label = `${totalCount} ${totalCount === 1 ? 'ride' : 'rides'} available`;
-    if (hasFilters) {
-      return `${label} matching filters`;
-    }
-    return label;
+    return hasFilters ? `${label} matching filters` : label;
   }, [totalCount, departureFilter, destinationFilter]);
 
   const loadRides = useCallback(async () => {
@@ -201,7 +194,6 @@ export function RidesTab({
 
     return (
       <div ref={tabRef} className="space-y-6">
-        {/* Location Filters */}
         <LocationFilters
           onDepartureFilterChange={setDepartureFilter}
           onDestinationFilterChange={setDestinationFilter}
@@ -209,17 +201,20 @@ export function RidesTab({
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groupedRides.map((ride) => (
+          {groupedRides.map((post) => (
             <RidePostCard
-              key={ride.id}
-              post={ride}
+              key={post.id}
+              post={post}
               currentUserId={user?.id}
               onMessage={openMessageModal}
+              onViewDetails={() => {
+                setSelectedPost(null);
+                setTimeout(() => setSelectedPost(post), 0);
+              }}
             />
           ))}
         </div>
 
-        {/* Pagination Controls */}
         <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}
@@ -229,21 +224,23 @@ export function RidesTab({
             tabRef.current?.scrollIntoView({ behavior: 'smooth' });
           }}
         />
+
+        {selectedPost && (
+          <PostDetailModal
+            isOpen={!!selectedPost}
+            onClose={() => setSelectedPost(null)}
+            post={selectedPost}
+            currentUserId={user?.id ?? ''}
+            onMessage={openMessageModal}
+          />
+        )}
       </div>
     );
   };
 
   return (
     <div className="space-y-12">
-      {/* Section 1: Driver Ride Posts */}
       <section>{renderRidesSection()}</section>
-
-      {/* Section 2: Community Members (if not hidden) */}
-      {!hideCommunityMembers && (
-        <section>
-          <CommunityMembersList supabase={supabase} />
-        </section>
-      )}
     </div>
   );
 }

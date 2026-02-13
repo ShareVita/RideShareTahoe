@@ -314,7 +314,7 @@
   .message-bubble {
     max-width: 85%;
     overflow-wrap: break-word;
-    word-break: break-all;
+    word-break: normal;
     hyphens: auto;
   }
 
@@ -340,7 +340,7 @@
 
     /* Handle long words and URLs in messages */
     .message-bubble p {
-      word-break: break-all;
+      word-break: normal;
       overflow-wrap: break-word;
       hyphens: auto;
       max-width: 100%;
@@ -360,7 +360,7 @@
 
     /* Ensure textarea doesn't get covered by mobile keyboard */
     .message-input textarea {
-      word-break: break-all;
+      word-break: normal;
       overflow-wrap: break-word;
       transition: height 0.1s ease-out;
     }

@@ -3,7 +3,10 @@ import Image from 'next/image';
 import { useState } from 'react';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import InviteToRideModal from '@/components/trips/InviteToRideModal';
-import { useIsBlocked } from '@/hooks/useIsBlocked';
+import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
+import { useUserProfile } from '@/hooks/useProfile';
+import { formatDateLabel, formatTimeLabel } from '@/lib/dateFormat';
+import { sanitizeLocation } from '@/libs/sanitize/location';
 
 interface PassengerPostCardProps {
   post: RidePostType;
@@ -13,6 +16,7 @@ interface PassengerPostCardProps {
   // eslint-disable-next-line no-unused-vars
   onDelete?: (postId: string) => void;
   deleting?: boolean;
+  onViewDetails: () => void;
 }
 
 /**
@@ -20,24 +24,39 @@ interface PassengerPostCardProps {
  *
  * @param props - The data to show and callbacks for messaging or hiding a post.
  */
+
 export function PassengerPostCard({
   post,
   currentUserId,
   onMessage,
   onDelete,
   deleting,
+  onViewDetails,
 }: Readonly<PassengerPostCardProps>) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const isOwner = currentUserId === post.poster_id;
-  const { isBlocked } = useIsBlocked(post.owner?.id);
 
+  const sanitizedStartLocation = sanitizeLocation(post.start_location);
+  const sanitizedEndLocation = sanitizeLocation(post.end_location);
   const badgeStyles = 'bg-green-100 text-green-800';
   const badgeLabel = '👋 Passenger';
+  const departureDateLabel = formatDateLabel(post.departure_date);
+  const departureTimeLabel = formatTimeLabel(post.departure_time);
+  const returnDateLabel = formatDateLabel(post.return_date);
 
-  // Hide posts from blocked users (unless viewing own post)
-  if (!isOwner && isBlocked) {
-    return null;
-  }
+  const { data: profile } = useUserProfile();
+  const { showProfileCompletionPrompt, profileCompletionModal } = useProfileCompletionPrompt({
+    toastMessage: 'Please finish your profile before contacting other riders.',
+    closeRedirect: null,
+  });
+
+  const handleRestrictedAction = (action: () => void) => {
+    if (!profile?.first_name) {
+      showProfileCompletionPrompt();
+      return;
+    }
+    action();
+  };
 
   // Add direction info if round trip
   let directionLabel = '';
@@ -76,10 +95,9 @@ export function PassengerPostCard({
               </span>
             )}
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {new Date(post.departure_date).toLocaleDateString()}
-              {isCombinedRoundTrip &&
-                post.return_date &&
-                ` - ${new Date(post.return_date).toLocaleDateString()}`}
+              {departureDateLabel ?? 'Date TBD'}
+              {departureTimeLabel && ` · ${departureTimeLabel}`}
+              {isCombinedRoundTrip && returnDateLabel && ` - ${returnDateLabel}`}
             </span>
           </div>
         </div>
@@ -100,12 +118,24 @@ export function PassengerPostCard({
       <div className="mb-4 grow">
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 mb-2">
           <span className="font-medium w-12 text-gray-500 dark:text-gray-400">From:</span>
-          <span className="truncate flex-1">{post.start_location}</span>
+          <span className="truncate flex-1">{sanitizedStartLocation}</span>
         </div>
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
           <span className="font-medium w-12 text-gray-500 dark:text-gray-400">To:</span>
-          <span className="truncate flex-1">{post.end_location}</span>
+          <span className="truncate flex-1">{sanitizedEndLocation}</span>
         </div>
+      </div>
+
+      {/* View Details link */}
+      <div className="mb-2">
+        <button
+          onClick={onViewDetails}
+          className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group"
+          aria-label={`View full ride details for trip from ${post.start_location} to ${post.end_location}`}
+        >
+          View Details
+          <span className="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+        </button>
       </div>
 
       {/* Owner Info (if not owner) */}
@@ -139,20 +169,11 @@ export function PassengerPostCard({
 
       {/* Actions */}
       <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2">
-        {post.owner && (
-          <Link
-            href={`/profile/${post.owner.id}`}
-            className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors text-center flex-1"
-          >
-            View Profile
-          </Link>
-        )}
-
         {isOwner ? (
           <>
             <Link
               href={`/rides/edit/${post.id}`}
-              className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors text-center flex-1"
+              className="bg-gray-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors text-center flex-1"
             >
               Edit
             </Link>
@@ -160,7 +181,7 @@ export function PassengerPostCard({
               <button
                 onClick={() => onDelete(post.id)}
                 disabled={deleting}
-                className={`bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors flex-1 ${
+                className={`bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex-1 ${
                   deleting ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
@@ -171,18 +192,31 @@ export function PassengerPostCard({
         ) : (
           post.owner && (
             <>
+              {/* Primary action: Message */}
               <button
-                onClick={() => post.owner && onMessage(post.owner, post)}
-                className="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors flex-1"
+                onClick={() =>
+                  handleRestrictedAction(() => post.owner && onMessage(post.owner, post))
+                }
+                className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-1"
               >
                 Message
               </button>
+
+              {/* Conversion action: Invite */}
               <button
-                onClick={() => setIsInviteModalOpen(true)}
-                className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors flex-1"
+                onClick={() => handleRestrictedAction(() => setIsInviteModalOpen(true))}
+                className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-1"
               >
                 Invite
               </button>
+
+              {/* Secondary action: View Profile */}
+              <Link
+                href={`/profile/${post.owner.id}`}
+                className="border-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-transparent px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-center flex-1"
+              >
+                View Profile
+              </Link>
             </>
           )
         )}
@@ -197,6 +231,8 @@ export function PassengerPostCard({
           user={{ id: currentUserId }}
         />
       )}
+
+      {profileCompletionModal}
     </div>
   );
 }
