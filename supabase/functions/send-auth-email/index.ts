@@ -19,8 +19,6 @@ interface AuthEmailPayload {
   };
 }
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-
 Deno.serve(async (req: Request) => {
   const payload: AuthEmailPayload = await req.json();
   const { user, email_data } = payload;
@@ -28,7 +26,7 @@ Deno.serve(async (req: Request) => {
   // Use Supabase's own verify endpoint (same as default templates).
   // This handles PKCE correctly and redirects to our callback with ?code=
   // which the existing OAuth handler in /api/auth/callback already processes.
-  const magicLink = `${SUPABASE_URL}/auth/v1/verify?token=${email_data.token}&type=${email_data.email_action_type}&redirect_to=${encodeURIComponent(email_data.redirect_to)}`;
+  const magicLink = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${email_data.token}&type=${email_data.email_action_type}&redirect_to=${encodeURIComponent(email_data.redirect_to)}`;
 
   const { error } = await resend.emails.send({
     from: `${APP_NAME} <${FROM_EMAIL}>`,
