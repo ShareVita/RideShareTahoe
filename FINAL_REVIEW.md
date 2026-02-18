@@ -198,7 +198,7 @@ catch (e) {
 
 **Current behavior:**
 
-```
+```text
 Community routes: 100 req/min
 Reviews routes:    60 req/min
 Matches routes:    20 req/min
@@ -380,7 +380,7 @@ function requiresAuth(pathname: string): boolean {
 
 **Problem B: Duplicates Supabase client for auth routes**
 
-```
+```text
 Request to /api/auth/callback:
 1. Middleware creates Supabase client (requiresAuth returns true)
 2. Route handler creates another Supabase client
@@ -411,7 +411,7 @@ export async function GET(request: NextRequest) {
 
 **Option 2: Use Next.js route groups**
 
-```
+```text
 app/
   (public)/
     api/
