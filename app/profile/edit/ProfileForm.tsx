@@ -176,7 +176,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     return sanitized;
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError('');
     setHasSubmitted(true);
@@ -198,20 +198,26 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       return;
     }
 
-    if (!formState.display_lat || !formState.display_lng) {
-      setSubmitError('Please validate your address before saving.');
-      return;
-    }
-
-    const hasSocial =
-      formState.facebook_url ||
-      formState.instagram_url ||
-      formState.linkedin_url ||
-      formState.airbnb_url;
-
-    if (!hasSocial) {
-      setSubmitError('Please provide at least one social media link.');
-      return;
+    // Auto-geocode if coordinates are missing
+    let resolvedLat = formState.display_lat;
+    let resolvedLng = formState.display_lng;
+    if (!resolvedLat || !resolvedLng) {
+      setValidationStatus('validating');
+      setValidationMessage('Checking location...');
+      const query = `${formState.street_address}, ${formState.city}, ${formState.state} ${formState.zip_code}`;
+      const coords = await geocodeLocation(query);
+      if (coords) {
+        resolvedLat = coords.lat;
+        resolvedLng = coords.lng;
+        setFormState((prev) => ({ ...prev, display_lat: coords.lat, display_lng: coords.lng }));
+        setValidationStatus('success');
+        setValidationMessage('Location verified!');
+      } else {
+        setValidationStatus('error');
+        setValidationMessage('Could not verify your address. Please check spelling and try again.');
+        setSubmitError('Could not verify your address. Please check spelling and try again.');
+        return;
+      }
     }
 
     // Consent validation: required if user hasn't already agreed
@@ -224,7 +230,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
 
     updateProfile.mutate(
       {
-        profileData: buildPayload(),
+        profileData: { ...buildPayload(), display_lat: resolvedLat, display_lng: resolvedLng },
         recordConsent: !hasExistingConsent && agreedToTerms,
       },
       {
