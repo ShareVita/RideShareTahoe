@@ -31,6 +31,7 @@ export default defineConfig([
     '**/*.d.ts',
     '**/.env.*',
     '**/.open-next/**',
+    'supabase/functions/**',
   ]),
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],

@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { type Session, type User, type UserMetadata } from '@supabase/supabase-js';
+import {
+  type EmailOtpType,
+  type Session,
+  type User,
+  type UserMetadata,
+} from '@supabase/supabase-js';
 import {
   getAppUrl,
   recordUserActivity,
@@ -54,7 +59,6 @@ function determineRedirectPath(
     hasLocation ? '✅ Verified (display_lat/lng present)' : '❌ Missing'
   );
 
-  // Existing user logic
   if (hasRole && hasPhonePrivate && hasLocation) {
     console.log('✅ PROFILE COMPLETE → Redirecting to /community');
     return `${finalRedirectBaseUrl}/community?${cacheBust}`;
@@ -66,7 +70,6 @@ function determineRedirectPath(
 
 /**
  * Check if welcome email was already sent to this user (idempotent check).
- * Uses email_events table instead of time-based checks for reliability.
  */
 async function hasWelcomeEmailBeenSent(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -83,16 +86,131 @@ async function hasWelcomeEmailBeenSent(
 }
 
 /**
- * Executes the core OAuth logic: code exchange, profile synchronization, emails, and final routing.
+ * Shared logic after a session is established: profile sync, emails, and routing.
+ * Used by both OAuth (code exchange) and magic link (token_hash) flows.
  */
-async function processCodeExchangeAndProfileUpdate(
+async function processAuthenticatedUser(
   requestUrl: URL,
-  code: string
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: User
 ): Promise<NextResponse> {
-  // Use secure Publishable Key client with cookie handling
+  const finalRedirectBaseUrl: string = requestUrl.origin;
+
+  const userMetadata: UserMetadata = user.user_metadata || {};
+  const googleGivenName: string | undefined = userMetadata.given_name || userMetadata.first_name;
+  const googleFamilyName: string | undefined = userMetadata.family_name || userMetadata.last_name;
+  const googlePicture: string | undefined = userMetadata.picture || userMetadata.avatar_url;
+
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select<string, Profile>('*')
+    .eq('id', user.id)
+    .single();
+
+  const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabase, user.id);
+  const isNewUser: boolean = !welcomeAlreadySent;
+  console.log(
+    isNewUser
+      ? `🆕 NEW USER DETECTED (no welcome email sent yet) - ${sanitizeForLog(user.id)}`
+      : `👤 EXISTING USER - ${sanitizeForLog(user.id)}`
+  );
+
+  console.log(`[Auth] User email: ${user.email || 'NOT AVAILABLE'}`);
+  if (user.email) {
+    try {
+      const supabaseAdmin = createAdminClient();
+      const { error: privateInfoError } = await supabaseAdmin
+        .from('user_private_info')
+        .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
+      if (privateInfoError) {
+        console.error('❌ Failed to upsert user_private_info:', JSON.stringify(privateInfoError));
+      } else {
+        console.log(`✅ User email stored in user_private_info for ${sanitizeForLog(user.id)}`);
+      }
+    } catch (err) {
+      console.error('❌ Exception upserting user_private_info:', err);
+    }
+  } else {
+    console.error('❌ No email available from user object');
+  }
+
+  const { data: privateInfo } = await supabase
+    .from('user_private_info')
+    .select('phone_number')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const hasPhonePrivate = !!(
+    privateInfo?.phone_number && privateInfo.phone_number.trim().length > 0
+  );
+
+  const upsertData: Partial<Profile> & { id: string } = {
+    id: user.id,
+    first_name: googleGivenName || existingProfile?.first_name || null,
+    last_name: googleFamilyName || existingProfile?.last_name || null,
+    profile_photo_url: googlePicture || existingProfile?.profile_photo_url || null,
+  };
+
+  const { data: updatedProfile, error: profileError } = await supabase
+    .from('profiles')
+    .upsert(upsertData, { onConflict: 'id' })
+    .select()
+    .single<Profile>();
+
+  if (profileError) {
+    console.error('❌ Profile upsert error:', profileError);
+  } else {
+    console.log('✅ Profile upserted');
+  }
+
+  if (!updatedProfile) {
+    console.error('Profile upsert failed to return data.');
+    return NextResponse.redirect(new URL('/login?error=profile_update_failed', requestUrl.origin));
+  }
+
+  if (isNewUser && user.email) {
+    try {
+      await recordUserActivity({
+        userId: user.id,
+        event: 'login',
+        metadata: { source: 'welcome_email_trigger' },
+      });
+
+      await sendEmail({
+        userId: user.id,
+        to: user.email,
+        emailType: 'welcome',
+        payload: {
+          userName: googleGivenName || '',
+          appUrl: getAppUrl(),
+        },
+      });
+
+      await scheduleNurtureEmail(user.id);
+      await scheduleCommunityGrowthEmail(user.id);
+
+      console.log(`✅ Welcome email sent to user ${sanitizeForLog(user.id)}`);
+    } catch (emailError) {
+      console.error('❌ Error sending welcome email:', emailError);
+    }
+  }
+
+  const redirectPath = determineRedirectPath(
+    finalRedirectBaseUrl,
+    updatedProfile,
+    isNewUser,
+    hasPhonePrivate
+  );
+
+  return NextResponse.redirect(redirectPath);
+}
+
+/**
+ * Handles the OAuth PKCE code exchange flow (Google).
+ */
+async function processCodeExchange(requestUrl: URL, code: string): Promise<NextResponse> {
   const supabase = await createClient();
 
-  // 1. Exchange Code
   const { data, error: exchangeError } = (await supabase.auth.exchangeCodeForSession(code)) as {
     data: { session: Session | null; user: User | null };
     error: unknown;
@@ -110,147 +228,53 @@ async function processCodeExchangeAndProfileUpdate(
     return NextResponse.redirect(new URL('/login?error=no_session', requestUrl.origin));
   }
 
-  const user: User = data.user;
-  const finalRedirectBaseUrl: string = requestUrl.origin;
-
-  // 3. Profile Fetch and Data Merge
-  const userMetadata: UserMetadata = user.user_metadata || {};
-  const googleGivenName: string | undefined = userMetadata.given_name || userMetadata.first_name;
-  const googleFamilyName: string | undefined = userMetadata.family_name || userMetadata.last_name;
-  const googlePicture: string | undefined = userMetadata.picture || userMetadata.avatar_url;
-
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select<string, Profile>('*')
-    .eq('id', user.id)
-    .single();
-
-  // 2. New User Check: Use idempotent database check instead of profile existence
-  // (Profile may be auto-created by database trigger, so we check email_events instead)
-  const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabase, user.id);
-  const isNewUser: boolean = !welcomeAlreadySent;
-  console.log(
-    isNewUser
-      ? `🆕 NEW USER DETECTED (no welcome email sent yet) - ${sanitizeForLog(user.id)}`
-      : `👤 EXISTING USER - ${sanitizeForLog(user.id)}`
-  );
-
-  // Upsert user's email into user_private_info (required for email sending)
-  // Uses service_role to bypass RLS policies on this protected table
-  console.log(`[Auth] User email from OAuth: ${user.email || 'NOT AVAILABLE'}`);
-  if (user.email) {
-    try {
-      const supabaseAdmin = createAdminClient();
-      const { error: privateInfoError } = await supabaseAdmin
-        .from('user_private_info')
-        .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
-      if (privateInfoError) {
-        console.error('❌ Failed to upsert user_private_info:', JSON.stringify(privateInfoError));
-      } else {
-        console.log(`✅ User email stored in user_private_info for ${sanitizeForLog(user.id)}`);
-      }
-    } catch (err) {
-      console.error('❌ Exception upserting user_private_info:', err);
-    }
-  } else {
-    console.error('❌ No email available from OAuth user object');
-  }
-
-  // Fetch private info for checking completeness (phone)
-  const { data: privateInfo } = await supabase
-    .from('user_private_info')
-    .select('phone_number')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  // Determine completeness using mixed data
-  const hasPhonePrivate = !!(
-    privateInfo?.phone_number && privateInfo.phone_number.trim().length > 0
-  );
-
-  // Build the upsert payload. Include `id` to allow insert-if-missing
-  const upsertData: Partial<Profile> & { id: string } = {
-    id: user.id,
-    first_name: googleGivenName || existingProfile?.first_name || null,
-    last_name: googleFamilyName || existingProfile?.last_name || null,
-    profile_photo_url: googlePicture || existingProfile?.profile_photo_url || null,
-  };
-
-  // 4. Profile Upsert (insert if missing, update if exists)
-  const { data: updatedProfile, error: profileError } = await supabase
-    .from('profiles')
-    .upsert(upsertData, { onConflict: 'id' })
-    .select()
-    .single<Profile>();
-
-  if (profileError) {
-    console.error('❌ Profile upsert error:', profileError);
-  } else {
-    console.log('✅ Profile upserted with Google data');
-  }
-
-  if (!updatedProfile) {
-    console.error('Profile upsert failed to return data.');
-    return NextResponse.redirect(new URL('/login?error=profile_update_failed', requestUrl.origin));
-  }
-
-  // 5. Welcome Email (only for new users who haven't received one yet)
-  if (isNewUser && user.email) {
-    try {
-      // Record user login activity
-      await recordUserActivity({
-        userId: user.id,
-        event: 'login',
-        metadata: { source: 'welcome_email_trigger' },
-      });
-
-      // Send welcome email using data from OAuth (no DB query needed!)
-      await sendEmail({
-        userId: user.id,
-        to: user.email,
-        emailType: 'welcome',
-        payload: {
-          userName: googleGivenName || '',
-          appUrl: getAppUrl(),
-        },
-      });
-
-      // Schedule nurture email for 3 days later
-      await scheduleNurtureEmail(user.id);
-
-      // Schedule community growth email for 30 days later
-      await scheduleCommunityGrowthEmail(user.id);
-
-      console.log(`✅ Welcome email sent to user ${sanitizeForLog(user.id)}`);
-    } catch (emailError) {
-      // Don't block the auth flow if email fails - log and continue
-      console.error('❌ Error sending welcome email:', emailError);
-    }
-  }
-
-  // 6. Routing
-  const redirectPath = determineRedirectPath(
-    finalRedirectBaseUrl,
-    updatedProfile,
-    isNewUser,
-    hasPhonePrivate
-  );
-
-  // Use NextResponse.redirect() which sets the status and Location header.
-  return NextResponse.redirect(redirectPath);
+  return processAuthenticatedUser(requestUrl, supabase, data.user);
 }
 
 /**
- * Handles the OAuth callback from the authentication provider.
- * Exchanges the code for a session and sets up the user profile.
+ * Handles the magic link (email OTP) flow.
+ * Supabase sends token_hash + type params instead of a code for magic links.
+ */
+async function processMagicLink(
+  requestUrl: URL,
+  tokenHash: string,
+  type: string
+): Promise<NextResponse> {
+  const supabase = await createClient();
+
+  const { data, error: verifyError } = await supabase.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: type as EmailOtpType,
+  });
+
+  if (verifyError) {
+    console.error('Magic link verification error:', verifyError);
+    return NextResponse.redirect(
+      new URL('/login?error=session_exchange_failed', requestUrl.origin)
+    );
+  }
+
+  if (!data.session || !data.user) {
+    console.error('No session or user created after magic link verification');
+    return NextResponse.redirect(new URL('/login?error=no_session', requestUrl.origin));
+  }
+
+  return processAuthenticatedUser(requestUrl, supabase, data.user);
+}
+
+/**
+ * Handles the auth callback from both OAuth providers (Google) and magic links.
+ * - OAuth: receives ?code= param → exchanges for session
+ * - Magic link: receives ?token_hash= + ?type= params → verifies OTP
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const requestUrl = new URL(req.url);
   const code: string | null = requestUrl.searchParams.get('code');
+  const tokenHash: string | null = requestUrl.searchParams.get('token_hash');
+  const type: string | null = requestUrl.searchParams.get('type');
   const error: string | null = requestUrl.searchParams.get('error');
   const errorDescription: string | null = requestUrl.searchParams.get('error_description');
 
-  // 1. Handle OAuth Errors (Guard Clause)
   if (error) {
     console.error('OAuth error:', error, errorDescription);
     return NextResponse.redirect(
@@ -258,18 +282,26 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 2. Process Authentication Code
+  // Google OAuth flow
   if (code) {
     try {
-      return await processCodeExchangeAndProfileUpdate(requestUrl, code);
-    } catch (error) {
-      // Catch unexpected errors
-      console.error('Unexpected error during session exchange:', error);
+      return await processCodeExchange(requestUrl, code);
+    } catch (err) {
+      console.error('Unexpected error during session exchange:', err);
       return NextResponse.redirect(new URL('/login?error=unexpected_error', requestUrl.origin));
     }
   }
 
-  // 3. Fallback: No Code Present
-  console.log('⚠️ No code present - Redirecting to login');
+  // Magic link flow
+  if (tokenHash && type) {
+    try {
+      return await processMagicLink(requestUrl, tokenHash, type);
+    } catch (err) {
+      console.error('Unexpected error during magic link verification:', err);
+      return NextResponse.redirect(new URL('/login?error=unexpected_error', requestUrl.origin));
+    }
+  }
+
+  console.log('⚠️ No code or token_hash present - Redirecting to login');
   return NextResponse.redirect(new URL('/login', requestUrl.origin));
 }
