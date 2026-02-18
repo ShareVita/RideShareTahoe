@@ -21,7 +21,7 @@ export default function VideoSection() {
   ];
 
   return (
-    <section className="bg-slate-50 py-20">
+    <section className="bg-gradient-to-br from-sky-50 via-white to-emerald-50 py-20">
       <div className="max-w-6xl mx-auto px-6 lg:px-8 space-y-12">
         <div className="text-center space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-slate-900">
