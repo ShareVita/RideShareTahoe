@@ -180,7 +180,9 @@ describe('createAdminClient', () => {
     };
 
     mockCreateSupabaseClient.mockImplementation((...args: unknown[]) => {
-      const opts = args[2] as { auth?: { persistSession?: boolean } } | undefined;
+      const opts = args[2] as
+        | { auth?: { persistSession?: boolean; autoRefreshToken?: boolean } }
+        | undefined;
       // Verify that session persistence is disabled
       expect(opts?.auth?.persistSession).toBe(false);
       expect(opts?.auth?.autoRefreshToken).toBe(false);
