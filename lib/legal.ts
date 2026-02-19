@@ -11,8 +11,8 @@ const LEGAL = {
   shortDisclosureGranted:
     'RideShareTahoe is a community program of ShareVita, a California 501(c)(3) nonprofit organization.',
   longDisclosure:
-    'RideShareTahoe ("we", "our", "us") is a community program of ShareVita, a California nonprofit public benefit corporation. ShareVita\'s IRS 501(c)(3) determination is pending. RideShareTahoe remains the product/service brand; ShareVita is the legal entity responsible for governance and compliance.',
-  status: 'pending' as 'pending' | 'granted',
+    'RideShareTahoe ("we", "our", "us") is a community program of ShareVita, a California 501(c)(3) nonprofit organization. RideShareTahoe remains the product/service brand; ShareVita is the legal entity responsible for governance and compliance.',
+  status: 'granted' as 'pending' | 'granted',
 
   // Contact information
   contact: {
@@ -26,7 +26,7 @@ const LEGAL = {
 
   // Donations/payments disclaimer
   donationsDisclaimer:
-    'We do not process payments on this site. If donations become available, they will be receipted by ShareVita. Tax-deductibility applies only after IRS determination; consult your advisor.',
+    'We do not process payments on this site. If donations become available, they will be receipted by ShareVita, a 501(c)(3) tax-exempt organization.',
 
   // Terms definitions
   termsDefinitions:
@@ -34,7 +34,7 @@ const LEGAL = {
 
   // FAQ disclosure
   faqDisclosure:
-    'RideShareTahoe is a program of ShareVita, a California nonprofit public benefit corporation (IRS 501(c)(3) determination pending).',
+    'RideShareTahoe is a program of ShareVita, a California 501(c)(3) nonprofit organization.',
 
   // Get current disclosure based on status
   getCurrentDisclosure: () => {
