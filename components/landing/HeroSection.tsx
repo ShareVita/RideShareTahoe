@@ -53,8 +53,15 @@ export default function HeroSection() {
           {/* CTAs */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/community"
+              href="/login"
               className="bg-white text-slate-950 rounded-2xl px-10 py-3 font-semibold shadow-2xl transition hover:scale-[1.02] inline-flex items-center justify-center"
+            >
+              Join Free
+            </Link>
+
+            <Link
+              href="/community"
+              className="rounded-2xl px-10 py-3 font-semibold shadow-xl transition hover:scale-[1.02] inline-flex items-center justify-center border border-white/30 text-white bg-white/10 hover:bg-white/15 backdrop-blur-md"
             >
               Find a Ride
             </Link>

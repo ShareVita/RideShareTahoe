@@ -1,6 +1,7 @@
 import HeroSection from '@/components/landing/HeroSection';
 import InfoGridSection from '@/components/landing/InfoGridSection';
 import StoriesSection from '@/components/landing/StoriesSection';
+import VideoSection from '@/components/landing/VideoSection';
 import ClosingCta from '@/components/landing/ClosingCta';
 
 export default function LandingPage() {
@@ -40,6 +41,8 @@ export default function LandingPage() {
         }}
       />
 
+      <VideoSection />
+
       <StoriesSection
         heading="Community Stories"
         stories={[
@@ -66,15 +69,15 @@ export default function LandingPage() {
       />
 
       <ClosingCta
-        title="Ready to hit the slopes?"
-        subtitle="Find a ride, post a ride, and make Tahoe trips easier all season."
+        title="Ready to ride? Join the crew."
+        subtitle="Free to join, free to use. Find a ride, post a ride, and make Tahoe trips easier all season."
         primary={{
-          label: 'Find a Ride',
-          href: '/community',
+          label: 'Join Free',
+          href: '/login',
         }}
         secondary={{
-          label: 'Post a Ride',
-          href: '/rides/post',
+          label: 'Browse Rides',
+          href: '/community',
         }}
       />
     </main>
