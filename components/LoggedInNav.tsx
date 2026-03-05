@@ -39,6 +39,10 @@ const STATIC_ITEMS = [
     href: '/profile',
     label: 'Profile',
   },
+  {
+    href: '/tahoe-transportation',
+    label: 'Transit Guide',
+  },
 ];
 
 /**
