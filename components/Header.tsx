@@ -84,6 +84,13 @@ const Header = ({ transparent = false }: HeaderProps) => {
           </button>
         </div>
 
+        {/* Nav links (desktop) */}
+        <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
+          <Link href="/tahoe-transportation" className="hover:text-white transition-colors">
+            Transit Guide
+          </Link>
+        </div>
+
         {/* CTA (desktop) */}
         <div className="flex justify-end flex-1">{cta}</div>
       </nav>
@@ -137,7 +144,13 @@ const Header = ({ transparent = false }: HeaderProps) => {
           <div className="flow-root mt-6">
             <div className="py-4">
               <div className="flex flex-col gap-y-2 items-start">
-                {/* Mobile links would go here if we had any public ones */}
+                <Link
+                  href="/tahoe-transportation"
+                  className="text-white font-medium py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Transit Guide
+                </Link>
               </div>
             </div>
             <div className="divider"></div>

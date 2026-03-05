@@ -97,7 +97,7 @@ const Footer = () => {
                 href="/tahoe-transportation"
                 className="text-slate-400 hover:text-white transition-colors"
               >
-                Tahoe Transportation
+                Transit Guide
               </Link>
             </div>
           </div>
