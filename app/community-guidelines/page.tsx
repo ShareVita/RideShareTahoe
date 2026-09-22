@@ -1,5 +1,14 @@
 import Link from 'next/link';
 import LEGAL from '@/lib/legal';
+import { getSEOTags } from '@/libs/seo';
+
+export const metadata = getSEOTags({
+  title: 'Community Guidelines | RideShareTahoe',
+  description:
+    'The ground rules that keep RideShareTahoe a reliable, community-run way to share rides to and from Lake Tahoe.',
+  keywords: ['community guidelines', 'RideShareTahoe rules', 'carpool etiquette'],
+  canonicalUrlRelative: '/community-guidelines',
+});
 
 export default function CommunityGuidelines() {
   return (

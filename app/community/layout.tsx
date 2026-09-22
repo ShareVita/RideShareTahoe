@@ -1,9 +1,14 @@
 import React from 'react';
+import { getSEOTags } from '@/libs/seo';
 
-/**
- * Layout for the community section.
- * Currently a pass-through, but can be used for shared layout elements specific to the community area.
- */
-export default function CommunityLayout({ children }: { readonly children: React.ReactNode }) {
+// Signed-in application surface: give it a distinct title, but keep it out of
+// search results.
+export const metadata = getSEOTags({
+  title: 'Community | RideShareTahoe',
+  description: 'Riders and drivers in the RideShareTahoe community.',
+  extraTags: { robots: { index: false, follow: false } },
+});
+
+export default function Layout({ children }: { readonly children: React.ReactNode }) {
   return <>{children}</>;
 }

@@ -53,7 +53,10 @@ export const getSEOTags = ({
       title: openGraph?.title || config.appName,
       description: openGraph?.description || config.appDescription,
       card: 'summary_large_image',
-      creator: '@marc_louvion',
+      // NOTE: no X/Twitter handle is set for RideShareTahoe yet. Add a
+      // `creator` field here once there is one. It previously carried the
+      // boilerplate author's handle, which credited the site to someone else
+      // in every social card.
     },
 
     // If a canonical URL is given, we add it. The metadataBase will turn the relative URL into a fully qualified URL

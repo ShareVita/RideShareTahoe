@@ -1,8 +1,14 @@
-import { ReactNode } from 'react';
+import React from 'react';
+import { getSEOTags } from '@/libs/seo';
 
-/**
- * Layout for the admin section.
- */
-export default function AdminLayout({ children }: { readonly children: ReactNode }) {
+// Signed-in application surface: give it a distinct title, but keep it out of
+// search results.
+export const metadata = getSEOTags({
+  title: 'Admin | RideShareTahoe',
+  description: 'Internal RideShareTahoe administration.',
+  extraTags: { robots: { index: false, follow: false } },
+});
+
+export default function Layout({ children }: { readonly children: React.ReactNode }) {
   return <>{children}</>;
 }

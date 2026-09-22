@@ -32,7 +32,7 @@ const config: Config = {
   appDescription:
     'RideShareTahoe - Connecting Bay Area drivers and passengers for community-based ridesharing to Lake Tahoe.',
   // REQUIRED (no https://, not trialing slash at the end, just the naked domain)
-  domainName: 'ridesharetahoe.com',
+  domainName: 'www.ridesharetahoe.com',
   resend: {
     // REQUIRED — Email 'From' field to be used when sending magic login links (no replies expected)
     fromNoReply: `RideShareTahoe <noreply@ridesharetahoe.com>`,

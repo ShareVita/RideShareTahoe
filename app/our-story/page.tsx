@@ -1,6 +1,15 @@
-'use client';
-
 import Link from 'next/link';
+import { getSEOTags } from '@/libs/seo';
+
+// This page is entirely static copy: no hooks, no event handlers. It was marked
+// 'use client' for no reason, which also made a `metadata` export impossible.
+export const metadata = getSEOTags({
+  title: 'Our Story: Why We Built RideShareTahoe',
+  description:
+    'How a Bay Area carpool habit turned into RideShareTahoe, a community-run way to share rides to Palisades, Northstar, Heavenly, Kirkwood and the rest of Lake Tahoe.',
+  keywords: ['RideShareTahoe', 'our story', 'Tahoe carpool', 'rideshare Lake Tahoe'],
+  canonicalUrlRelative: '/our-story',
+});
 
 export default function OurStoryPage() {
   return (

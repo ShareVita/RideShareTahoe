@@ -1,5 +1,14 @@
 import Link from 'next/link';
 import LEGAL from '@/lib/legal';
+import { getSEOTags } from '@/libs/seo';
+
+export const metadata = getSEOTags({
+  title: 'Carpool Safety Tips | RideShareTahoe',
+  description:
+    'How to vet a driver or rider, agree on cost and pickup, and keep every Tahoe carpool safe for everyone in the car.',
+  keywords: ['carpool safety', 'rideshare safety', 'Tahoe carpool tips'],
+  canonicalUrlRelative: '/safety',
+});
 
 export default function SafetyGuidelines() {
   return (
