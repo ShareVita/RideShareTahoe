@@ -71,15 +71,20 @@ describe('AppLayout', () => {
     mockUseRouter.mockReturnValue({ push: jest.fn() });
   });
 
-  it('renders the loading state', () => {
+  // Regression guard: the layout used to return a bare "Loading..." screen while
+  // auth resolved, which meant the server-rendered HTML for every route contained
+  // no page content and search crawlers indexed nothing. Page content must render
+  // regardless of auth loading state.
+  it('renders page content while auth is still loading', () => {
     mockUseUser.mockReturnValue({ loading: true, user: null });
     mockUsePathname.mockReturnValue('/');
 
     renderWithQueryClient(<AppLayout>Test Children</AppLayout>);
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
-    expect(screen.queryByTestId('mock-header')).not.toBeInTheDocument();
-    expect(screen.queryByText('Test Children')).not.toBeInTheDocument();
+    expect(screen.getByText('Test Children')).toBeInTheDocument();
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    expect(screen.getByTestId('mock-header')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-footer')).toBeInTheDocument();
   });
 
   it('renders correctly for a logged-out user on a non-auth page', () => {

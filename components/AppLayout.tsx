@@ -23,7 +23,11 @@ interface PendingReview {
  * Handles the display of the ReviewBanner and ReviewModal for logged-in users.
  */
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useUser();
+  // NOTE: intentionally not gating this subtree on `loading`. Doing so made the
+  // server response for every route render only "Loading...", so crawlers saw no
+  // page content. `user` is null until auth resolves, which renders the same
+  // logged-out chrome the server would render anyway.
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState<PendingReview | null>(null);
@@ -51,14 +55,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     setIsReviewModalOpen(false);
     setSelectedReview(null);
   }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen w-full bg-white dark:bg-slate-950 flex items-center justify-center text-slate-900 dark:text-slate-50">
-        Loading...
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full bg-white dark:bg-slate-950 flex flex-col transition-colors duration-300">

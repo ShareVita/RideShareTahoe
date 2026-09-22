@@ -4,8 +4,8 @@ import { getSEOTags } from '@/libs/seo';
 // Signed-in application surface: give it a distinct title, but keep it out of
 // search results.
 export const metadata = getSEOTags({
-  title: 'Messages | RideShareTahoe',
-  description: 'Your RideShareTahoe conversations.',
+  title: 'Edit Profile | RideShareTahoe',
+  description: 'Edit your RideShareTahoe profile.',
   extraTags: { robots: { index: false, follow: false } },
 });
 
