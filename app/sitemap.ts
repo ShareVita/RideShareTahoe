@@ -8,15 +8,22 @@ import config from '@/config';
  * sitemap entry that redirects is reported as an error in Search Console and
  * is never indexed.
  *
- * Today the session gate in lib/supabase/proxy.ts redirects every path except
- * `/`, `/login` and `/auth` to `/login`, so `/` is the only entry that can be
- * listed. The marketing and content routes below are the ones worth opening to
- * anonymous visitors — uncomment each one as it is made publicly reachable:
- *
- *   /our-story, /how-to-use, /faq, /safety, /community-guidelines,
- *   /tahoe-transportation, /rides/find, /privacy-policy, /tos
+ * This list must stay in sync with PUBLIC_PATHS in lib/supabase/proxy.ts. A
+ * route listed here but still gated will 307 to /login, which Search Console
+ * reports as an error and never indexes.
  */
-const PUBLIC_ROUTES = [{ path: '/', changeFrequency: 'daily' as const, priority: 1 }];
+const PUBLIC_ROUTES = [
+  { path: '/', changeFrequency: 'daily' as const, priority: 1 },
+  { path: '/rides/find', changeFrequency: 'daily' as const, priority: 0.9 },
+  { path: '/tahoe-transportation', changeFrequency: 'monthly' as const, priority: 0.8 },
+  { path: '/how-to-use', changeFrequency: 'monthly' as const, priority: 0.7 },
+  { path: '/our-story', changeFrequency: 'monthly' as const, priority: 0.7 },
+  { path: '/faq', changeFrequency: 'monthly' as const, priority: 0.6 },
+  { path: '/safety', changeFrequency: 'monthly' as const, priority: 0.6 },
+  { path: '/community-guidelines', changeFrequency: 'yearly' as const, priority: 0.4 },
+  { path: '/privacy-policy', changeFrequency: 'yearly' as const, priority: 0.3 },
+  { path: '/tos', changeFrequency: 'yearly' as const, priority: 0.3 },
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = `https://${config.domainName}`;
