@@ -4,6 +4,7 @@ import React, { FormEvent, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUpdateProfile, useUserConsents, type UpdatableProfileData } from '@/hooks/useProfile';
 import { geocodeLocation } from '@/libs/geocoding';
+import { trackSignupConversion } from '@/libs/googleAds';
 import PhotoUpload from '@/components/ui/PhotoUpload';
 
 const PRONOUN_OPTIONS = [
@@ -236,6 +237,8 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       {
         onSuccess: () => {
           if (isFirstTimeUser) {
+            // A completed first profile is the sign-up conversion for Google Ads
+            trackSignupConversion();
             // Redirect first-time users to onboarding welcome page
             router.push('/onboarding/welcome');
           } else {
