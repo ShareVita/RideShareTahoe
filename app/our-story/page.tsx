@@ -61,18 +61,17 @@ export default function OurStoryPage() {
                 ShareVita
               </a>
               , a California 501(c)(3) nonprofit. {LEGAL.umbrellaMission} Our other program,
-              ShareSkippy, connects dog owners with neighbors who want time with a dog. The idea
-              behind both is the same: most of what people need is already sitting in their
-              neighborhood, going unused. A spare seat on the way to the slopes. An afternoon to
-              walk a dog. We build the simple, free tools that connect those neighbors, in the
-              spirit of mutual aid rather than a marketplace.
+              ShareSkippy, pairs dog owners with neighbors who want time with a dog. The idea behind
+              both is the same: most of what people need is already in their neighborhood, going
+              unused. A spare seat on the way to the slopes. A free afternoon and a love of dogs. We
+              build the simple, free tools that connect those neighbors. Think mutual aid, not a
+              marketplace.
             </p>
             <p>
-              For Tahoe that matters in three concrete ways. Every full car is three or four fewer
-              cars idling on I-80 and US-50 on a powder Saturday. Every shared trip makes a day on
-              the mountain affordable for someone without a car, or without a car they trust in the
-              snow. And every ride is a chance to meet other skiers and snowboarders who become the
-              crew you keep going up with.
+              For Tahoe, that looks like this. Every full car is three or four fewer cars idling on
+              I-80 on a powder Saturday. Every shared trip puts a day on the mountain within reach
+              for someone without a car, or without a car they trust in the snow. And a lot of first
+              rides turn into the crew you keep going up with.
             </p>
           </div>
         </section>

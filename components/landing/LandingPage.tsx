@@ -10,8 +10,6 @@ export default function LandingPage() {
     <main className="min-h-screen bg-white dark:bg-slate-950">
       <HeroSection />
 
-      <MissionSection />
-
       <InfoGridSection
         title="Why RideShareTahoe?"
         description="We are more than just a carpool app. We are a community dedicated to making Tahoe accessible and sustainable."
@@ -43,6 +41,8 @@ export default function LandingPage() {
           href: '/how-to-use',
         }}
       />
+
+      <MissionSection />
 
       <VideoSection />
 

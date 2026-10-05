@@ -307,9 +307,10 @@ export default function HowToUsePage() {
                   <SectionHeading id="cost-sharing">💸 Splitting Costs Fairly</SectionHeading>
                   <div className="space-y-6 mt-6 text-gray-700">
                     <p>
-                      RideShareTahoe is carpooling, not a taxi. Under California law that works
-                      because drivers only recover their real trip costs. Nobody makes a profit, and
-                      the driver was going to Tahoe anyway. Here is how members usually split it.
+                      RideShareTahoe is carpooling, not a taxi. That matters legally: in California,
+                      a carpool stays a carpool as long as the driver only recovers real trip costs
+                      and was making the trip anyway. Nobody profits. This is how members usually
+                      split it.
                     </p>
 
                     <h3 className="text-xl font-semibold text-gray-900">
@@ -342,7 +343,9 @@ export default function HowToUsePage() {
                     >
                       <ul className="list-disc list-inside space-y-1">
                         <li>About 400 miles round trip at 22 mpg is roughly 18 gallons of gas.</li>
-                        <li>At $5 a gallon that is about $90 in gas, plus a $8 bridge toll.</li>
+                        <li>
+                          At $5 a gallon that is about $90 in gas, plus the $8.50 Bay Bridge toll.
+                        </li>
                         <li>Total trip cost about $98, split four ways including the driver.</li>
                         <li>
                           A fair ask is about $25 per passenger. Post that as your cost share.
