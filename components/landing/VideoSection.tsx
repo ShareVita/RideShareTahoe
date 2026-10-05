@@ -6,7 +6,7 @@ export default function VideoSection() {
     {
       number: 1,
       title: 'Create your free account',
-      description: 'Sign up with Google or email in seconds — no credit card needed.',
+      description: 'Sign up with Google or email in seconds. No credit card needed.',
     },
     {
       number: 2,
