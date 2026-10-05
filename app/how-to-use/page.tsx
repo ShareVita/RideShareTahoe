@@ -18,6 +18,7 @@ const SECTIONS = [
   { id: 'finding-rides', label: 'Finding Rides' },
   { id: 'connecting', label: 'Connecting with Others' },
   { id: 'booking', label: 'Booking a Ride' },
+  { id: 'cost-sharing', label: 'Splitting Costs Fairly' },
   { id: 'reviews', label: 'Reviews & Trust' },
   { id: 'managing-posts', label: 'Managing Your Posts' },
   { id: 'account-management', label: 'Account Management' },
@@ -295,6 +296,97 @@ export default function HowToUsePage() {
                         <li>Exchange contact numbers for the day of travel</li>
                         <li>Agree on payment method (Cash, Venmo, etc.)</li>
                       </ul>
+                    </Callout>
+                  </div>
+                </div>
+              </section>
+
+              {/* Cost sharing */}
+              <section id="cost-sharing">
+                <div className="bg-white rounded-xl shadow-lg p-8">
+                  <SectionHeading id="cost-sharing">💸 Splitting Costs Fairly</SectionHeading>
+                  <div className="space-y-6 mt-6 text-gray-700">
+                    <p>
+                      RideShareTahoe is carpooling, not a taxi. Under California law that works
+                      because drivers only recover their real trip costs. Nobody makes a profit, and
+                      the driver was going to Tahoe anyway. Here is how members usually split it.
+                    </p>
+
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      What counts as a trip cost
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>
+                        <strong>Gas.</strong> The big one. A Bay Area to North Lake round trip is
+                        roughly 400 miles; Sacramento to South Lake is about 200.
+                      </li>
+                      <li>
+                        <strong>Tolls.</strong> Bay Bridge or other bridge tolls if the route
+                        crosses one.
+                      </li>
+                      <li>
+                        <strong>Parking.</strong> Several resorts charge for close-in lots on
+                        weekends. Say up front whether it is included.
+                      </li>
+                      <li>
+                        <strong>Not included:</strong> wear and tear, insurance, your time, or a
+                        &ldquo;driver fee&rdquo;. Asking for those turns a carpool into commercial
+                        transportation, which your insurance likely does not cover.
+                      </li>
+                    </ul>
+
+                    <h3 className="text-xl font-semibold text-gray-900">A worked example</h3>
+                    <Callout
+                      tone="green"
+                      title="San Francisco to Palisades and back, SUV with 3 passengers"
+                    >
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>About 400 miles round trip at 22 mpg is roughly 18 gallons of gas.</li>
+                        <li>At $5 a gallon that is about $90 in gas, plus a $8 bridge toll.</li>
+                        <li>Total trip cost about $98, split four ways including the driver.</li>
+                        <li>
+                          A fair ask is about $25 per passenger. Post that as your cost share.
+                        </li>
+                      </ul>
+                    </Callout>
+                    <p>
+                      Prices change, so do your own math with current gas prices. The point is that
+                      the number on your post should be an honest estimate of each person&apos;s
+                      share of the real cost, not more.
+                    </p>
+
+                    <h3 className="text-xl font-semibold text-gray-900">How and when to pay</h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Agree on the amount in the chat before anyone gets in the car.</li>
+                      <li>
+                        Venmo, Zelle, Cash App or cash all work. RideShareTahoe never handles money.
+                      </li>
+                      <li>
+                        Most people pay when they are dropped off, or at a gas stop on the way up.
+                      </li>
+                      <li>
+                        If plans change and a seat opens up, the remaining passengers are not on the
+                        hook for the empty seat unless everyone agrees.
+                      </li>
+                    </ul>
+
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      Driver versus passenger posts
+                    </h3>
+                    <p>
+                      Driver posts show a suggested cost share per seat. Passenger posts are
+                      requests, and the default assumption is that the passenger is happy to chip in
+                      for gas. Flexible posts mean the person can do either depending on who else
+                      signs up.
+                    </p>
+                    <Callout tone="blue" title="Why this matters">
+                      Keeping it to true cost-sharing protects drivers&apos; insurance coverage,
+                      keeps RideShareTahoe within California carpool rules, and keeps the price fair
+                      for the people who most need a ride. See section 4 of our{' '}
+                      <Link href="/tos" className="text-blue-600 underline">
+                        Terms of Service
+                      </Link>{' '}
+                      for the formal version.
                     </Callout>
                   </div>
                 </div>

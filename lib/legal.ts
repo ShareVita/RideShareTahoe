@@ -6,6 +6,16 @@
 
 const LEGAL = {
   umbrellaName: 'ShareVita',
+  umbrellaWebsite: 'https://sharevita.org',
+  /** IRS Employer Identification Number for ShareVita. */
+  ein: '39-4771264',
+  founder: 'Kaia Colban',
+  /** One-line mission shared by every ShareVita program. */
+  umbrellaMission:
+    'ShareVita builds free tools that help neighbors share what they already have, so communities get stronger and nobody has to go it alone.',
+  /** One-line mission for the RideShareTahoe program. */
+  programMission:
+    'RideShareTahoe gets people to Lake Tahoe without a car of their own, cuts the traffic and emissions on I-80 and US-50, and connects skiers and riders who want a crew to share the drive with.',
   shortDisclosurePending:
     'RideShareTahoe is a community program of ShareVita, a California nonprofit public benefit corporation (501(c)(3) determination pending).',
   shortDisclosureGranted:
@@ -34,7 +44,7 @@ const LEGAL = {
 
   // FAQ disclosure
   faqDisclosure:
-    'RideShareTahoe is a program of ShareVita, a California 501(c)(3) nonprofit organization.',
+    'RideShareTahoe is a program of ShareVita, a California 501(c)(3) nonprofit (EIN 39-4771264) founded and run by Kaia Colban. It is 100% free and funded by ShareVita and donations.',
 
   // Get current disclosure based on status
   getCurrentDisclosure: () => {

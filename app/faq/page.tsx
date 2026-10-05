@@ -37,7 +37,22 @@ const faqData = [
     id: 'areas',
     question: 'What areas does RideShareTahoe serve?',
     answer:
-      'We primarily serve the San Francisco Bay Area and the Lake Tahoe region, including North and South Lake Tahoe, Truckee, and surrounding ski resorts.',
+      'Trips between Lake Tahoe and the San Francisco Bay Area, Sacramento and Reno. On the Tahoe side that means Truckee, North and South Lake Tahoe and every ski resort around the lake, including Palisades, Northstar, Heavenly, Kirkwood, Sugar Bowl and Mt. Rose.',
+    category: 'general',
+  },
+
+  {
+    id: 'browse-without-account',
+    question: 'Can I browse rides without an account?',
+    answer:
+      'Yes. The Find a Ride page lists every upcoming ride post with the route, date, seats and cost share. You only need a free account to see full profiles and send a message, which keeps members from being contacted by anonymous visitors.',
+    category: 'general',
+  },
+  {
+    id: 'how-funded',
+    question: 'How is RideShareTahoe funded? Is there a catch?',
+    answer:
+      'No catch. RideShareTahoe is 100% free and has no ads. It is funded by ShareVita, the 501(c)(3) nonprofit that runs it, and by donations. Drivers can only ask passengers to split real trip costs like gas, tolls and parking, never make a profit.',
     category: 'general',
   },
 
