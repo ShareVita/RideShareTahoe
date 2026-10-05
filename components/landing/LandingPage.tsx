@@ -1,4 +1,5 @@
 import HeroSection from '@/components/landing/HeroSection';
+import MissionSection from '@/components/landing/MissionSection';
 import InfoGridSection from '@/components/landing/InfoGridSection';
 import StoriesSection from '@/components/landing/StoriesSection';
 import VideoSection from '@/components/landing/VideoSection';
@@ -40,6 +41,8 @@ export default function LandingPage() {
           href: '/how-to-use',
         }}
       />
+
+      <MissionSection />
 
       <VideoSection />
 

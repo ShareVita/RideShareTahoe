@@ -34,7 +34,7 @@ export default function HeroSection() {
 
           {/* SEO anchor headline (single H1 on homepage) */}
           <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold leading-tight tracking-tight font-display text-white/95 drop-shadow-lg">
-            Carpool to Lake Tahoe — Free to use, Community-Run
+            Carpool to Lake Tahoe. Free, community-run, nonprofit.
           </h1>
 
           {/* Brand vibe headline */}
@@ -45,9 +45,9 @@ export default function HeroSection() {
           </h2>
 
           <p className="text-xl md:text-2xl text-slate-200 max-w-3xl mx-auto leading-relaxed font-light drop-shadow-md">
-            Find or post rides between the Bay Area, Reno, and Tahoe. Split gas, cut traffic, and
-            meet mountain friends — with carpools heading to Palisades, Northstar, Heavenly,
-            Kirkwood, and more.
+            Find or post rides between the Bay Area, Sacramento, Reno and Tahoe. Split gas, skip the
+            solo drive, and meet people on their way to Palisades, Northstar, Heavenly, Kirkwood and
+            the rest of the lake.
           </p>
 
           {/* CTAs */}
@@ -60,7 +60,7 @@ export default function HeroSection() {
             </Link>
 
             <Link
-              href="/community"
+              href="/rides/find"
               className="rounded-2xl px-10 py-3 font-semibold shadow-xl transition hover:scale-[1.02] inline-flex items-center justify-center border border-white/30 text-white bg-white/10 hover:bg-white/15 backdrop-blur-md"
             >
               Find a Ride
@@ -75,7 +75,8 @@ export default function HeroSection() {
           </div>
 
           <p className="text-sm text-slate-300/90 max-w-3xl mx-auto">
-            No ads. No algorithms. Just neighbors helping neighbors get to the mountains.
+            No ads, no fees, no algorithms. A program of ShareVita, a California 501(c)(3)
+            nonprofit, built by neighbors who needed a ride.
           </p>
         </div>
       </div>

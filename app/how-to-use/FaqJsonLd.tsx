@@ -13,6 +13,14 @@ export default function FaqJsonLd() {
       },
       {
         '@type': 'Question',
+        name: 'How much should a passenger pay for a carpool to Tahoe?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Passengers split the real trip costs with the driver: gas, tolls and parking, divided by everyone in the car including the driver. A typical Bay Area to Tahoe round trip works out to roughly $20 to $30 per passenger. Drivers may not profit, so the cost share should match an honest estimate of actual expenses.',
+        },
+      },
+      {
+        '@type': 'Question',
         name: 'How do I post a ride?',
         acceptedAnswer: {
           '@type': 'Answer',

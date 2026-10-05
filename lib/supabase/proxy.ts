@@ -23,6 +23,7 @@ const PUBLIC_PATHS = new Set([
   '/community-guidelines',
   '/how-to-use',
   '/tahoe-transportation',
+  '/tahoe-resorts',
   '/rides/find',
   '/privacy-policy',
   '/tos',

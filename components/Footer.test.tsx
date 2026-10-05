@@ -16,17 +16,17 @@ jest.mock('@/lib/legal', () => ({
   __esModule: true,
   default: {
     getCurrentDisclosure: jest.fn().mockReturnValue('Mock Legal Disclosure'),
+    ein: '00-0000000',
+    umbrellaWebsite: 'https://sharevita.org',
   },
 }));
 
 describe('Footer', () => {
   it('renders brand information', () => {
     render(<Footer />);
-    expect(screen.getByText('RideTahoe')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Connecting Bay Area drivers with Tahoe-bound riders/i)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/© 2025 RideTahoe. All rights reserved./i)).toBeInTheDocument();
+    expect(screen.getByText('RideShareTahoe')).toBeInTheDocument();
+    expect(screen.getByText(/Free carpool matching for trips between/i)).toBeInTheDocument();
+    expect(screen.getByText(/© 2026 ShareVita. All rights reserved./i)).toBeInTheDocument();
   });
 
   it('renders quick links', () => {
@@ -36,6 +36,15 @@ describe('Footer', () => {
     expect(screen.getByText('Find a Ride').closest('a')).toHaveAttribute('href', '/rides/find');
     expect(screen.getByText('Post a Ride').closest('a')).toHaveAttribute('href', '/rides/post');
     expect(screen.getByText('Messages').closest('a')).toHaveAttribute('href', '/messages');
+    expect(screen.getByText('Resorts & Routes').closest('a')).toHaveAttribute(
+      'href',
+      '/tahoe-resorts'
+    );
+    expect(screen.getByText('Cost Sharing Guide').closest('a')).toHaveAttribute(
+      'href',
+      '/how-to-use#cost-sharing'
+    );
+    expect(screen.getByText('About Us').closest('a')).toHaveAttribute('href', '/our-story');
   });
 
   it('renders legal links', () => {
@@ -55,7 +64,8 @@ describe('Footer', () => {
 
   it('renders legal disclosure', () => {
     render(<Footer />);
-    expect(screen.getByText('Mock Legal Disclosure')).toBeInTheDocument();
+    expect(screen.getByText(/Mock Legal Disclosure/)).toBeInTheDocument();
+    expect(screen.getByText(/EIN 00-0000000/)).toBeInTheDocument();
     expect(screen.getByText('Made with ❤️ for snow lovers')).toBeInTheDocument();
   });
 
