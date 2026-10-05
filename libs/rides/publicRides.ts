@@ -97,6 +97,15 @@ export function toPublicRide(ride: RideRow, profile: ProfileRow | undefined): Pu
   };
 }
 
+/** ISO date strings for the inclusive window of past trips to show. */
+export function recentTripWindow(today: Date, days: number): { from: string; to: string } {
+  const to = new Date(today);
+  to.setUTCDate(to.getUTCDate() - 1);
+  const from = new Date(today);
+  from.setUTCDate(from.getUTCDate() - days);
+  return { from: from.toISOString().split('T')[0], to: to.toISOString().split('T')[0] };
+}
+
 /**
  * Upcoming active ride posts for the public Find a Ride directory.
  * Works with an anonymous Supabase client: the `rides` row-level policy
@@ -114,6 +123,44 @@ export async function fetchPublicUpcomingRides(
     .gte('departure_date', today)
     .order('departure_date', { ascending: true })
     .order('departure_time', { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  if (!rides || rides.length === 0) return [];
+
+  const posterIds = Array.from(new Set(rides.map((ride) => ride.poster_id)));
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name')
+    .in('id', posterIds);
+
+  if (profilesError) throw profilesError;
+
+  const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+  return rides.map((ride) => toPublicRide(ride, profilesById.get(ride.poster_id)));
+}
+
+/**
+ * Recently completed trips, shown on the public directory when the season is
+ * quiet so visitors can see what rides on the site look like.
+ *
+ * Completed rides are not readable under the anonymous row-level policy, so
+ * this takes the server-side admin client. Only the public columns are read
+ * and only the reduced `PublicRide` shape leaves this function.
+ */
+export async function fetchPublicRecentRides(
+  supabase: SupabaseClient<Database>,
+  options: { limit?: number; days?: number } = {}
+): Promise<PublicRide[]> {
+  const { limit = 12, days = 365 } = options;
+  const { from, to } = recentTripWindow(new Date(), days);
+  const { data: rides, error } = await supabase
+    .from('rides')
+    .select(PUBLIC_RIDE_COLUMNS)
+    .in('status', ['active', 'completed'])
+    .gte('departure_date', from)
+    .lte('departure_date', to)
+    .order('departure_date', { ascending: false })
     .limit(limit);
 
   if (error) throw error;

@@ -8,7 +8,9 @@ const BADGES: Record<PublicRide['postingType'], { label: string; className: stri
   flexible: { label: 'Flexible: can drive or ride', className: 'bg-amber-100 text-amber-800' },
 };
 
-function PublicRideCard({ ride }: { ride: PublicRide }) {
+type ListMode = 'upcoming' | 'past';
+
+function PublicRideCard({ ride, mode }: { ride: PublicRide; mode: ListMode }) {
   const badge = BADGES[ride.postingType];
   const seats =
     ride.seatsAvailable !== null
@@ -63,13 +65,25 @@ function PublicRideCard({ ride }: { ride: PublicRide }) {
       </dl>
 
       <div className="mt-4 flex items-center justify-between gap-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400">Posted by {ride.posterLabel}</p>
-        <Link
-          href="/login"
-          className="text-sm font-semibold text-slate-900 dark:text-white underline underline-offset-4"
-        >
-          Sign in to message
-        </Link>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Posted by {ride.posterLabel}
+          {mode === 'past' ? ' · trip date has passed' : ''}
+        </p>
+        {mode === 'upcoming' ? (
+          <Link
+            href="/login"
+            className="text-sm font-semibold text-slate-900 dark:text-white underline underline-offset-4"
+          >
+            Sign in to message
+          </Link>
+        ) : (
+          <Link
+            href="/rides/post"
+            className="text-sm font-semibold text-slate-900 dark:text-white underline underline-offset-4"
+          >
+            Post a ride like this
+          </Link>
+        )}
       </div>
     </li>
   );
@@ -80,7 +94,16 @@ function PublicRideCard({ ride }: { ride: PublicRide }) {
  * Trip facts are public so people can see the community is real before joining.
  * Profiles, photos and messaging stay behind sign-in.
  */
-export default function PublicRideList({ rides }: { rides: PublicRide[] }) {
+export default function PublicRideList({
+  rides,
+  mode = 'upcoming',
+  showEmptyState = true,
+}: {
+  rides: PublicRide[];
+  mode?: ListMode;
+  showEmptyState?: boolean;
+}) {
+  if (rides.length === 0 && !showEmptyState) return null;
   if (rides.length === 0) {
     return (
       <div className="bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 text-center">
@@ -104,7 +127,7 @@ export default function PublicRideList({ rides }: { rides: PublicRide[] }) {
   return (
     <ul className="grid grid-cols-1 md:grid-cols-2 gap-5">
       {rides.map((ride) => (
-        <PublicRideCard key={ride.id} ride={ride} />
+        <PublicRideCard key={ride.id} ride={ride} mode={mode} />
       ))}
     </ul>
   );
