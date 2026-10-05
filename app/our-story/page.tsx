@@ -94,8 +94,8 @@ export default function OurStoryPage() {
             </p>
             <p>
               So I&apos;d spend half my night bouncing between them, scrolling endlessly, hoping to
-              spot someone going my way. The community <em>existed</em> &mdash; I just couldn&apos;t
-              reach it.
+              spot someone going my way. The community <em>existed</em>. I just couldn&apos;t reach
+              it.
             </p>
             <p>
               I was frustrated that there wasn&apos;t one place to connect with everyone, filter by
@@ -103,12 +103,12 @@ export default function OurStoryPage() {
             </p>
             <p className="font-bold text-gray-900">So I built it.</p>
             <p>
-              RideShareTahoe is my attempt to fix that chaos &mdash; to give mountain lovers one
-              clean, simple, friendly place to connect. No more scattered group chats. No more
-              digging. Just people helping each other get outside.
+              RideShareTahoe is my attempt to fix that chaos: to give mountain lovers one clean,
+              simple, friendly place to connect. No more scattered group chats. No more digging.
+              Just people helping each other get outside.
             </p>
             <p className="text-gray-900">
-              &mdash; {LEGAL.founder}, founder of ShareVita and RideShareTahoe
+              {LEGAL.founder}, founder of ShareVita and RideShareTahoe
             </p>
           </div>
         </section>

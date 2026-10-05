@@ -11,7 +11,7 @@ export const metadata = getSEOTags({
   openGraph: {
     title: 'Carpool to Tahoe | RideShareTahoe',
     description:
-      'Community-run carpools to and from Tahoe—save money, reduce traffic, and meet mountain friends.',
+      'Community-run carpools to and from Tahoe. Save money, reduce traffic, and meet mountain friends.',
     image: '/og/home.jpg',
   },
 });

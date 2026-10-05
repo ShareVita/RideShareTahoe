@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getSEOTags } from '@/libs/seo';
-import { createClient } from '@/lib/supabase/server';
-import { fetchPublicUpcomingRides, type PublicRide } from '@/libs/rides/publicRides';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
+import {
+  fetchPublicRecentRides,
+  fetchPublicUpcomingRides,
+  type PublicRide,
+} from '@/libs/rides/publicRides';
 import PublicRideList from '@/components/rides/PublicRideList';
 
 export const metadata: Metadata = getSEOTags({
@@ -21,18 +25,28 @@ export const metadata: Metadata = getSEOTags({
 // The directory changes as people post, so render it on every request.
 export const dynamic = 'force-dynamic';
 
-async function loadRides(): Promise<PublicRide[]> {
+async function loadUpcoming(): Promise<PublicRide[]> {
   try {
     const supabase = await createClient();
     return await fetchPublicUpcomingRides(supabase);
   } catch (error) {
-    console.error('Public ride directory failed to load:', error);
+    console.error('Public ride directory failed to load upcoming rides:', error);
+    return [];
+  }
+}
+
+async function loadRecent(): Promise<PublicRide[]> {
+  try {
+    return await fetchPublicRecentRides(createAdminClient());
+  } catch (error) {
+    console.error('Public ride directory failed to load recent rides:', error);
     return [];
   }
 }
 
 export default async function FindRidePage() {
-  const rides = await loadRides();
+  const [rides, recent] = await Promise.all([loadUpcoming(), loadRecent()]);
+  const nothingUpcoming = rides.length === 0;
   const drivers = rides.filter((ride) => ride.postingType !== 'passenger');
   const passengers = rides.filter((ride) => ride.postingType === 'passenger');
 
@@ -82,10 +96,10 @@ export default async function FindRidePage() {
           </h2>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
             {drivers.length === 0
-              ? 'No driver posts yet for upcoming dates.'
+              ? 'No driver posts yet for upcoming dates. Posts pick up as ski season gets closer.'
               : `${drivers.length} upcoming ${drivers.length === 1 ? 'trip' : 'trips'} with room for passengers.`}
           </p>
-          <PublicRideList rides={drivers} />
+          <PublicRideList rides={drivers} showEmptyState={nothingUpcoming && recent.length === 0} />
         </div>
       </section>
 
@@ -105,6 +119,25 @@ export default async function FindRidePage() {
           {passengers.length > 0 && <PublicRideList rides={passengers} />}
         </div>
       </section>
+
+      {recent.length > 0 && (
+        <section className="px-6 pb-20" aria-labelledby="recent-heading">
+          <div className="max-w-5xl mx-auto">
+            <h2
+              id="recent-heading"
+              className="text-2xl font-bold text-slate-900 dark:text-white mb-2"
+            >
+              Recent trips from the community
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              {nothingUpcoming
+                ? 'Nothing posted for upcoming dates yet. These are real rides members shared over the past year, so you can see what a post looks like and what people usually chip in.'
+                : 'Rides members shared over the past year.'}
+            </p>
+            <PublicRideList rides={recent} mode="past" showEmptyState={false} />
+          </div>
+        </section>
+      )}
 
       <section className="px-6 pb-24">
         <div className="max-w-4xl mx-auto bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center">

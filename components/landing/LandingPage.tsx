@@ -27,7 +27,7 @@ export default function LandingPage() {
           {
             icon: '💰',
             title: 'Shared Costs',
-            description: 'Gas isn’t cheap — but splitting it is.',
+            description: 'Gas isn’t cheap, but splitting it is.',
           },
           {
             icon: '🌱',

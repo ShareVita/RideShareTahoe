@@ -1,4 +1,4 @@
-import { toPosterLabel, toPublicPlace, toPublicRide } from './publicRides';
+import { recentTripWindow, toPosterLabel, toPublicPlace, toPublicRide } from './publicRides';
 
 describe('public ride directory mapping', () => {
   it('hides street addresses and keeps the town', () => {
@@ -50,5 +50,12 @@ describe('public ride directory mapping', () => {
       posterLabel: 'Chris N.',
     });
     expect(ride).not.toHaveProperty('poster_id');
+  });
+
+  it('builds a past-trip window that ends yesterday', () => {
+    expect(recentTripWindow(new Date('2026-10-05T12:00:00Z'), 365)).toEqual({
+      from: '2025-10-05',
+      to: '2026-10-04',
+    });
   });
 });

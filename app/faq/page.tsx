@@ -159,7 +159,9 @@ const categories = [
 
 export default function FAQPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [openItems, setOpenItems] = useState<string[]>([]);
+  // Answers start expanded so visitors and crawlers can read the whole page
+  // without clicking. Clicking a question collapses it.
+  const [openItems, setOpenItems] = useState<string[]>(() => faqData.map((item) => item.id));
 
   const filteredFAQ =
     selectedCategory === 'all'

@@ -4,7 +4,7 @@ import { getSEOTags } from '@/libs/seo';
 export const metadata = getSEOTags({
   title: 'Tahoe Transportation Guide – Shuttles, Buses & More | RideShareTahoe',
   description:
-    'Complete guide to getting to and around Lake Tahoe — airport shuttles from Reno, Bay Area ski buses, local public transit, and resort shuttles. Plus find a carpool on RideShareTahoe.',
+    'Complete guide to getting to and around Lake Tahoe: airport shuttles from Reno, Bay Area ski buses, local public transit, and resort shuttles. Plus find a carpool on RideShareTahoe.',
   canonicalUrlRelative: '/tahoe-transportation',
   keywords: [
     'lake tahoe transportation',
@@ -63,15 +63,15 @@ export default function TahoeTransportation() {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Getting To & Around Lake Tahoe</h1>
           <p className="text-gray-600 mb-3">
             Whether you&apos;re trying to get to your carpool pickup spot, need a ride from where
-            your carpool drops you off, or can only find a ride one way — here are all the
+            your carpool drops you off, or can only find a ride one way, here are all the
             transportation options available to and around Lake Tahoe.
           </p>
           <p className="text-gray-600">
             Can&apos;t find what you need below?{' '}
             <Link href="/rides/find" className="text-blue-600 hover:text-blue-800 font-medium">
               Find a carpool on RideShareTahoe
-            </Link>{' '}
-            — community members post rides from the Bay Area, Sacramento, Reno, and beyond.
+            </Link>
+            . Community members post rides from the Bay Area, Sacramento, Reno, and beyond.
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export default function TahoeTransportation() {
         {/* Getting Around — North Shore */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
-            🚌 Getting Around — North Shore
+            🚌 Getting Around: North Shore
           </h2>
           <p className="text-gray-500 text-sm mb-5">
             Free and low-cost transit options for getting around Truckee, Tahoe City, Kings Beach,
@@ -153,7 +153,7 @@ export default function TahoeTransportation() {
             <TransportCard
               name="TART Connect"
               href="https://tahoetruckeetransit.com/how-to-ride/tart-connect/"
-              description="Free on-demand neighborhood shuttle — book via app for door-to-door service within designated zones."
+              description="Free on-demand neighborhood shuttle. Book via app for door-to-door service within designated zones."
             />
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function TahoeTransportation() {
         {/* Getting Around — South Shore */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
           <h2 className="text-2xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
-            🚌 Getting Around — South Shore
+            🚌 Getting Around: South Shore
           </h2>
           <p className="text-gray-500 text-sm mb-5">
             Free transit options for South Lake Tahoe, Stateline, and the South Shore area.
@@ -187,7 +187,7 @@ export default function TahoeTransportation() {
           </h2>
           <p className="text-gray-500 text-sm mb-5">
             Most major resorts run free shuttles from town hubs and nearby lodging. Check their
-            sites for current schedules — many hotels also offer complimentary local shuttles.
+            sites for current schedules, and many hotels also offer complimentary local shuttles.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TransportCard
@@ -215,7 +215,7 @@ export default function TahoeTransportation() {
           </h2>
           <p className="text-blue-800 mb-5">
             RideShareTahoe connects people carpooling to and from Lake Tahoe. Split the drive and
-            the cost with community members heading the same way — including one-way trips.
+            the cost with community members heading the same way, including one-way trips.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
