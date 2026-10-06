@@ -2,11 +2,14 @@ import Link from 'next/link';
 import { getSEOTags } from '@/libs/seo';
 
 export const metadata = getSEOTags({
-  title: 'Tahoe Transportation Guide – Shuttles, Buses & More | RideShareTahoe',
+  title: 'How to Get to Lake Tahoe: Buses, Shuttles, Flights and Carpools | RideShareTahoe',
   description:
     'Complete guide to getting to and around Lake Tahoe: airport shuttles from Reno, Bay Area ski buses, local public transit, and resort shuttles. Plus find a carpool on RideShareTahoe.',
   canonicalUrlRelative: '/tahoe-transportation',
   keywords: [
+    'how to get to lake tahoe',
+    'how to get to tahoe',
+    'getting to lake tahoe',
     'lake tahoe transportation',
     'tahoe shuttle',
     'reno airport to tahoe',
@@ -24,7 +27,7 @@ export const metadata = getSEOTags({
     'tahoe convoy',
   ],
   openGraph: {
-    title: 'Tahoe Transportation Guide – Shuttles, Buses & More',
+    title: 'How to Get to Lake Tahoe: Buses, Shuttles, Flights and Carpools',
     description:
       'Shuttles from Reno, Bay Area ski buses, local transit, and resort shuttles. All your options for getting to & around Lake Tahoe.',
   },
