@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-TGM53SZZX1"
+          src="https://www.googletagmanager.com/gtag/js?id=G-15EWNNGDEZ"
           strategy="beforeInteractive"
         />
         <Script id="google-analytics" strategy="beforeInteractive">
@@ -58,7 +58,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 						globalThis.dataLayer = globalThis.dataLayer || [];
 						function gtag(){dataLayer.push(arguments);}
 						gtag('js', new Date());
-						gtag('config', 'G-TGM53SZZX1');
+						gtag('config', 'G-15EWNNGDEZ');
 						gtag('config', 'AW-18056537904');
 					`}
         </Script>
