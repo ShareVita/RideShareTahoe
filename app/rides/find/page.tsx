@@ -14,6 +14,9 @@ export const metadata: Metadata = getSEOTags({
   description:
     'Browse upcoming community carpools to Lake Tahoe from the Bay Area, Sacramento and Reno. See rides to Palisades, Northstar, Heavenly, Kirkwood and more, then sign in to message a driver or post your own.',
   canonicalUrlRelative: '/rides/find',
+  // app/rides/layout.tsx marks the signed-in ride pages noindex. This public
+  // directory is in the sitemap and must stay indexable, so override it here.
+  extraTags: { robots: { index: true, follow: true } },
   openGraph: {
     title: 'Find a Ride to Tahoe | RideShareTahoe',
     description:
