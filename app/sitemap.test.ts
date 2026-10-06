@@ -23,6 +23,7 @@ describe('sitemap', () => {
       '/community-guidelines',
       '/how-to-use',
       '/tahoe-transportation',
+      '/tahoe-resorts',
       '/rides/find',
       '/privacy-policy',
       '/tos',

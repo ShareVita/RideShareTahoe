@@ -16,6 +16,7 @@ const PUBLIC_ROUTES = [
   { path: '/', changeFrequency: 'daily' as const, priority: 1 },
   { path: '/rides/find', changeFrequency: 'daily' as const, priority: 0.9 },
   { path: '/tahoe-transportation', changeFrequency: 'monthly' as const, priority: 0.8 },
+  { path: '/tahoe-resorts', changeFrequency: 'monthly' as const, priority: 0.8 },
   { path: '/how-to-use', changeFrequency: 'monthly' as const, priority: 0.7 },
   { path: '/our-story', changeFrequency: 'monthly' as const, priority: 0.7 },
   { path: '/faq', changeFrequency: 'monthly' as const, priority: 0.6 },
