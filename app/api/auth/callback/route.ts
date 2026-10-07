@@ -33,8 +33,7 @@ interface Profile {
 function determineRedirectPath(
   finalRedirectBaseUrl: string,
   profile: Profile,
-  isNewUser: boolean,
-  hasPhonePrivate: boolean
+  isNewUser: boolean
 ): string {
   const cacheBust: string = `_t=${Date.now()}`;
 
@@ -44,20 +43,20 @@ function determineRedirectPath(
     return `${finalRedirectBaseUrl}/profile/edit?${cacheBust}`;
   }
 
-  // Check profile completeness for existing users
-  // Role was removed from profiles. Require names, private phone and location.
+  // Check profile completeness for existing users. This must match what the
+  // profile form collects: names and a verified location. The form has no
+  // phone field, so requiring one sent every returning member to edit.
   const hasNames = !!profile.first_name?.trim() && !!profile.last_name?.trim();
   const hasLocation: boolean = profile.display_lat !== null && profile.display_lng !== null;
 
   console.log('📊 Profile completeness check:');
   console.log('   ✓ Names:', hasNames ? '✅ Complete' : '❌ Missing');
-  console.log('   ✓ Phone:', hasPhonePrivate ? '✅ Complete' : '❌ Missing');
   console.log(
     '   ✓ Location:',
     hasLocation ? '✅ Verified (display_lat/lng present)' : '❌ Missing'
   );
 
-  if (hasNames && hasPhonePrivate && hasLocation) {
+  if (hasNames && hasLocation) {
     console.log('✅ PROFILE COMPLETE → Redirecting to /community');
     return `${finalRedirectBaseUrl}/community?${cacheBust}`;
   } else {
@@ -134,16 +133,6 @@ async function processAuthenticatedUser(
     console.error('❌ No email available from user object');
   }
 
-  const { data: privateInfo } = await supabase
-    .from('user_private_info')
-    .select('phone_number')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const hasPhonePrivate = !!(
-    privateInfo?.phone_number && privateInfo.phone_number.trim().length > 0
-  );
-
   const upsertData: Partial<Profile> & { id: string } = {
     id: user.id,
     first_name: googleGivenName || existingProfile?.first_name || null,
@@ -195,12 +184,7 @@ async function processAuthenticatedUser(
     }
   }
 
-  const redirectPath = determineRedirectPath(
-    finalRedirectBaseUrl,
-    updatedProfile,
-    isNewUser,
-    hasPhonePrivate
-  );
+  const redirectPath = determineRedirectPath(finalRedirectBaseUrl, updatedProfile, isNewUser);
 
   return NextResponse.redirect(redirectPath);
 }

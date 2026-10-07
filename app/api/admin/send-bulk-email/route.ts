@@ -3,6 +3,7 @@ import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase
 import { sendEmail } from '@/libs/email/sendEmail';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getUsersWithEmails, type UserWithEmail } from '@/libs/email/helpers';
 
 interface BulkEmailResult {
   totalUsers: number;
@@ -119,41 +120,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all users with email addresses (email is in user_private_info)
-    const { data: users, error: usersError } = await adminSupabase
-      .from('profiles')
-      .select('id, first_name, last_name, user_private_info(email)')
-      .eq('is_banned', false)
-      .not('user_private_info.email', 'is', null)
-      .not('user_private_info.email', 'eq', '');
-
-    if (usersError) {
+    // Every non-banned member with an email address. Marketing opt-outs are
+    // enforced inside sendEmail.
+    let usersWithEmails: UserWithEmail[];
+    try {
+      usersWithEmails = await getUsersWithEmails(adminSupabase, { excludeBanned: true });
+    } catch (usersError) {
       console.error('Error fetching users:', usersError);
-      return NextResponse.json(
-        { error: 'Failed to fetch users' },
-        {
-          status: 500,
-        }
-      );
+      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
-
-    // Filter users with valid emails and transform the data
-    const usersWithEmails = (users || [])
-      .map((user) => {
-        // Handle Supabase's JOIN response format (can be array or object)
-        const privateInfo = Array.isArray(user.user_private_info)
-          ? user.user_private_info[0]
-          : user.user_private_info;
-        const email = privateInfo?.email;
-        if (!email) return null;
-        return {
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email,
-        };
-      })
-      .filter((user): user is NonNullable<typeof user> => user !== null);
 
     if (usersWithEmails.length === 0) {
       return NextResponse.json(

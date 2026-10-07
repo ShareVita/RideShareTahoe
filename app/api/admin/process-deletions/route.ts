@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getEmailsByUserId } from '@/libs/email/helpers';
 import { processScheduledDeletions } from '@/lib/accountDeletion';
 
 /**
@@ -78,7 +79,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createAdminClient();
-    // Get all pending deletion requests with user info (email from user_private_info)
     const { data: deletionRequests, error } = await supabase
       .from('account_deletion_requests')
       .select(
@@ -87,8 +87,7 @@ export async function GET(request: NextRequest) {
         user:profiles!account_deletion_requests_user_id_fkey (
           id,
           first_name,
-          last_name,
-          user_private_info (email)
+          last_name
         )
       `
       )
@@ -98,6 +97,13 @@ export async function GET(request: NextRequest) {
     if (error) {
       throw error;
     }
+
+    // Email lives in user_private_info, which PostgREST cannot embed from
+    // profiles; read it separately.
+    const emails = await getEmailsByUserId(
+      supabase,
+      deletionRequests.map((request) => request.user_id)
+    );
 
     // Calculate days remaining for each request
     const requestsWithDaysRemaining = deletionRequests.map((request) => {
@@ -109,6 +115,7 @@ export async function GET(request: NextRequest) {
 
       return {
         ...request,
+        email: emails.get(request.user_id) ?? null,
         daysRemaining: Math.max(0, daysRemaining),
         isReadyForProcessing: daysRemaining <= 0,
       };

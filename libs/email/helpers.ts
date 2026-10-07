@@ -66,47 +66,71 @@ export async function getUserWithEmail(
   };
 }
 
+/** PostgREST returns at most this many rows per request (Supabase default). */
+const PAGE_SIZE = 1000;
+/** Keep `id=in.(...)` filters well under URL length limits. */
+const ID_CHUNK_SIZE = 100;
+
 /**
- * Fetch multiple users with their emails efficiently using a single query with JOIN.
- * Returns users that have valid email addresses.
+ * Emails keyed by user id.
+ *
+ * `user_private_info` and `profiles` both reference `auth.users` but not each
+ * other, so PostgREST cannot embed one in the other (it answers PGRST200).
+ * Read the private rows separately and join in code.
+ */
+export async function getEmailsByUserId(
+  supabase: AdminClient,
+  userIds: readonly string[]
+): Promise<Map<string, string>> {
+  const chunks: string[][] = [];
+  for (let start = 0; start < userIds.length; start += ID_CHUNK_SIZE) {
+    chunks.push(userIds.slice(start, start + ID_CHUNK_SIZE));
+  }
+
+  const results = await Promise.all(
+    chunks.map((ids) => supabase.from('user_private_info').select('id, email').in('id', ids))
+  );
+
+  const emails = new Map<string, string>();
+  for (const { data, error } of results) {
+    if (error) throw error;
+    for (const row of data ?? []) {
+      const email = row.email?.trim();
+      if (email) emails.set(row.id, email);
+    }
+  }
+  return emails;
+}
+
+/**
+ * Every user who has an email address, read in pages so the whole member list
+ * is returned (a single request stops at 1000 rows).
  */
 export async function getUsersWithEmails(
   supabase: AdminClient,
   options?: { excludeBanned?: boolean }
 ): Promise<UserWithEmail[]> {
-  let query = supabase
-    .from('profiles')
-    .select('id, first_name, last_name, user_private_info(email)');
-
-  if (options?.excludeBanned) {
-    query = query.eq('is_banned', false);
+  const profiles: Array<Pick<UserWithEmail, 'id' | 'first_name' | 'last_name'>> = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let query = supabase.from('profiles').select('id, first_name, last_name');
+    if (options?.excludeBanned) {
+      query = query.eq('is_banned', false);
+    }
+    const { data, error } = await query.order('id').range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    profiles.push(...(data ?? []));
+    if (!data || data.length < PAGE_SIZE) break;
   }
 
-  const { data: users, error } = await query;
+  const emails = await getEmailsByUserId(
+    supabase,
+    profiles.map((profile) => profile.id)
+  );
 
-  if (error || !users) {
-    return [];
-  }
-
-  // Filter and transform to get users with valid emails
-  return users
-    .map((user) => {
-      // Handle Supabase's JOIN response format (can be array or object)
-      const privateInfo = Array.isArray(user.user_private_info)
-        ? user.user_private_info[0]
-        : user.user_private_info;
-
-      const email = privateInfo?.email;
-      if (!email) return null;
-
-      return {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email,
-      };
-    })
-    .filter((user): user is UserWithEmail => user !== null);
+  return profiles.flatMap((profile) => {
+    const email = emails.get(profile.id);
+    return email ? [{ ...profile, email }] : [];
+  });
 }
 
 /**

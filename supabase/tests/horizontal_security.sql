@@ -38,6 +38,12 @@ BEGIN
     RAISE EXCEPTION 'FAIL anonymous rate-limit reset allowed';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  BEGIN
+    PERFORM public.check_rate_limit('anon:probe', 'test', 5, 60);
+    RAISE EXCEPTION 'FAIL anonymous check_rate_limit allowed';
+  EXCEPTION WHEN raise_exception OR insufficient_privilege THEN
+    IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+  END;
   RAISE NOTICE 'PASS anonymous base-table reads, private-email RPC and rate-limit reset denied';
 END $$;
 
@@ -157,6 +163,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = '00000000-0000-4000-8000-000000000001'
     AND is_banned = false) THEN RAISE EXCEPTION 'FAIL service role moderation'; END IF;
   RAISE NOTICE 'PASS trusted service-role moderation';
+  IF (public.check_rate_limit('service:bulk', 'test', 5, 60)->>'allowed')::boolean IS NOT TRUE THEN
+    RAISE EXCEPTION 'FAIL service role rejected by check_rate_limit';
+  END IF;
+  RAISE NOTICE 'PASS service role can use check_rate_limit';
 END $$;
 
 RESET ROLE;
