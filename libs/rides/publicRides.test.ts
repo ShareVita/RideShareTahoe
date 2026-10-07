@@ -10,13 +10,39 @@ describe('public ride directory mapping', () => {
   });
 
   it.each([
+    ['Palisades Tahoe', 'Palisades Tahoe'],
+    ['Squaw Valley', 'Palisades Tahoe'],
+    ['Northstar California, Truckee, CA', 'Northstar'],
+    ['Heavenly', 'Heavenly'],
+    ['Kirkwood Mountain Resort', 'Kirkwood'],
+    ['Mt. Rose', 'Mt. Rose'],
+    ['Sierra at Tahoe', 'Sierra-at-Tahoe'],
+  ])('names the ski resort: %s', (input, expected) => {
+    expect(toPublicPlace(input)).toBe(expected);
+  });
+
+  it.each([
+    ['Mountain View, CA', 'Mountain View'],
+    ['Walnut Creek', 'Walnut Creek'],
+    ['Truckee CA', 'Truckee'],
+    ['South Lake', 'South Lake Tahoe'],
+    ['South San Francisco', 'South San Francisco'],
+    ['East Palo Alto, CA', 'East Palo Alto'],
+    ['Reno-Tahoe International Airport RNO', 'Reno-Tahoe Airport'],
+    ['Lake Tahoe', 'Lake Tahoe'],
+  ])('names the town or region without a street: %s', (input, expected) => {
+    expect(toPublicPlace(input)).toBe(expected);
+  });
+
+  it.each([
     '123 Main St',
-    'Palisades Tahoe',
     'Meet at my apartment',
     '123 Main St, Apt 2',
     'Unit 7, Oakland Avenue',
     'San Francisco Blvd',
+    '42 Truckee Way',
     'Unknown Town, CA',
+    'Secret cove or sand beach',
     '',
   ])('never exposes unverified freeform pickup text: %s', (input) => {
     expect(toPublicPlace(input)).toBe('Location shared after sign-in');
@@ -53,7 +79,7 @@ describe('public ride directory mapping', () => {
       id: 'ride-1',
       postingType: 'driver',
       from: 'San Francisco',
-      to: 'Truckee',
+      to: 'Northstar',
       departureDate: '2026-12-13',
       departureTime: '06:00:00',
       isRoundTrip: true,

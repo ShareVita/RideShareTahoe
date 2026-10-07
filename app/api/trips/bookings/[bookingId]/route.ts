@@ -8,6 +8,7 @@ import {
 import { sendConversationMessage } from '@/lib/supabase/conversations';
 import { z } from 'zod';
 import type { Database } from '@/types/database.types';
+import { TAHOE_TIME_ZONE } from '@/lib/dateFormat';
 
 const bookingActionSchema = z.object({
   action: z.enum(['approve', 'deny', 'cancel']),
@@ -315,6 +316,8 @@ function buildBookingMessage({
     ? new Date(booking.pickup_time).toLocaleString('en-US', {
         dateStyle: 'medium',
         timeStyle: 'short',
+        // Servers run in UTC; pickups are Tahoe-local.
+        timeZone: TAHOE_TIME_ZONE,
       })
     : '';
 

@@ -60,33 +60,6 @@ const Header = ({ transparent = false }: HeaderProps) => {
           </Link>
         </div>
 
-        {/* Burger button */}
-        <div className="flex lg:hidden">
-          <button
-            type="button"
-            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-white"
-            onClick={() => setIsOpen(true)}
-            aria-expanded={isOpen}
-            aria-controls="public-mobile-menu"
-          >
-            <span className="sr-only">Open main menu</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            </svg>
-          </button>
-        </div>
-
         {/* Nav links (desktop) */}
         <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
           <Link href="/rides/find" className="hover:text-white transition-colors">
@@ -97,8 +70,35 @@ const Header = ({ transparent = false }: HeaderProps) => {
           </Link>
         </div>
 
-        {/* CTA (desktop) */}
-        <div className="hidden lg:flex justify-end flex-1">{cta}</div>
+        {/* Sign in stays visible on every width; the menu button joins it below lg. */}
+        <div className="flex flex-1 items-center justify-end gap-4">
+          {cta}
+          <div className="flex lg:hidden">
+            <button
+              type="button"
+              className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-white"
+              onClick={() => setIsOpen(true)}
+              aria-expanded={isOpen}
+              aria-controls="public-mobile-menu"
+            >
+              <span className="sr-only">Open main menu</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
       </nav>
 
       {/* Mobile menu */}

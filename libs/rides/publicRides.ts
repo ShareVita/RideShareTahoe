@@ -54,43 +54,193 @@ const PUBLIC_RIDE_COLUMNS =
   'id, poster_id, posting_type, start_location, end_location, departure_date, departure_time, is_round_trip, return_date, available_seats, total_seats, price_per_seat, car_type, has_awd';
 
 /**
- * Only emit canonical city names, never arbitrary pickup/address segments.
- * Without structured city fields we cannot reliably distinguish a landmark,
- * street, apartment, or town. This intentionally incomplete regional allowlist
- * fails closed; unknown towns need sign-in rather than a risky text heuristic.
+ * Public place names a visitor may see, most specific first within each group.
+ *
+ * Ride locations are free text, so the public page never shows them directly.
+ * It shows a canonical name only when the text names a known resort, region or
+ * town as a whole word. Anything unrecognized (a street, a landmark, "my place")
+ * falls back to a sign-in prompt, so a street address can never leak.
+ */
+const RESORTS: ReadonlyArray<readonly [canonical: string, aliases: readonly string[]]> = [
+  ['Palisades Tahoe', ['Palisades Tahoe', 'Palisades', 'Squaw Valley', 'Alpine Meadows']],
+  ['Northstar', ['Northstar California', 'Northstar']],
+  ['Heavenly', ['Heavenly Mountain Resort', 'Heavenly']],
+  ['Kirkwood', ['Kirkwood Mountain Resort', 'Kirkwood']],
+  ['Sugar Bowl', ['Sugar Bowl']],
+  ['Sierra-at-Tahoe', ['Sierra-at-Tahoe', 'Sierra at Tahoe']],
+  ['Mt. Rose', ['Mt. Rose', 'Mt Rose', 'Mount Rose']],
+  ['Diamond Peak', ['Diamond Peak']],
+  ['Homewood', ['Homewood Mountain Resort', 'Homewood']],
+  ['Boreal', ['Boreal Mountain', 'Boreal']],
+  ['Donner Ski Ranch', ['Donner Ski Ranch']],
+  ['Tahoe Donner', ['Tahoe Donner']],
+  ['Soda Springs', ['Soda Springs']],
+];
+
+const REGIONS: ReadonlyArray<readonly [canonical: string, aliases: readonly string[]]> = [
+  ['South Lake Tahoe', ['South Lake Tahoe', 'South Lake', 'S Lake Tahoe', 'SLT']],
+  ['North Lake Tahoe', ['North Lake Tahoe', 'North Lake']],
+  ['Reno-Tahoe Airport', ['Reno-Tahoe International Airport', 'Reno Tahoe Airport', 'RNO']],
+  ['SFO', ['San Francisco International Airport', 'SFO']],
+  ['San Jose Airport', ['San Jose International Airport', 'SJC']],
+  ['Sacramento Airport', ['Sacramento International Airport', 'SMF']],
+];
+
+const TOWNS: readonly string[] = [
+  // Tahoe basin and Sierra
+  'Truckee',
+  'Tahoe City',
+  'Tahoe Vista',
+  'Kings Beach',
+  'Carnelian Bay',
+  'Tahoma',
+  'Meyers',
+  'Olympic Valley',
+  'Incline Village',
+  'Crystal Bay',
+  'Stateline',
+  'Zephyr Cove',
+  'Glenbrook',
+  'Minden',
+  'Gardnerville',
+  'Carson City',
+  'Reno',
+  'Sparks',
+  'Markleeville',
+  'Pollock Pines',
+  // Sacramento and foothills
+  'West Sacramento',
+  'Sacramento',
+  'Davis',
+  'Woodland',
+  'Elk Grove',
+  'Roseville',
+  'Rocklin',
+  'Lincoln',
+  'Folsom',
+  'El Dorado Hills',
+  'Cameron Park',
+  'Placerville',
+  'Auburn',
+  'Grass Valley',
+  'Nevada City',
+  'Citrus Heights',
+  'Rancho Cordova',
+  // Bay Area
+  'South San Francisco',
+  'San Francisco',
+  'Oakland',
+  'Berkeley',
+  'Alameda',
+  'Emeryville',
+  'Richmond',
+  'El Cerrito',
+  'Albany',
+  'San Leandro',
+  'Hayward',
+  'Fremont',
+  'Union City',
+  'Newark',
+  'Castro Valley',
+  'Dublin',
+  'Pleasanton',
+  'Livermore',
+  'San Ramon',
+  'Danville',
+  'Walnut Creek',
+  'Lafayette',
+  'Orinda',
+  'Moraga',
+  'Concord',
+  'Pleasant Hill',
+  'Martinez',
+  'Antioch',
+  'Pittsburg',
+  'Vallejo',
+  'Benicia',
+  'Napa',
+  'Sonoma',
+  'Santa Rosa',
+  'Petaluma',
+  'Novato',
+  'San Rafael',
+  'Mill Valley',
+  'Sausalito',
+  'Daly City',
+  'San Bruno',
+  'Millbrae',
+  'Burlingame',
+  'San Mateo',
+  'Foster City',
+  'Belmont',
+  'San Carlos',
+  'Redwood City',
+  'Menlo Park',
+  'East Palo Alto',
+  'Palo Alto',
+  'Mountain View',
+  'Los Altos',
+  'Sunnyvale',
+  'Santa Clara',
+  'Cupertino',
+  'San Jose',
+  'Campbell',
+  'Saratoga',
+  'Los Gatos',
+  'Milpitas',
+  'Morgan Hill',
+  'Gilroy',
+  'Half Moon Bay',
+  'Pacifica',
+  'Santa Cruz',
+];
+
+/** The broad fallback when the text names the lake but nothing more specific. */
+const LAKE_TAHOE: readonly [string, readonly string[]] = ['Lake Tahoe', ['Lake Tahoe', 'Tahoe']];
+
+/** A place name followed by one of these is a street ("Oakland Avenue"), not a place. */
+const STREET_SUFFIX =
+  /^\s+(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|way|ln|lane|ct|court|pl|place|pkwy|parkway|hwy|highway|ter|terrace|cir|circle)\b/i;
+
+const PUBLIC_PLACE_HIDDEN = 'Location shared after sign-in';
+
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Whether `alias` appears in `text` as a whole word that is not part of a street name. */
+function namesPlace(text: string, alias: string): boolean {
+  const pattern = new RegExp(`(?<![A-Za-z])${escapeForRegExp(alias)}(?![A-Za-z])`, 'gi');
+  for (const match of text.matchAll(pattern)) {
+    const rest = text.slice(match.index + match[0].length);
+    if (!STREET_SUFFIX.test(rest)) return true;
+  }
+  return false;
+}
+
+/** Longest aliases first, so "South Lake Tahoe" wins over "Tahoe". */
+const PLACE_GROUPS: ReadonlyArray<ReadonlyArray<readonly [string, string]>> = [
+  RESORTS,
+  REGIONS,
+  TOWNS.map((town) => [town, [town]] as const),
+  [LAKE_TAHOE],
+].map((group) =>
+  group
+    .flatMap(([canonical, aliases]) => aliases.map((alias) => [canonical, alias] as const))
+    .sort((a, b) => b[1].length - a[1].length)
+);
+
+/**
+ * The public label for a free-text ride location: a known resort first, then a
+ * region or airport, then a town, then "Lake Tahoe". Unknown text is hidden.
  */
 export function toPublicPlace(location: string): string {
-  const parts = sanitizeLocation(location)
-    .split(',')
-    .map((part) => part.trim().toLowerCase());
-  const cities = [
-    'San Francisco',
-    'Oakland',
-    'Berkeley',
-    'San Jose',
-    'Sacramento',
-    'Davis',
-    'Roseville',
-    'Folsom',
-    'Auburn',
-    'Placerville',
-    'Truckee',
-    'South Lake Tahoe',
-    'Tahoe City',
-    'Tahoe Vista',
-    'Kings Beach',
-    'Carnelian Bay',
-    'Olympic Valley',
-    'Soda Springs',
-    'Incline Village',
-    'Stateline',
-    'Reno',
-    'Sparks',
-    'Carson City',
-  ];
-  return (
-    cities.find((city) => parts.includes(city.toLowerCase())) ?? 'Location shared after sign-in'
-  );
+  const text = sanitizeLocation(location);
+  for (const group of PLACE_GROUPS) {
+    const found = group.find(([, alias]) => namesPlace(text, alias));
+    if (found) return found[0];
+  }
+  return PUBLIC_PLACE_HIDDEN;
 }
 
 /** "Kaia Colban" becomes "Kaia C."; a missing name becomes "Community member". */
