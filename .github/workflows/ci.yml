@@ -3,8 +3,10 @@ name: CI Pipeline
 permissions:
   contents: read
 
+# PRs and the merge queue are validated by pr.yml (the ruleset's required
+# checks). This workflow re-validates main after merge and owns the manual
+# production-migration job.
 on:
-  pull_request:
   push:
     branches: ['main']
   workflow_dispatch:
@@ -16,9 +18,13 @@ on:
 
 jobs:
   supabase-db-push:
-    if: github.event_name == 'workflow_dispatch' && inputs.apply_migrations
+    # Only from main: a dispatch from any other branch would push that
+    # branch's unreviewed migrations to production.
+    if: github.event_name == 'workflow_dispatch' && inputs.apply_migrations && github.ref == 'refs/heads/main'
     needs: [build]
-    environment: production
+    # A dedicated environment, separate from the Vercel-managed "Production"
+    # one, so required reviewers can be added without affecting deployments.
+    environment: supabase-production
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

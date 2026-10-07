@@ -55,8 +55,9 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 
    Update `.env.local` with:
    - Verify Supabase connection values (URL, publishable key, service role key)
-   - Optional `RESEND_API_KEY` for sending emails
-   - Optional `CRON_SECRET_TOKEN` for the deletion cron job (`scripts/setup-deletion-cron.sh` explains how to use this)
+   - `RESEND_API_KEY` for sending emails (optional locally)
+   - `EMAIL_UNSUBSCRIBE_SECRET`: at least 32 random characters, and never rotated once marketing email has gone out (it signs unsubscribe links). **Required in production**: without it every marketing email and the unsubscribe page fail.
+   - `CRON_SECRET` (Vercel Cron) or `CRON_SECRET_TOKEN` (any other scheduler) for the scheduled jobs; the `/api/cron` routes return 503 when neither is set
 
 4. **Open the app**
 
@@ -66,7 +67,7 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 
 - The template lives in `.env.example`; it documents the required Supabase/Resend keys and sets `NODE_ENV=development` by default.
 - `scripts/populate-env-keys.ps1` / `scripts/populate-env-keys.sh` are invoked by the Taskfile to refresh Supabase publishable and service keys when the local stack starts.
-- Optional placeholders for Stripe/OpenAI remain commented for historical reference, but we rely solely on Supabase and Resend for now.
+- Production also needs `SUPABASE_SERVICE_ROLE_KEY` (the public ride board reads through it), `APP_URL=https://www.ridesharetahoe.com` and `NEXT_PUBLIC_APP_URL` (the base for links in emails).
 
 ## Helpful commands
 
@@ -83,13 +84,33 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 
 The live site's responses identify Vercel. The old Cloudflare commands referenced uninstalled adapters and have been removed; use the configured Vercel project for preview deployments and obtain owner approval before production deployment.
 
-CI validates changes without writing the production database. Production migration application is an explicit **CI Pipeline** workflow dispatch with `apply_migrations` enabled, after tests, integration tests, and the build pass. Configure the GitHub `production` environment with required reviewers. Review `supabase db push --dry-run` before dispatch; do not use `--include-all` to bypass migration-history disagreements.
+CI validates changes without writing the production database. `pr.yml` validates every pull request and the merge queue (its job names are the `main` ruleset's required checks). Production migration application is an explicit **CI Pipeline** workflow dispatch from `main` with `apply_migrations` enabled, after tests, integration tests, and the build pass. It runs in the `supabase-production` GitHub environment: add required reviewers to that environment (it is separate from the Vercel-managed `Production` environment). Review `supabase db push --dry-run` before dispatch; do not use `--include-all` to bypass migration-history disagreements.
 
 For database security verification when full Supabase cannot run, `scripts/test-horizontal-security.sh` replays migrations and runs real PostgreSQL RLS/trigger regression checks in a new disposable native database. It is not a substitute for Supabase authentication or browser end-to-end checks.
 
-## Cron job helper
+## Scheduled jobs
 
-- `scripts/setup-deletion-cron.sh` guides you through configuring the `CRON_SECRET_TOKEN` and adding the secure endpoint to your scheduler (cron, GitHub Actions, Vercel Cron, etc.).
+`vercel.json` schedules two Vercel Cron jobs (times are UTC):
+
+| Route                                | Schedule    | Does                                                     |
+| ------------------------------------ | ----------- | -------------------------------------------------------- |
+| `/api/cron/process-deletions`        | daily 11:00 | Deletes accounts whose 30-day deletion window has passed |
+| `/api/cron/process-scheduled-emails` | daily 16:00 | Sends due nurture and reminder emails                    |
+
+Both stay inert (HTTP 503) until `CRON_SECRET` is set in the Vercel Production environment, so setting that variable is the switch that turns them on.
+
+**Before setting `CRON_SECRET` the first time**, reconcile `account_deletion_requests` in production. Before this release, "cancel deletion" left the request `pending` and only moved its date out 30 days, so those members would be deleted on the first run. Mark them cancelled first:
+
+```sql
+UPDATE account_deletion_requests
+SET status = 'cancelled'
+WHERE status = 'pending'
+  AND scheduled_deletion_date > created_at + interval '30 days 1 minute';
+```
+
+Then review the remaining `pending` rows by hand.
+
+`/api/cron/process-reengage-emails` is deliberately **not** scheduled: its inactivity query still matches almost every member. `scripts/setup-deletion-cron.sh` prints instructions for schedulers other than Vercel.
 
 ## Verification checklist
 

@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # Instructions only: do not print credentials or enable production jobs.
-BASE_URL=${BASE_URL:-https://ridesharetahoe.com}
+# Use www: the apex domain redirects, and clients drop Authorization on a
+# cross-host redirect, so the scheduler would get 401.
+BASE_URL=${BASE_URL:-https://www.ridesharetahoe.com}
 cat <<EOF
 Account deletion scheduler setup (requires owner approval before enabling):
 
@@ -12,8 +14,9 @@ Account deletion scheduler setup (requires owner approval before enabling):
    Authorization: Bearer \$CRON_SECRET_TOKEN
    GET is also supported for providers that require it. Both methods PROCESS
    deletion requests; neither is a read-only health/status endpoint.
-3. For Vercel Cron, configure its CRON_SECRET to the same value as the app's
-   CRON_SECRET_TOKEN. Do not assume Vercel reads the custom variable name.
+3. On Vercel, vercel.json already schedules this route. Vercel Cron sends
+   CRON_SECRET, which the route accepts directly; set it in the project's
+   Production environment. CRON_SECRET_TOKEN is for any other scheduler.
 4. Read pending/processing requests via the authenticated admin-only endpoint:
    GET $BASE_URL/api/admin/process-deletions
 
