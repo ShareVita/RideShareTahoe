@@ -1,0 +1,81 @@
+import { NextRequest } from 'next/server';
+import { GET as scheduled } from './process-scheduled-emails/route';
+import { GET as reengage } from './process-reengage-emails/route';
+import { GET as deletions, POST as postDeletions } from './process-deletions/route';
+import { processScheduledDeletions } from '@/lib/accountDeletion';
+import { processScheduledEmails, processReengageEmails } from '@/libs/email';
+
+jest.mock('@/lib/accountDeletion', () => ({ processScheduledDeletions: jest.fn() }));
+jest.mock('@/libs/email', () => ({
+  processScheduledEmails: jest.fn(),
+  processReengageEmails: jest.fn(),
+}));
+
+describe.each([
+  ['scheduled', scheduled, processScheduledEmails],
+  ['reengage', reengage, processReengageEmails],
+  ['deletions GET', deletions, processScheduledDeletions],
+  ['deletions POST', postDeletions, processScheduledDeletions],
+] as const)('%s cron authorization', (_name, handler, processor) => {
+  const originalSecret = process.env.CRON_SECRET_TOKEN;
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.CRON_SECRET_TOKEN = 'local-scheduler-secret';
+    (processor as jest.Mock).mockResolvedValue({ processed: 0, errors: [] });
+  });
+  afterAll(() => {
+    if (originalSecret === undefined) delete process.env.CRON_SECRET_TOKEN;
+    else process.env.CRON_SECRET_TOKEN = originalSecret;
+  });
+
+  it.each([
+    undefined,
+    '',
+    'Bearer wrong',
+    'Bearer local-scheduler-secret-extra',
+    'local-scheduler-secret',
+    'Basic local-scheduler-secret',
+    'Bearer undefined',
+  ])('rejects invalid authorization %s before processing', async (authorization) => {
+    const request = new NextRequest('http://localhost/api/cron/test', {
+      headers: { ...(authorization ? { authorization } : {}), cookie: 'logged-in-user-session' },
+    });
+    const response = await handler(request);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Unauthorized' });
+    expect(processor).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, ''])('fails closed when the configured secret is %s', async (secret) => {
+    if (secret === undefined) delete process.env.CRON_SECRET_TOKEN;
+    else process.env.CRON_SECRET_TOKEN = secret;
+    const response = await handler(
+      new NextRequest('http://localhost/api/cron/test', {
+        headers: { authorization: 'Bearer undefined' },
+      })
+    );
+    expect(response.status).toBe(503);
+    expect(processor).not.toHaveBeenCalled();
+  });
+
+  it('accepts only the exact scheduler bearer secret without a user session', async () => {
+    const response = await handler(
+      new NextRequest('http://localhost/api/cron/test', {
+        headers: { authorization: 'Bearer local-scheduler-secret' },
+      })
+    );
+    expect(response.status).toBe(200);
+    expect(processor).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not expose internal failures to the caller', async () => {
+    (processor as jest.Mock).mockRejectedValue(new Error('sensitive provider diagnostics'));
+    const response = await handler(
+      new NextRequest('http://localhost/api/cron/test', {
+        headers: { authorization: 'Bearer local-scheduler-secret' },
+      })
+    );
+    expect(response.status).toBe(500);
+    expect(JSON.stringify(await response.json())).not.toContain('sensitive');
+  });
+});

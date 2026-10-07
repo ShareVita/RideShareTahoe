@@ -79,7 +79,7 @@ export async function processReengageEmails(): Promise<ReengageResult> {
         }
 
         // Send re-engagement email
-        await sendEmail({
+        const event = await sendEmail({
           userId: user.id,
           to: userEmail,
           emailType: 'reengage',
@@ -89,6 +89,10 @@ export async function processReengageEmails(): Promise<ReengageResult> {
           },
         });
 
+        if (event.status === 'skipped') {
+          skipped++;
+          continue;
+        }
         sent++;
         console.log(`Sent re-engagement email to ${userEmail}`);
       } catch (error) {

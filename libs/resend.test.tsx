@@ -100,8 +100,19 @@ describe('sendEmail', () => {
       expect(emailData.html).toBe(mockParams.html);
 
       expect(emailData.headers).toBeDefined();
-      expect(emailData.headers['List-Unsubscribe']).toContain(config.resend.supportEmail);
+      expect(emailData.headers['List-Unsubscribe']).toBeUndefined();
       expect(emailData.headers['X-Entity-Ref-ID']).toBeDefined();
+    });
+
+    it('adds one-click headers only for an explicit marketing unsubscribe URL', async () => {
+      const unsubscribeUrl = 'https://ridesharetahoe.com/api/email/unsubscribe?token=signed';
+      await resendModule.sendEmail({ ...mockParams, unsubscribeUrl });
+      expect(mockResendSend.mock.calls[0][0].headers).toEqual(
+        expect.objectContaining({
+          'List-Unsubscribe': `<${unsubscribeUrl}>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        })
+      );
     });
 
     it('should strip HTML tags to create text content if text is missing', async () => {

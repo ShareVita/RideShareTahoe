@@ -37,9 +37,11 @@ const mockSupabaseChain = {
   update: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
   gte: jest.fn().mockReturnThis(),
+  in: jest.fn().mockReturnThis(),
   order: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   single: jest.fn(),
+  maybeSingle: jest.fn(),
 };
 
 /**
@@ -109,6 +111,7 @@ describe('Email Service', () => {
     mockSupabaseChain.order.mockClear().mockReturnThis();
     mockSupabaseChain.limit.mockClear().mockReturnThis();
     mockSupabaseChain.single.mockReset();
+    mockSupabaseChain.maybeSingle.mockImplementation(() => mockSupabaseChain.single());
 
     mockFrom.mockClear().mockReturnValue(mockSupabaseChain);
     mockCreateServiceClient.mockClear().mockReturnValue({ from: mockFrom });
@@ -121,6 +124,59 @@ describe('Email Service', () => {
 
   // #region Test Cases
   describe('sendEmail', () => {
+    it('logs skipped marketing without rendering or contacting Resend after durable opt-out', async () => {
+      mockSupabaseChain.single.mockResolvedValueOnce({
+        data: { marketing_unsubscribed_at: '2026-10-01' },
+        error: null,
+      });
+      mockSupabaseChain.single.mockResolvedValueOnce({
+        data: { ...mockEmailEvent, email_type: 'reengage' },
+        error: null,
+      });
+      const result = await sendEmail({ ...baseEmailParams, emailType: 'reengage' });
+      expect(result.status).toBe('skipped');
+      expect(mockedResendSendEmail).not.toHaveBeenCalled();
+      expect(mockedLoadEmailTemplate).not.toHaveBeenCalled();
+      expect(mockSupabaseChain.update).toHaveBeenCalledWith({ status: 'skipped' });
+    });
+
+    it('checks opt-out again on retries and fails closed on preference errors', async () => {
+      mockSupabaseChain.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'preference unavailable' },
+      });
+      await expect(sendEmail({ ...baseEmailParams, emailType: 'nurture_day3' })).rejects.toThrow(
+        'preference unavailable'
+      );
+      expect(mockedResendSendEmail).not.toHaveBeenCalled();
+      expect(mockSupabaseChain.insert).not.toHaveBeenCalled();
+    });
+
+    it('adds signed visible unsubscribe and headers to explicit marketing content', async () => {
+      process.env.EMAIL_UNSUBSCRIBE_SECRET = 'test-only-secret-with-at-least-32-characters';
+      mockSupabaseChain.single.mockResolvedValueOnce({
+        data: { marketing_unsubscribed_at: null },
+        error: null,
+      });
+      mockSupabaseChain.single.mockResolvedValueOnce({ data: mockEmailEvent, error: null });
+      mockedResendSendEmail.mockResolvedValue({ id: 'marketing-id' });
+      await sendEmail({
+        ...baseEmailParams,
+        userId: '11111111-1111-4111-8111-111111111111',
+        emailType: 'bulk_announcement',
+        subject: 'News',
+        html: '<p>News</p>',
+        text: 'News',
+      });
+      expect(mockedResendSendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          html: expect.stringContaining('/unsubscribe?token='),
+          text: expect.stringContaining('Unsubscribe from promotional emails:'),
+          unsubscribeUrl: expect.stringContaining('/api/email/unsubscribe?token='),
+        })
+      );
+    });
+
     it('should send an email using a template', async () => {
       /**
        * Mock the database flow for a new email:
@@ -238,6 +294,7 @@ describe('Email Service', () => {
       const result = await sendEmail(baseEmailParams);
 
       expect(mockSupabaseChain.select).toHaveBeenCalledWith('id, status');
+      expect(mockSupabaseChain.in).toHaveBeenCalledWith('status', ['sent', 'queued']);
       expect(mockedResendSendEmail).not.toHaveBeenCalled();
       expect(result).toEqual(fullExistingEvent);
     });

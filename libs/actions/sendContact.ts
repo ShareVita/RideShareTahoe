@@ -2,7 +2,8 @@
 
 import { z } from 'zod';
 import { headers } from 'next/headers';
-import { rateLimit } from '@/lib/ratelimit';
+import { checkSupabaseRateLimit } from '@/libs/rateLimit';
+import { createAdminClient } from '@/lib/supabase/server';
 import config from '@/config';
 
 const contactSchema = z.object({
@@ -49,10 +50,18 @@ export async function sendContact(formData: FormData) {
 
     // Rate limiting
     const headersList = await headers();
-    const ip = headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip') ?? 'unknown';
+    const ip =
+      headersList.get('x-forwarded-for')?.split(',')[0].trim() ??
+      headersList.get('x-real-ip') ??
+      'unknown';
 
-    const rateLimitOk = await rateLimit(ip, 'contact:submit', 5, 600); // 5 submissions per 10 minutes
-    if (!rateLimitOk) {
+    const rateLimitResult = await checkSupabaseRateLimit(
+      createAdminClient(),
+      `contact:${ip}`,
+      'contact:submit',
+      { maxRequests: 5, windowSeconds: 600 }
+    );
+    if (!rateLimitResult.success) {
       return {
         ok: false,
         errors: {

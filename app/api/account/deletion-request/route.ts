@@ -17,13 +17,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { reason } = body;
 
+    if (reason != null && (typeof reason !== 'string' || reason.trim().length > 500)) {
+      return NextResponse.json({ error: 'Reason must be at most 500 characters' }, { status: 400 });
+    }
+
     // Check if user already has a pending deletion request
     const { data: existingRequest, error: checkError } = await supabase
       .from('account_deletion_requests')
       .select('*')
       .eq('user_id', user.id)
-      .eq('status', 'pending')
-      .single();
+      .in('status', ['pending', 'processing'])
+      .limit(1)
+      .maybeSingle();
 
     if (checkError && checkError.code !== 'PGRST116') {
       // PGRST116 = no rows returned
@@ -44,12 +49,18 @@ export async function POST(request: NextRequest) {
       .from('account_deletion_requests')
       .insert({
         user_id: user.id,
-        reason: reason || null,
+        reason: reason?.trim() || null,
       })
       .select()
       .single();
 
     if (insertError) {
+      if (insertError.code === '23505') {
+        return NextResponse.json(
+          { error: 'You already have an active deletion request' },
+          { status: 409 }
+        );
+      }
       throw insertError;
     }
 
@@ -153,21 +164,16 @@ export async function DELETE(request: NextRequest) {
 
     console.log(`User authenticated: ${user.id}`);
 
-    // When cancelling, we need to start a new 30-day countdown
-    // So we update the scheduled_deletion_date to 30 days from now
-    const newScheduledDate = new Date();
-    newScheduledDate.setDate(newScheduledDate.getDate() + 30);
-
     const { data: updatedRequest, error: updateError } = await supabase
       .from('account_deletion_requests')
       .update({
-        scheduled_deletion_date: newScheduledDate.toISOString(),
-        processed_at: null, // Reset processed_at since we're starting fresh
+        status: 'cancelled',
+        processed_at: null,
       })
       .eq('user_id', user.id)
       .eq('status', 'pending')
       .select()
-      .single();
+      .maybeSingle();
 
     if (updateError) {
       return handleUpdateError(updateError);
@@ -187,10 +193,8 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message:
-        'Account deletion request cancelled successfully. A new 30-day countdown has started.',
+      message: 'Account deletion request cancelled successfully.',
       duration: duration,
-      newScheduledDate: newScheduledDate.toISOString(),
     });
   } catch (error: unknown) {
     return handleCancellationError(error, startTime);

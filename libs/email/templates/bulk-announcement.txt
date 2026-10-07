@@ -18,4 +18,4 @@ Website: https://ridesharetahoe.com
 Support: support@ridesharetahoe.com
 
 You're receiving this email because you're a member of RideShareTahoe.
-If you'd like to unsubscribe from these announcements, you can update your email preferences in your account settings.
+Unsubscribe from promotional emails: {{unsubscribeUrl}}

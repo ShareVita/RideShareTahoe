@@ -98,6 +98,7 @@ type EmailParams = {
   text?: string;
   html?: string;
   replyTo?: string;
+  unsubscribeUrl?: string;
 };
 
 /**
@@ -112,7 +113,14 @@ type EmailParams = {
  * @param {string} [params.replyTo] - The email address to set as the "Reply-To" address.
  * @returns {Promise<Object>} A Promise that resolves with the email sending result data.
  */
-export const sendEmail = async ({ to, subject, text, html, replyTo }: EmailParams) => {
+export const sendEmail = async ({
+  to,
+  subject,
+  text,
+  html,
+  replyTo,
+  unsubscribeUrl,
+}: EmailParams) => {
   // Wait to respect rate limit
   await waitForRateLimit();
   // Validate content for deliverability
@@ -145,7 +153,12 @@ export const sendEmail = async ({ to, subject, text, html, replyTo }: EmailParam
     replyTo,
     headers: {
       'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-      'List-Unsubscribe': `<mailto:${config.resend.supportEmail}?subject=Unsubscribe>`,
+      ...(unsubscribeUrl
+        ? {
+            'List-Unsubscribe': `<${unsubscribeUrl}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          }
+        : {}),
     },
     react: reactContent,
   };

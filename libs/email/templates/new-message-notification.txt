@@ -20,4 +20,4 @@ The RideShareTahoe Team 🏔️
 RideShareTahoe is a community platform connecting the Bay Area to Lake Tahoe.
 
 You received this notification because you have a new message on RideShareTahoe. 
-You can manage your notification preferences in your account settings or unsubscribe here: {{unsubscribeUrl}}
+Promotional email preferences do not affect message notifications. Contact support: {{supportEmail}}

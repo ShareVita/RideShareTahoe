@@ -124,7 +124,7 @@ describe('processReengageEmails', () => {
     mockChain.limit.mockResolvedValue(mockSuccess([{ id: 1 }]));
     setupComplexNotChain(mockSuccess([inactiveUser1]));
     mockChain.single.mockResolvedValue(mockSuccess(null));
-    (sendEmail as jest.Mock).mockResolvedValue(undefined);
+    (sendEmail as jest.Mock).mockResolvedValue({ status: 'sent' });
 
     const result = await processReengageEmails();
 

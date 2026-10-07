@@ -9,6 +9,7 @@ export interface ScheduledEmail {
   run_after: string;
   payload: EmailPayload;
   picked_at: string | null;
+  status: 'pending' | 'sent' | 'cancelled';
   created_at: string;
 }
 
@@ -40,6 +41,7 @@ export async function processScheduledEmails(): Promise<{
       .select('*')
       .lte('run_after', new Date().toISOString())
       .is('picked_at', null)
+      .eq('status', 'pending')
       .order('run_after', { ascending: true })
       .limit(100); // Process in batches
 
@@ -56,18 +58,24 @@ export async function processScheduledEmails(): Promise<{
 
     // Process each scheduled email
     for (const scheduledEmail of scheduledEmails) {
+      let accepted = false;
       try {
         // Mark as picked up to prevent duplicate processing
-        const { error: pickupError } = await supabase
+        const { data: claimed, error: pickupError } = await supabase
           .from('scheduled_emails')
           .update({ picked_at: new Date().toISOString() })
-          .eq('id', scheduledEmail.id);
+          .eq('id', scheduledEmail.id)
+          .eq('status', 'pending')
+          .is('picked_at', null)
+          .select('id')
+          .maybeSingle();
 
         if (pickupError) {
           console.error(`Failed to mark email ${scheduledEmail.id} as picked up:`, pickupError);
           errors.push({ id: scheduledEmail.id, error: pickupError.message });
           continue;
         }
+        if (!claimed) continue;
 
         // Get user email from user_private_info (parallel queries for efficiency)
         const [{ data: profile }, { data: privateInfo }] = await Promise.all([
@@ -80,26 +88,48 @@ export async function processScheduledEmails(): Promise<{
         ]);
 
         if (!profile || !privateInfo?.email) {
-          console.error(`User not found for scheduled email ${scheduledEmail.id}`);
-          errors.push({ id: scheduledEmail.id, error: 'User not found or missing email' });
-          continue;
+          throw new Error('User not found or missing email');
         }
 
         const user = { first_name: profile.first_name, email: privateInfo.email };
 
         // Send the email
-        await sendEmail({
+        const event = await sendEmail({
           userId: scheduledEmail.user_id,
           to: user.email,
           emailType: scheduledEmail.email_type as EmailType,
           payload: scheduledEmail.payload as EmailPayload,
         });
+        accepted = true;
+
+        const { error: completionError } = await supabase
+          .from('scheduled_emails')
+          .update({ status: event.status === 'skipped' ? 'cancelled' : 'sent' })
+          .eq('id', scheduledEmail.id);
+        if (completionError) throw new Error(completionError.message);
 
         processed++;
         console.log(
           `Successfully processed scheduled email ${scheduledEmail.id} (${scheduledEmail.email_type})`
         );
       } catch (error) {
+        // Do not retry a provider-accepted send after a completion-write failure.
+        // Manual reconciliation: inspect email_events.external_message_id and
+        // Resend's delivery record. Mark this schedule sent if accepted (cancelled
+        // for an opt-out). Clear picked_at only after confirming no send occurred.
+        // A hard-crashed claim also needs this check; elapsed time alone is unsafe.
+        if (!accepted) {
+          const { error: releaseError } = await supabase
+            .from('scheduled_emails')
+            .update({ picked_at: null })
+            .eq('id', scheduledEmail.id)
+            .eq('status', 'pending');
+          if (releaseError)
+            errors.push({
+              id: scheduledEmail.id,
+              error: `Failed to release claim: ${releaseError.message}`,
+            });
+        }
         console.error(`Error processing scheduled email ${scheduledEmail.id}:`, error);
         errors.push({
           id: scheduledEmail.id,

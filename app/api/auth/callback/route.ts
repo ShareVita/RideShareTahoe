@@ -22,8 +22,6 @@ interface Profile {
   last_name: string | null;
   profile_photo_url: string | null;
   bio: string | null;
-  role: string | null;
-  phone_number: string | null;
   display_lat: number | null;
   display_lng: number | null;
 }
@@ -47,19 +45,19 @@ function determineRedirectPath(
   }
 
   // Check profile completeness for existing users
-  // Treat bio as optional; require role, phone, and a verified location
-  const hasRole: boolean = !!profile.role && profile.role.trim().length > 0;
+  // Role was removed from profiles. Require names, private phone and location.
+  const hasNames = !!profile.first_name?.trim() && !!profile.last_name?.trim();
   const hasLocation: boolean = profile.display_lat !== null && profile.display_lng !== null;
 
   console.log('📊 Profile completeness check:');
-  console.log('   ✓ Role:', hasRole ? '✅ Complete' : '❌ Missing');
+  console.log('   ✓ Names:', hasNames ? '✅ Complete' : '❌ Missing');
   console.log('   ✓ Phone:', hasPhonePrivate ? '✅ Complete' : '❌ Missing');
   console.log(
     '   ✓ Location:',
     hasLocation ? '✅ Verified (display_lat/lng present)' : '❌ Missing'
   );
 
-  if (hasRole && hasPhonePrivate && hasLocation) {
+  if (hasNames && hasPhonePrivate && hasLocation) {
     console.log('✅ PROFILE COMPLETE → Redirecting to /community');
     return `${finalRedirectBaseUrl}/community?${cacheBust}`;
   } else {
@@ -80,6 +78,8 @@ async function hasWelcomeEmailBeenSent(
     .select('id')
     .eq('user_id', userId)
     .eq('email_type', 'welcome')
+    .eq('status', 'sent')
+    .limit(1)
     .maybeSingle();
 
   return !!welcomeEmailRecord;
@@ -108,10 +108,10 @@ async function processAuthenticatedUser(
     .single();
 
   const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabase, user.id);
-  const isNewUser: boolean = !welcomeAlreadySent;
+  const isNewUser: boolean = !existingProfile?.first_name;
   console.log(
     isNewUser
-      ? `🆕 NEW USER DETECTED (no welcome email sent yet) - ${sanitizeForLog(user.id)}`
+      ? `🆕 NEW USER DETECTED (profile not set up yet) - ${sanitizeForLog(user.id)}`
       : `👤 EXISTING USER - ${sanitizeForLog(user.id)}`
   );
 
@@ -168,7 +168,7 @@ async function processAuthenticatedUser(
     return NextResponse.redirect(new URL('/login?error=profile_update_failed', requestUrl.origin));
   }
 
-  if (isNewUser && user.email) {
+  if (!welcomeAlreadySent && user.email) {
     try {
       await recordUserActivity({
         userId: user.id,

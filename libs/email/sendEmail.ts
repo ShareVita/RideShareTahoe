@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { sendEmail as resendSendEmail } from '@/libs/resend';
 import { EmailPayload, loadEmailTemplate, ResendSendResult } from './templates';
+import { canSendMarketingEmail, getUnsubscribeUrls, MARKETING_EMAIL_TYPES } from './preferences';
 
 export type EmailType =
   | 'welcome'
@@ -52,6 +53,21 @@ export async function sendEmail({
 }: SendEmailParams): Promise<EmailEvent> {
   const supabase = createAdminClient();
 
+  const marketing = MARKETING_EMAIL_TYPES.has(emailType);
+  if (marketing && !(await canSendMarketingEmail(supabase, userId))) {
+    const event = await createInitialEvent(
+      supabase,
+      userId,
+      emailType,
+      to,
+      subject || emailType,
+      payload
+    );
+    await updateEventStatus(supabase, event.id, 'skipped');
+    return { ...event, status: 'skipped' } as EmailEvent;
+  }
+  const unsubscribeUrls = marketing ? getUnsubscribeUrls(userId) : undefined;
+
   // 1. Check idempotency
   const existingEvent = await checkIdempotency(supabase, userId, emailType);
   if (existingEvent) return existingEvent;
@@ -62,7 +78,7 @@ export async function sendEmail({
     subject,
     html,
     text,
-    payload
+    unsubscribeUrls ? { ...payload, unsubscribeUrl: unsubscribeUrls.page } : payload
   );
 
   // 3. Create initial event
@@ -82,6 +98,7 @@ export async function sendEmail({
       subject: finalSubject,
       html: finalHtml,
       text: finalText,
+      ...(unsubscribeUrls ? { unsubscribeUrl: unsubscribeUrls.oneClick } : {}),
     });
 
     const resendData = resendResult as ResendSendResult;
@@ -130,7 +147,10 @@ async function checkIdempotency(
     .select('id, status')
     .eq('user_id', userId)
     .eq('email_type', emailType)
-    .single();
+    .in('status', ['sent', 'queued'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (existingEvent) {
     console.log('Email already sent to user, skipping', { emailType, userId });
@@ -161,9 +181,18 @@ async function prepareEmailContent(
 
   if (!html && !text) {
     const template = await loadEmailTemplate(emailType, payload);
-    finalSubject = template.subject;
+    finalSubject = subject || template.subject;
     finalHtml = template.html;
     finalText = template.text;
+  }
+
+  if (MARKETING_EMAIL_TYPES.has(emailType) && payload.unsubscribeUrl) {
+    const url = String(payload.unsubscribeUrl);
+    // Explicit bulk content must also carry a visible unsubscribe link.
+    if (finalHtml && !finalHtml.includes(url))
+      finalHtml += `<p><a href="${url}">Unsubscribe from promotional emails</a></p>`;
+    if (finalText && !finalText.includes(url))
+      finalText += `\n\nUnsubscribe from promotional emails: ${url}`;
   }
 
   // Ensure we have required content
@@ -216,11 +245,15 @@ async function createInitialEvent(
 async function updateEventStatus(
   supabase: SupabaseClient,
   eventId: number,
-  status: 'sent' | 'failed',
+  status: 'sent' | 'failed' | 'skipped',
   externalMessageId?: string,
   errorMessage?: string
 ) {
-  const updateData: { status: 'sent' | 'failed'; external_message_id?: string; error?: string } = {
+  const updateData: {
+    status: 'sent' | 'failed' | 'skipped';
+    external_message_id?: string;
+    error?: string;
+  } = {
     status,
   };
 
