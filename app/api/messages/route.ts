@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { TAHOE_TIME_ZONE } from '@/lib/dateFormat';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -184,13 +185,23 @@ export async function POST(request: NextRequest) {
       if (recipient_id !== user.id) {
         const adminSupabase = createAdminClient();
 
-        // Fetch both recipient (with email) and sender data in parallel
-        const [recipient, senderResult] = await Promise.all([
+        // One email per unread stretch, not one per message: if the recipient
+        // still has an earlier unread message in this thread, they were already
+        // notified and have not opened it yet.
+        const [recipient, senderResult, earlierUnread] = await Promise.all([
           getUserWithEmail(adminSupabase, recipient_id),
           adminSupabase.from('profiles').select('first_name, last_name').eq('id', user.id).single(),
+          adminSupabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('conversation_id', conversationId)
+            .eq('recipient_id', recipient_id)
+            .eq('is_read', false)
+            .neq('id', message.id),
         ]);
+        const alreadyNotified = (earlierUnread.count ?? 0) > 0;
 
-        if (recipient?.email && senderResult.data) {
+        if (recipient?.email && senderResult.data && !alreadyNotified) {
           const sender = senderResult.data;
           await sendEmail({
             userId: recipient_id,
@@ -202,8 +213,12 @@ export async function POST(request: NextRequest) {
               senderInitial: (sender.first_name || 'U')[0].toUpperCase(),
               messagePreview:
                 trimmedContent.substring(0, 100) + (trimmedContent.length > 100 ? '...' : ''),
-              messageTime: new Date().toLocaleString(),
-              messageUrl: `${getAppUrl()}/messages/${message.id}`,
+              messageTime: new Date().toLocaleString('en-US', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: TAHOE_TIME_ZONE,
+              }),
+              messageUrl: `${getAppUrl()}/messages?conversation=${encodeURIComponent(conversationId)}`,
               threadId: conversationId,
             },
           });

@@ -9,6 +9,12 @@ INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
   ('00000000-0000-4000-8000-000000000004', 'insert@example.test', '{}');
 UPDATE public.profiles SET is_admin = true WHERE id = '00000000-0000-4000-8000-000000000002';
 DELETE FROM public.profiles WHERE id = '00000000-0000-4000-8000-000000000004';
+INSERT INTO public.conversations (id, participant1_id, participant2_id) VALUES
+  ('00000000-0000-4000-8000-0000000000c1', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000000003');
+INSERT INTO public.messages (id, conversation_id, sender_id, recipient_id, content) VALUES
+  ('00000000-0000-4000-8000-0000000000e1', '00000000-0000-4000-8000-0000000000c1',
+   '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000001', 'original');
 
 SET LOCAL ROLE anon;
 SELECT set_config('request.jwt.claims', '{"role":"anon"}', true);
@@ -27,7 +33,18 @@ BEGIN
     RAISE EXCEPTION 'FAIL anonymous admin search allowed';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
-  RAISE NOTICE 'PASS anonymous base-table reads and private-email RPC denied';
+  BEGIN
+    PERFORM public.cleanup_old_rate_limits(0);
+    RAISE EXCEPTION 'FAIL anonymous rate-limit reset allowed';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    PERFORM public.check_rate_limit('anon:probe', 'test', 5, 60);
+    RAISE EXCEPTION 'FAIL anonymous check_rate_limit allowed';
+  EXCEPTION WHEN raise_exception OR insufficient_privilege THEN
+    IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+  END;
+  RAISE NOTICE 'PASS anonymous base-table reads, private-email RPC and rate-limit reset denied';
 END $$;
 
 SET LOCAL ROLE authenticated;
@@ -58,6 +75,21 @@ BEGIN
     WHERE id = '00000000-0000-4000-8000-000000000003';
   GET DIAGNOSTICS affected = ROW_COUNT;
   IF affected <> 0 THEN RAISE EXCEPTION 'FAIL other profile modified'; END IF;
+  UPDATE public.messages SET is_read = true WHERE id = '00000000-0000-4000-8000-0000000000e1';
+  GET DIAGNOSTICS affected = ROW_COUNT;
+  IF affected <> 1 THEN RAISE EXCEPTION 'FAIL recipient cannot mark message read'; END IF;
+  BEGIN
+    UPDATE public.messages SET content = 'forged', sender_id = auth.uid()
+      WHERE id = '00000000-0000-4000-8000-0000000000e1';
+    RAISE EXCEPTION 'FAIL recipient rewrote a received message';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  RAISE NOTICE 'PASS recipient can mark read but cannot rewrite messages';
+  BEGIN
+    PERFORM public.cleanup_old_rate_limits(0);
+    RAISE EXCEPTION 'FAIL member rate-limit reset allowed';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
   BEGIN
     PERFORM public.search_users('', 0, 10);
     RAISE EXCEPTION 'FAIL member admin search allowed';
@@ -103,7 +135,13 @@ BEGIN
     AND is_banned = true) THEN RAISE EXCEPTION 'FAIL admin moderation'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.search_users('owner@example.test', 0, 10)
     WHERE email = 'owner@example.test') THEN RAISE EXCEPTION 'FAIL admin email search'; END IF;
+  BEGIN
+    UPDATE public.profiles SET is_admin = true WHERE id = '00000000-0000-4000-8000-000000000001';
+    RAISE EXCEPTION 'FAIL admin granted admin from a member session';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
   RAISE NOTICE 'PASS authenticated persisted admin moderation and private-email search';
+  RAISE NOTICE 'PASS signed-in admin cannot grant admin';
 END $$;
 
 SELECT set_config('request.jwt.claims', '{"role":"authenticated","sub":"00000000-0000-4000-8000-000000000001"}', true);
@@ -125,6 +163,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = '00000000-0000-4000-8000-000000000001'
     AND is_banned = false) THEN RAISE EXCEPTION 'FAIL service role moderation'; END IF;
   RAISE NOTICE 'PASS trusted service-role moderation';
+  IF (public.check_rate_limit('service:bulk', 'test', 5, 60)->>'allowed')::boolean IS NOT TRUE THEN
+    RAISE EXCEPTION 'FAIL service role rejected by check_rate_limit';
+  END IF;
+  RAISE NOTICE 'PASS service role can use check_rate_limit';
 END $$;
 
 RESET ROLE;

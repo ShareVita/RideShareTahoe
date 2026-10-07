@@ -29,20 +29,25 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  privileged boolean :=
+  -- Server-side tooling: the service-role key or a direct postgres session.
+  trusted boolean :=
     auth.role() = 'service_role'
-    OR (session_user = 'postgres' AND current_setting('role') NOT IN ('anon', 'authenticated'))
-    OR public.is_profile_admin();
+    OR (session_user = 'postgres' AND current_setting('role') NOT IN ('anon', 'authenticated'));
+  -- Signed-in admins may ban and unban from the admin UI, but may not grant or
+  -- revoke admin. A stolen admin session or an XSS must not be able to mint
+  -- new admins; that stays a service-role operation.
+  moderator boolean := public.is_profile_admin();
 BEGIN
-  IF NOT COALESCE(privileged, false) THEN
+  IF NOT COALESCE(trusted, false) THEN
     IF TG_OP = 'INSERT' THEN
       IF NEW.is_admin IS DISTINCT FROM false OR NEW.is_banned IS DISTINCT FROM false THEN
         RAISE EXCEPTION 'Privileged profile fields cannot be set' USING ERRCODE = '42501';
       END IF;
     ELSE
-      IF NEW.id IS DISTINCT FROM OLD.id
-        OR NEW.is_admin IS DISTINCT FROM OLD.is_admin
-        OR NEW.is_banned IS DISTINCT FROM OLD.is_banned THEN
+      IF NEW.id IS DISTINCT FROM OLD.id OR NEW.is_admin IS DISTINCT FROM OLD.is_admin THEN
+        RAISE EXCEPTION 'Privileged profile fields cannot be changed' USING ERRCODE = '42501';
+      END IF;
+      IF NEW.is_banned IS DISTINCT FROM OLD.is_banned AND NOT COALESCE(moderator, false) THEN
         RAISE EXCEPTION 'Privileged profile fields cannot be changed' USING ERRCODE = '42501';
       END IF;
     END IF;
@@ -62,12 +67,17 @@ CREATE TRIGGER protect_profile_fields
   BEFORE INSERT OR UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.protect_profile_fields();
 
+-- The backfill is not member activity. Without this, every geocoded member's
+-- updated_at (shown as "last online" in the member list) would jump to the
+-- migration time.
+ALTER TABLE public.profiles DISABLE TRIGGER update_profiles_updated_at;
 UPDATE public.profiles
 SET display_lat = round(display_lat, 2), display_lng = round(display_lng, 2),
     display_lat_offset = NULL, display_lng_offset = NULL
 WHERE display_lat IS DISTINCT FROM round(display_lat, 2)
    OR display_lng IS DISTINCT FROM round(display_lng, 2)
    OR display_lat_offset IS NOT NULL OR display_lng_offset IS NOT NULL;
+ALTER TABLE public.profiles ENABLE TRIGGER update_profiles_updated_at;
 
 -- search_users bypasses RLS and returns private email addresses. Both the
 -- execution grant and in-function admin guard are required.
@@ -99,3 +109,15 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.search_users(TEXT, INTEGER, INTEGER) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.search_users(TEXT, INTEGER, INTEGER) TO authenticated;
+
+-- Recipients may only mark a message read. The "update their received
+-- messages" policy has no column limit, so without this a recipient could
+-- rewrite content or sender_id and fabricate a message from another member.
+REVOKE UPDATE ON public.messages FROM anon, authenticated;
+GRANT UPDATE (is_read) ON public.messages TO authenticated;
+
+-- cleanup_old_rate_limits is SECURITY DEFINER and was executable by everyone
+-- through default function grants, so anyone could call it with
+-- p_older_than_hours = 0 and wipe every rate-limit counter. No app code calls
+-- it; keep it for service-role maintenance only.
+REVOKE ALL ON FUNCTION public.cleanup_old_rate_limits(INTEGER) FROM PUBLIC, anon, authenticated;

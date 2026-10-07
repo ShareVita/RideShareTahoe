@@ -39,7 +39,8 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
       passenger_id: 'passenger-1',
       status: 'pending',
       pickup_location: 'Downtown',
-      pickup_time: '2025-12-25T09:15:00Z',
+      // 9:15 AM Pacific (PST); the message must show Tahoe time, not server UTC.
+      pickup_time: '2025-12-25T17:15:00Z',
       ride_id: ride.id,
       ride,
       driver: { first_name: 'Driver', last_name: 'Test' },
@@ -87,6 +88,9 @@ describe('PATCH /api/trips/bookings/[bookingId]', () => {
       rideId: bookingRow.ride_id,
       content: expect.stringContaining('confirmed'),
     });
+    expect((sendConversationMessage as jest.Mock).mock.calls[0][0].content).toContain(
+      'Dec 25, 2025, 9:15 AM'
+    );
   });
 
   it('cancels a pending request and notifies the driver', async () => {

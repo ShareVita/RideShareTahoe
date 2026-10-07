@@ -167,7 +167,11 @@ export default function MessagesPage() {
 
       const safeData = Array.isArray(data) ? data : [];
       setConversations(safeData);
-      setSelectedConversationId((previous) => previous ?? safeData[0]?.id ?? null);
+      // Notification emails link to /messages?conversation=<id>; open that
+      // thread when it belongs to this member, otherwise the most recent one.
+      const linkedId = new URLSearchParams(window.location.search).get('conversation');
+      const linked = safeData.find((conversation) => conversation.id === linkedId);
+      setSelectedConversationId((previous) => previous ?? linked?.id ?? safeData[0]?.id ?? null);
     } catch (error) {
       console.error('Unable to load conversations', error);
       setFetchError('Unable to load conversations right now.');
@@ -323,24 +327,6 @@ export default function MessagesPage() {
   useEffect(() => {
     fetchBookingRequests();
   }, [fetchBookingRequests]);
-
-  useEffect(() => {
-    if (!user || authLoading) return;
-
-    const markAllMessagesRead = async () => {
-      const { error } = await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('recipient_id', user.id)
-        .eq('is_read', false);
-
-      if (error) {
-        console.error('Error marking all messages as read:', error);
-      }
-    };
-
-    markAllMessagesRead();
-  }, [authLoading, supabase, user]);
 
   const markMessagesAsRead = useCallback(async () => {
     if (!currentConversation || !user) {

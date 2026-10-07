@@ -24,11 +24,7 @@ const completeProfile = {
   display_lat: 0,
   display_lng: -120,
 };
-function setup(
-  profile: unknown,
-  welcome: unknown,
-  privateInfo: unknown = { phone_number: '+15555550123' }
-) {
+function setup(profile: unknown, welcome: unknown) {
   const chain = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
@@ -38,9 +34,7 @@ function setup(
     maybeSingle: jest.fn(),
   };
   chain.single.mockResolvedValue({ data: profile, error: null });
-  chain.maybeSingle
-    .mockResolvedValueOnce({ data: welcome, error: null })
-    .mockResolvedValueOnce({ data: privateInfo, error: null });
+  chain.maybeSingle.mockResolvedValueOnce({ data: welcome, error: null });
   (createClient as jest.Mock).mockResolvedValue({
     from: () => chain,
     auth: {
@@ -53,20 +47,21 @@ function setup(
   });
 }
 beforeEach(() => jest.clearAllMocks());
-it('routes complete users without the dropped role column to community, even without welcome-email history', async () => {
+it('routes complete users to community without a role or phone number, even without welcome-email history', async () => {
   setup(completeProfile, null);
   const response = await GET(new NextRequest('http://localhost/api/auth/callback?code=valid'));
   expect(response.headers.get('location')).toMatch(/^http:\/\/localhost\/community\?/);
   expect(sendEmail).not.toHaveBeenCalled();
 });
-it.each([
-  [{ ...completeProfile, last_name: ' ' }, { phone_number: '+15555550123' }],
-  [{ ...completeProfile, display_lat: null }, { phone_number: '+15555550123' }],
-  [completeProfile, { phone_number: ' ' }],
-])(
+it('routes a returning member with names and location to community', async () => {
+  setup(completeProfile, { id: 1 });
+  const response = await GET(new NextRequest('http://localhost/api/auth/callback?code=valid'));
+  expect(response.headers.get('location')).toMatch(/^http:\/\/localhost\/community\?/);
+});
+it.each([[{ ...completeProfile, last_name: ' ' }], [{ ...completeProfile, display_lat: null }]])(
   'routes incomplete users to edit even when a welcome email exists',
-  async (profile, privateInfo) => {
-    setup(profile, { id: 1 }, privateInfo);
+  async (profile) => {
+    setup(profile, { id: 1 });
     const response = await GET(new NextRequest('http://localhost/api/auth/callback?code=valid'));
     expect(response.headers.get('location')).toContain('/profile/edit?');
   }
