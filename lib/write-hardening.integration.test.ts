@@ -17,10 +17,12 @@ const anon = createClient<Database>(url, publishableKey, options);
  * key is always present locally and in CI; the newer `sb_secret_` key is
  * checked too when SUPABASE_SECRET_KEY is provided.
  */
-const serviceRoleKeys = [
+const serviceRoleKeys: Array<[label: string, key: string]> = [
   ['legacy JWT', process.env.SUPABASE_SERVICE_ROLE_KEY!],
-  ...(process.env.SUPABASE_SECRET_KEY ? [['sb_secret', process.env.SUPABASE_SECRET_KEY]] : []),
-] as const;
+];
+if (process.env.SUPABASE_SECRET_KEY) {
+  serviceRoleKeys.push(['sb_secret', process.env.SUPABASE_SECRET_KEY]);
+}
 
 interface Member {
   id: string;
