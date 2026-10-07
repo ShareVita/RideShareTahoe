@@ -70,7 +70,7 @@ export default function InfoGridSection({
         <div className="grid gap-8 md:grid-cols-3">
           {items.map((item) => (
             <article key={`${item.title}-${item.description}`} className={cardClass}>
-              <div className="mb-6 text-5xl filter drop-shadow-md text-center" aria-hidden>
+              <div className="mb-6 text-5xl drop-shadow-md text-center" aria-hidden>
                 {item.icon}
               </div>
               <h3 className="text-2xl font-bold mb-3 font-display text-black dark:text-white text-center">
