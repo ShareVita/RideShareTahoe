@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
 import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
+import { alreadyNotifiedOfUnread } from '@/libs/email/messageNotifications';
 
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -185,21 +186,20 @@ export async function POST(request: NextRequest) {
       if (recipient_id !== user.id) {
         const adminSupabase = createAdminClient();
 
-        // One email per unread stretch, not one per message: if the recipient
-        // still has an earlier unread message in this thread, they were already
-        // notified and have not opened it yet.
-        const [recipient, senderResult, earlierUnread] = await Promise.all([
+        // One email per unread stretch, not one per message (see
+        // alreadyNotifiedOfUnread). If the check itself fails, send anyway: a
+        // duplicate is better than a missed notification.
+        const [recipient, senderResult, alreadyNotified] = await Promise.all([
           getUserWithEmail(adminSupabase, recipient_id),
           adminSupabase.from('profiles').select('first_name, last_name').eq('id', user.id).single(),
-          adminSupabase
-            .from('messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('conversation_id', conversationId)
-            .eq('recipient_id', recipient_id)
-            .eq('is_read', false)
-            .neq('id', message.id),
+          alreadyNotifiedOfUnread(adminSupabase, {
+            recipientId: recipient_id,
+            conversationId,
+          }).catch((checkError: unknown) => {
+            console.error('Could not check earlier message notifications:', checkError);
+            return false;
+          }),
         ]);
-        const alreadyNotified = (earlierUnread.count ?? 0) > 0;
 
         if (recipient?.email && senderResult.data && !alreadyNotified) {
           const sender = senderResult.data;

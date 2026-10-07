@@ -3,6 +3,7 @@ import { POST } from './route';
 import { getAuthenticatedUser } from '@/lib/supabase/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getUserWithEmail, sendEmail } from '@/libs/email';
+import { alreadyNotifiedOfUnread } from '@/libs/email/messageNotifications';
 
 jest.mock('@/lib/supabase/auth', () => ({
   getAuthenticatedUser: jest.fn(),
@@ -13,6 +14,7 @@ jest.mock('@/lib/supabase/server', () => ({ createAdminClient: jest.fn() }));
 jest.mock('@/libs/rateLimit', () => ({
   checkSupabaseRateLimit: jest.fn().mockResolvedValue({ success: true }),
 }));
+jest.mock('@/libs/email/messageNotifications', () => ({ alreadyNotifiedOfUnread: jest.fn() }));
 jest.mock('@/libs/email', () => ({
   getAppUrl: () => 'https://www.ridesharetahoe.com',
   getUserWithEmail: jest.fn(),
@@ -40,19 +42,15 @@ function memberClient() {
   return { from: (table: string) => (table === 'conversations' ? conversations : messages) };
 }
 
-/** The service-role client: the sender's name and the recipient's earlier unread count. */
-function adminClient(earlierUnread: number) {
-  const unreadQuery = {
-    select: () => unreadQuery,
-    eq: () => unreadQuery,
-    neq: async () => ({ count: earlierUnread, error: null }),
-  };
-  const profiles = {
-    select: () => ({
-      eq: () => ({ single: async () => ({ data: { first_name: 'Ava', last_name: 'Skier' } }) }),
+/** The service-role client: only the sender's name is read directly. */
+function adminClient() {
+  return {
+    from: () => ({
+      select: () => ({
+        eq: () => ({ single: async () => ({ data: { first_name: 'Ava', last_name: 'Skier' } }) }),
+      }),
     }),
   };
-  return { from: (table: string) => (table === 'profiles' ? profiles : unreadQuery) };
 }
 
 function send(): Promise<Response> {
@@ -80,12 +78,17 @@ describe('new-message email notification', () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  it('emails once with a link to the thread and the time in Tahoe', async () => {
-    (createAdminClient as jest.Mock).mockReturnValue(adminClient(0));
+  it('emails with a link to the thread and the time in Tahoe', async () => {
+    (createAdminClient as jest.Mock).mockReturnValue(adminClient());
+    (alreadyNotifiedOfUnread as jest.Mock).mockResolvedValue(false);
 
     const response = await send();
 
     expect(response.status).toBe(200);
+    expect(alreadyNotifiedOfUnread).toHaveBeenCalledWith(expect.anything(), {
+      recipientId,
+      conversationId,
+    });
     expect(sendEmail).toHaveBeenCalledTimes(1);
     const { payload } = (sendEmail as jest.Mock).mock.calls[0][0];
     expect(payload.messageUrl).toBe(
@@ -94,12 +97,23 @@ describe('new-message email notification', () => {
     expect(payload.messageTime).toBe('Dec 13, 2026, 6:00 AM');
   });
 
-  it('does not email again while an earlier message in the thread is unread', async () => {
-    (createAdminClient as jest.Mock).mockReturnValue(adminClient(2));
+  it('does not email again when this unread stretch was already emailed', async () => {
+    (createAdminClient as jest.Mock).mockReturnValue(adminClient());
+    (alreadyNotifiedOfUnread as jest.Mock).mockResolvedValue(true);
 
     const response = await send();
 
     expect(response.status).toBe(200);
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('still emails when the earlier-notification check fails', async () => {
+    (createAdminClient as jest.Mock).mockReturnValue(adminClient());
+    (alreadyNotifiedOfUnread as jest.Mock).mockRejectedValue(new Error('database unavailable'));
+
+    const response = await send();
+
+    expect(response.status).toBe(200);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
   });
 });
