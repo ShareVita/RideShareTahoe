@@ -37,7 +37,12 @@ it('preserves marketing analytics but never configures a query-bearing page loca
   const { context, appendChild } = run('/rides/find');
   const configs = context.dataLayer.filter((entry) => entry[0] === 'config');
   expect(configs).toHaveLength(2);
+  expect(configs[0][1]).toBe('G-15EWNNGDEZ');
+  expect(configs[1][1]).toBe('AW-18056537904');
   expect(configs[0][2]).toEqual({ page_location: 'https://ridesharetahoe.com/rides/find' });
   expect(configs[1][2]).toEqual({ page_location: 'https://ridesharetahoe.com/rides/find' });
   expect(appendChild).toHaveBeenCalledTimes(1);
+  expect(appendChild.mock.calls[0][0].src).toBe(
+    'https://www.googletagmanager.com/gtag/js?id=G-15EWNNGDEZ'
+  );
 });
