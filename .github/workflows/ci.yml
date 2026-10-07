@@ -6,9 +6,24 @@ permissions:
 on:
   push:
     branches: ['main']
+  # Production migrations run only when someone dispatches this workflow from
+  # main with apply_migrations checked, after every validation job passes.
+  workflow_dispatch:
+    inputs:
+      apply_migrations:
+        description: 'Apply production migrations after all validation passes'
+        type: boolean
+        default: false
 
 jobs:
   supabase-db-push:
+    # Never on push. A merge to main used to push every pending migration to
+    # production automatically, in parallel with the tests.
+    if: github.event_name == 'workflow_dispatch' && inputs.apply_migrations && github.ref == 'refs/heads/main'
+    needs: [build]
+    # Dedicated environment (separate from Vercel's "Production") so required
+    # reviewers can approve each migration run.
+    environment: supabase-production
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -23,10 +38,9 @@ jobs:
         run: |
           npx supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
           echo "Linked Supabase project ${{ secrets.SUPABASE_PROJECT_REF }}"
-      - name: Push Supabase schema and seeds
+      - name: Push reviewed Supabase migrations
         run: |
-          npx supabase db push --include-all
-          echo "Supabase schema and seeds pushed"
+          npx supabase db push
 
   test:
     runs-on: ubuntu-latest
@@ -135,7 +149,7 @@ jobs:
           RUN_INTEGRATION_TESTS: true
     
   build:
-    needs: [supabase-db-push, test, integration-test]
+    needs: [test, integration-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
