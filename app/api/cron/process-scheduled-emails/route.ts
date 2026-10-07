@@ -1,7 +1,14 @@
 import { processScheduledEmails } from '@/libs/email';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { rejectUnauthorizedCron } from '@/libs/cronAuth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const rejection = rejectUnauthorizedCron(request);
+  if (rejection) return rejection;
+  if (process.env.SCHEDULED_EMAILS_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Scheduled emails are disabled' }, { status: 503 });
+  }
+
   try {
     console.log('Starting scheduled email processing...');
 
@@ -22,7 +29,6 @@ export async function GET() {
     return NextResponse.json(
       {
         error: 'Failed to process scheduled emails',
-        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
