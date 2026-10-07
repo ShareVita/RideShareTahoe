@@ -56,7 +56,7 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
    Update `.env.local` with:
    - Verify Supabase connection values (URL, publishable key, service role key)
    - `RESEND_API_KEY` for sending emails (optional locally)
-   - `EMAIL_UNSUBSCRIBE_SECRET`: at least 32 random characters, and never rotated once marketing email has gone out (it signs unsubscribe links). **Required in production**: without it every marketing email and the unsubscribe page fail.
+   - `EMAIL_UNSUBSCRIBE_SECRET`: at least 32 random characters. It signs unsubscribe links, so rotating it invalidates every link in emails already sent (those pages report an invalid link). Rotate only if it leaks, and expect older emails' unsubscribe links to stop working; newer emails carry working links. **Required in production**: without it every marketing email and the unsubscribe page fail.
    - `CRON_SECRET` (Vercel Cron) or `CRON_SECRET_TOKEN` (any other scheduler) for the scheduled jobs; the `/api/cron` routes return 503 when neither is set
 
 4. **Open the app**
@@ -109,9 +109,14 @@ For database security verification when full Supabase cannot run, `scripts/test-
 | `/api/cron/process-deletions`        | daily 11:00 | Deletes accounts whose 30-day deletion window has passed |
 | `/api/cron/process-scheduled-emails` | daily 16:00 | Sends due nurture and reminder emails                    |
 
-Both stay inert (HTTP 503) until `CRON_SECRET` is set in the Vercel Production environment, so setting that variable is the switch that turns them on.
+Vercel's scheduled runs send `CRON_SECRET`, so they return 503 until it is set. Deletion processing has two other entry points that do not depend on it:
 
-**Before setting `CRON_SECRET` the first time**, reconcile every open deletion request by hand. Before this release, "cancel deletion" left the request `pending` and only moved its date later, so the first deletion run would delete members who believe they cancelled. No query can prove which rows those are, so this is a manual review, not a script.
+- the cron routes also accept `CRON_SECRET_TOKEN` (for schedulers other than Vercel);
+- an admin can run deletion processing with `POST /api/admin/process-deletions`.
+
+Until the reconciliation below is finished, leave **both** `CRON_SECRET` and `CRON_SECRET_TOKEN` unset and do not call the admin processing endpoint.
+
+**Before enabling deletion processing by any of those paths**, reconcile every open deletion request by hand. Before this release, "cancel deletion" left the request `pending` and only moved its date later, so the first deletion run would delete members who believe they cancelled. No query can prove which rows those are, so this is a manual review, not a script.
 
 1. Run this read-only report in the Supabase SQL editor (it changes nothing):
 
@@ -128,13 +133,19 @@ Both stay inert (HTTP 503) until `CRON_SECRET` is set in the Vercel Production e
 
    `changed_after_request` or `date_pushed_out` being true suggests the member pressed the old cancel button. Neither is proof: a member who cancelled within seconds shows neither, and other edits can set `updated_at`.
 
-2. Decide each row yourself (contact the member when unsure). Mark the ones you confirm as cancelled one id at a time:
+2. Decide each `pending` row yourself (contact the member when unsure). Cancel the ones you confirm one id at a time, only while still `pending`:
 
    ```sql
-   UPDATE account_deletion_requests SET status = 'cancelled' WHERE id = '<request id>';
+   UPDATE account_deletion_requests SET status = 'cancelled'
+   WHERE id = '<request id>' AND status = 'pending'
+   RETURNING id;
    ```
 
-3. Set `CRON_SECRET` only when every remaining `pending` row is a deletion you have confirmed should happen.
+   It must return exactly one row. If it returns none, the request changed state; re-run the report.
+
+3. Treat every `processing` row separately. `processing` means a worker claimed the request and may be deleting the account, and marking it cancelled does not stop a deletion in flight. No worker could run before this release, so a `processing` row that predates the deploy is an anomaly. Check in Supabase Auth whether that account still exists, then resolve the row by hand. Do not enable processing while any `processing` row is unexplained.
+
+4. Enable processing (set `CRON_SECRET`, and `CRON_SECRET_TOKEN` only if another scheduler needs it) only when every remaining `pending` row is a deletion you have confirmed should happen and no `processing` row is unexplained.
 
 `/api/cron/process-reengage-emails` is deliberately **not** scheduled: its inactivity query still matches almost every member. `scripts/setup-deletion-cron.sh` prints instructions for schedulers other than Vercel.
 
