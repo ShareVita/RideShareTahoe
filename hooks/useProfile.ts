@@ -16,41 +16,11 @@ export interface UserProfile {
   display_lng: number | null;
   street_address: string | null;
   zip_code: string | null;
-  is_admin?: boolean;
-  is_banned?: boolean;
+  is_admin?: boolean | null;
+  is_banned?: boolean | null;
   pronouns?: string | null;
   // Add other profile fields here
   [key: string]: unknown;
-}
-
-/**
- * Interface for the 'dogs' database table data.
- */
-export interface UserDog {
-  id: string;
-  owner_id: string;
-  name: string;
-  breed: string | null;
-  birthday: string | null;
-  age_years: number;
-  age_months: number;
-  size: string | null;
-  photo_url: string | null;
-  gender: string | null;
-  neutered: boolean;
-  temperament: string[] | null;
-  energy_level: string | null;
-  dog_friendly: boolean;
-  cat_friendly: boolean;
-  kid_friendly: boolean;
-  leash_trained: boolean;
-  crate_trained: boolean;
-  house_trained: boolean;
-  fully_vaccinated: boolean;
-  activities: string[] | null;
-  description: string | null;
-  created_at: string;
-  updated_at: string | null;
 }
 
 /**
@@ -166,38 +136,6 @@ export const useUserProfile = () => {
 };
 
 /**
- * Loads the list of dogs owned by the current user.
- *
- * @returns A query result containing the user's dogs array.
- * @throws {Error} When fetching the dogs list fails.
- */
-export const useUserDogs = () => {
-  const { user } = useUser();
-  const supabase = createClient();
-
-  return useQuery<UserDog[], Error>({
-    queryKey: ['dogs', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from('dogs')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to fetch dogs');
-      }
-
-      return (data as UserDog[]) || [];
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-/**
  * Options for the profile update mutation.
  */
 export interface UpdateProfileOptions {
@@ -282,7 +220,7 @@ export const useUpdateProfile = () => {
         return normalizedNew !== normalizedCurrent;
       });
 
-      let profileResult = currentProfile;
+      let profileResult: Partial<UserProfile> | undefined = currentProfile;
 
       // 1. Update Public Profile (ONLY if there are changes)
       if (changedProfileFields.length > 0) {
@@ -302,7 +240,7 @@ export const useUpdateProfile = () => {
           throw new Error(profileError.message || 'Failed to update public profile');
         }
 
-        profileResult = data;
+        profileResult = { ...currentProfile, ...data };
       }
 
       // 2. Update Private Info (ONLY if there are changes)

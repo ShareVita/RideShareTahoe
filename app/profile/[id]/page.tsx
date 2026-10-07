@@ -14,30 +14,10 @@ import MessageModal from '@/components/MessageModal';
 import BlockModal from '@/components/BlockModal';
 import VehicleDisplay from '@/components/vehicles/VehicleDisplay';
 import { useIsBlocked } from '@/hooks/useIsBlocked';
+import type { Database } from '@/types/database.types';
 
-interface Profile {
-  id: string;
-  first_name: string;
-  last_name: string;
-  profile_photo_url?: string;
-  city?: string;
-  state?: string;
-  bio?: string;
-
-  pronouns?: string | null;
-  support_preferences?: string[];
-  support_story?: string;
-  [key: string]: unknown;
-}
-
-interface ProfileSocials {
-  user_id: string;
-  facebook_url?: string;
-  instagram_url?: string;
-  linkedin_url?: string;
-  airbnb_url?: string;
-  other_social_url?: string;
-}
+type Profile = Database['public']['Tables']['profiles']['Row'];
+type ProfileSocials = Database['public']['Tables']['profile_socials']['Row'];
 
 interface PendingReview {
   meeting_id: string;
@@ -343,52 +323,6 @@ export default function PublicProfilePage() {
           {/* Vehicles */}
           <VehicleDisplay userId={profile.id} />
 
-          {/* Community Support Preferences */}
-          {((profile.support_preferences && profile.support_preferences.length > 0) ||
-            profile.support_story) && (
-            <div className="mb-6 p-4 bg-linear-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                Community Support Preferences
-              </h3>
-
-              {/* Support Preferences */}
-              {profile.support_preferences && profile.support_preferences.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Feels most empowered supporting:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.support_preferences.map((pref) => (
-                      <span
-                        key={pref}
-                        className="inline-flex items-center bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1 rounded-full text-sm border border-blue-200 dark:border-blue-700"
-                      >
-                        {pref === 'elderly_passengers' && '👴 Elderly passengers'}
-                        {pref === 'sick_recovering' && '🏥 Medical transport'}
-                        {pref === 'low_income_families' && '💰 Cost-conscious travelers'}
-                        {pref === 'people_disabilities' && '♿ People with disabilities'}
-                        {pref === 'single_parents' && 'Single parents'}
-                        {pref === 'other' && '🤝 Other'}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Support Story */}
-              {profile.support_story && (
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Additional thoughts:
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    {profile.support_story}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Social Links */}
           {socials &&
             (socials.facebook_url ||
@@ -473,7 +407,7 @@ export default function PublicProfilePage() {
       <MessageModal
         isOpen={isMessageModalOpen}
         onClose={() => setIsMessageModalOpen(false)}
-        recipient={profile ? { id: profile.id, first_name: profile.first_name } : null}
+        recipient={profile ? { id: profile.id, first_name: profile.first_name ?? 'Member' } : null}
         ridePost={null}
       />
 

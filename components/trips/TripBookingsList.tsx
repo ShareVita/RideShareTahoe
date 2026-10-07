@@ -31,7 +31,7 @@ export default function TripBookingsList({
             : "You haven't booked any rides yet."}
         </p>
         <Link
-          href={role === 'driver' ? '/rides/post/driver' : '/rides'}
+          href={role === 'driver' ? '/rides/post' : '/rides/find'}
           className="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
           {role === 'driver' ? 'Post a Ride' : 'Find a Ride'}

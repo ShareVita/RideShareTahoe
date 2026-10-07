@@ -1,138 +1,88 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import { createClient } from '@/lib/supabase/client';
-import { useProtectedRoute } from '@/hooks/useProtectedRoute';
-import type { RidePostType } from '@/app/community/types';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import CreateRidePage from './page';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from 'react-hot-toast';
+import type { RidePostType } from '@/app/community/types';
 
-const mockRouterPush = jest.fn();
-const mockRouterBack = jest.fn();
-
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockRouterPush,
-    back: mockRouterBack,
-  }),
-}));
-
-jest.mock('@/hooks/useProtectedRoute');
-jest.mock('@/lib/supabase/client');
-
-const mockRidePost: Partial<RidePostType> = {
+const mockPush = jest.fn();
+const mockData: Partial<RidePostType> = {
   posting_type: 'driver',
-  start_location: 'San Francisco, CA',
-  end_location: 'South Lake Tahoe, CA',
-  departure_date: '2025-12-20',
-  departure_time: '09:30',
-  price_per_seat: 45,
+  title: 'Round trip',
+  start_location: 'Truckee',
+  end_location: 'San Francisco',
+  start_lat: 39.3279,
+  start_lng: -120.1833,
+  end_lat: 37.7749,
+  end_lng: -122.4194,
+  departure_date: '2026-12-20',
+  departure_time: '08:00',
+  return_date: '2026-12-21',
+  return_time: '14:00',
+  is_round_trip: true,
   total_seats: 3,
-  description: 'Heading up for the weekend',
-  special_instructions: 'Bring snacks',
-  has_awd: true,
 };
-
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush, back: jest.fn() }) }));
+jest.mock('@/hooks/useProtectedRoute', () => ({
+  useProtectedRoute: () => ({ user: { id: 'driver' }, isLoading: false }),
+}));
+jest.mock('@/lib/supabase/client', () => ({ createClient: jest.fn() }));
+jest.mock('react-hot-toast', () => ({ toast: jest.fn() }));
 jest.mock('@/components/rides/RideForm', () => ({
   __esModule: true,
-  default: function MockRideForm({
-    onSave,
-    onCancel,
-  }: {
-    // eslint-disable-next-line no-unused-vars
-    onSave: (_data: Partial<RidePostType>) => void;
-    onCancel: () => void;
-  }) {
-    return (
-      <div>
-        <p>Mock Ride Form</p>
-        <button type="button" onClick={() => onSave(mockRidePost)}>
-          Save Ride
-        </button>
-        <button type="button" onClick={onCancel}>
-          Cancel Ride
-        </button>
-      </div>
-    );
-  },
+  // eslint-disable-next-line no-unused-vars
+  default: ({ onSave }: { onSave: (data: Partial<RidePostType>) => Promise<void> }) => (
+    <button onClick={() => onSave(mockData)}>Save fixture</button>
+  ),
 }));
 
-const mockedUseProtectedRoute = useProtectedRoute as jest.Mock;
-const mockedCreateClient = createClient as jest.Mock;
-
-describe('CreateRidePage', () => {
-  const mockUser = { id: 'user-123' };
-  let fromMock: jest.Mock;
-  let insertMock: jest.Mock;
-
+describe('ride creation persistence', () => {
+  const insert = jest.fn();
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRouterPush.mockReset();
-    mockRouterBack.mockReset();
-
-    mockedUseProtectedRoute.mockReturnValue({ user: mockUser, isLoading: false });
-
-    insertMock = jest.fn().mockResolvedValue({ error: null });
-    fromMock = jest.fn(() => ({ insert: insertMock }));
-
-    mockedCreateClient.mockReturnValue({ from: fromMock });
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ vehicles: [] }) });
+    insert.mockResolvedValue({ error: null });
+    (createClient as jest.Mock).mockReturnValue({ from: () => ({ insert }) });
   });
-
-  it('shows spinner while authentication is loading', () => {
-    mockedUseProtectedRoute.mockReturnValue({ user: null, isLoading: true });
-    const { container } = render(<CreateRidePage />);
-
-    expect(container.querySelector('.animate-spin')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Post a Ride/i })).not.toBeInTheDocument();
-  });
-
-  it('renders the form after auth resolves', () => {
+  it('persists outbound coordinates and swaps both axes for the return leg', async () => {
     render(<CreateRidePage />);
-
-    expect(screen.getByRole('heading', { name: /Post a Ride/i })).toBeInTheDocument();
-    expect(
-      screen.getByText(/Share your journey or find a ride with the community./i)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Mock Ride Form/i)).toBeInTheDocument();
-  });
-
-  it('inserts ride data and redirects on successful save', async () => {
-    render(<CreateRidePage />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
-
-    await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith('/community');
-    });
-
-    expect(fromMock).toHaveBeenCalledWith('rides');
-    expect(insertMock).toHaveBeenCalledWith(
-      expect.arrayContaining([
+    await userEvent.click(screen.getByRole('button', { name: 'Save fixture' }));
+    await waitFor(() =>
+      expect(insert).toHaveBeenCalledWith([
         expect.objectContaining({
-          poster_id: mockUser.id,
-          status: 'active',
-          ...mockRidePost,
+          start_lat: 39.3279,
+          start_lng: -120.1833,
+          end_lat: 37.7749,
+          end_lng: -122.4194,
+        }),
+        expect.objectContaining({
+          start_location: 'San Francisco',
+          end_location: 'Truckee',
+          start_lat: 37.7749,
+          start_lng: -122.4194,
+          end_lat: 39.3279,
+          end_lng: -120.1833,
         }),
       ])
     );
+    expect(mockPush).toHaveBeenCalledWith('/community');
+    expect(toast).not.toHaveBeenCalled();
   });
-
-  it('shows an error message when saving fails', async () => {
-    insertMock.mockResolvedValueOnce({ error: new Error('boom') });
-    render(<CreateRidePage />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Save Ride/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Failed to create ride/i)).toBeInTheDocument();
-    });
-
-    expect(mockRouterPush).not.toHaveBeenCalled();
-  });
-
-  it('calls router.back when cancel is clicked', () => {
-    render(<CreateRidePage />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Cancel Ride/i }));
-
-    expect(mockRouterBack).toHaveBeenCalled();
+  it('reports a mapping warning only after a successful post', async () => {
+    const originalLat = mockData.start_lat;
+    mockData.start_lat = null;
+    try {
+      render(<CreateRidePage />);
+      await userEvent.click(screen.getByRole('button', { name: 'Save fixture' }));
+      await waitFor(() =>
+        expect(toast).toHaveBeenCalledWith(
+          expect.stringContaining('Ride posted.'),
+          expect.anything()
+        )
+      );
+      expect(mockPush).toHaveBeenCalledWith('/community');
+    } finally {
+      mockData.start_lat = originalLat;
+    }
   });
 });

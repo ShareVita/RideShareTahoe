@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import RideForm from './RideForm';
 import { Vehicle } from '@/app/community/types';
 import userEvent from '@testing-library/user-event';
+import { geocodeLocation } from '@/libs/geocoding';
 
 jest.setTimeout(10000);
 
@@ -9,6 +10,7 @@ jest.setTimeout(10000);
 jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn(),
 }));
+jest.mock('@/libs/geocoding', () => ({ geocodeLocation: jest.fn() }));
 
 const mockVehicles: Vehicle[] = [
   {
@@ -39,6 +41,9 @@ describe('RideForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockOnSave.mockResolvedValue(undefined);
+    (geocodeLocation as jest.Mock).mockImplementation(async (place: string) =>
+      place === 'San Francisco' ? { lat: 37.77, lng: -122.42 } : { lat: 39.17, lng: -120.14 }
+    );
   });
 
   it('renders correctly with default driver state', () => {
@@ -104,7 +109,14 @@ describe('RideForm', () => {
     await user.click(screen.getByRole('button', { name: /Post Ride/i }));
 
     await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalled();
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          start_lat: 37.77,
+          start_lng: -122.42,
+          end_lat: 39.17,
+          end_lng: -120.14,
+        })
+      );
     });
   });
 
@@ -145,5 +157,106 @@ describe('RideForm', () => {
         })
       );
     });
+  });
+
+  it('keeps the existing vehicle and coordinates on edit, and restores it after another selection', async () => {
+    const user = userEvent.setup();
+    render(
+      <RideForm
+        isEditing
+        initialData={{
+          title: 'Existing ride',
+          start_location: 'Truckee',
+          end_location: 'Tahoe City',
+          departure_date: '2026-12-25',
+          departure_time: '08:00:00',
+          is_round_trip: true,
+          trip_direction: 'departure',
+          car_type: 'Original SUV',
+          has_awd: true,
+          start_lat: 39.32,
+          start_lng: -120.18,
+          end_lat: 39.17,
+          end_lng: -120.14,
+        }}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        vehicles={mockVehicles}
+      />
+    );
+    expect(screen.getByLabelText(/Select from My Vehicles/i)).toHaveValue('existing');
+    await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'v2');
+    await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'existing');
+    await user.click(screen.getByRole('button', { name: 'Update Ride' }));
+    await waitFor(() =>
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          car_type: 'Original SUV',
+          has_awd: true,
+          start_lat: 39.32,
+          start_lng: -120.18,
+        })
+      )
+    );
+    expect(geocodeLocation).not.toHaveBeenCalled();
+  });
+
+  it('clears stale coordinates when an edited location cannot be mapped, but still saves', async () => {
+    const user = userEvent.setup();
+    (geocodeLocation as jest.Mock).mockResolvedValue(null);
+    render(
+      <RideForm
+        isEditing
+        initialData={{
+          posting_type: 'passenger',
+          title: 'Existing ride',
+          start_location: 'Truckee',
+          end_location: 'Tahoe City',
+          departure_date: '2026-12-25',
+          departure_time: '08:00',
+          start_lat: 39.32,
+          start_lng: -120.18,
+          end_lat: 39.17,
+          end_lng: -120.14,
+        }}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />
+    );
+    await user.clear(screen.getByLabelText(/Start Location/i));
+    await user.type(screen.getByLabelText(/Start Location/i), 'Unmapped location');
+    await user.click(screen.getByRole('button', { name: 'Update Ride' }));
+    await waitFor(() =>
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          start_lat: null,
+          start_lng: null,
+          end_lat: 39.17,
+          end_lng: -120.14,
+        })
+      )
+    );
+  });
+
+  it('rejects a Pacific DST gap before geocoding or saving', async () => {
+    const user = userEvent.setup();
+    render(
+      <RideForm
+        initialData={{
+          posting_type: 'passenger',
+          title: 'DST trip',
+          start_location: 'Truckee',
+          end_location: 'Tahoe City',
+          departure_date: '2026-03-08',
+          departure_time: '02:30',
+        }}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Post Ride' }));
+    expect(screen.getByText(/valid departure date and time in Pacific/i)).toBeInTheDocument();
+    expect(mockOnSave).not.toHaveBeenCalled();
+    expect(geocodeLocation).not.toHaveBeenCalled();
   });
 });

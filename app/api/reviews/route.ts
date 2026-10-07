@@ -4,6 +4,7 @@ import {
   ensureProfileComplete,
 } from '@/lib/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { isReviewableBooking } from '@/libs/reviews/eligibility';
 
 /**
  * Retrieves reviews, optionally filtered by userId.
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Creates a new review for a completed ride booking.
+ * Creates a new review for a past confirmed or completed ride booking.
  * Validates booking status, input fields, and ensures one review per trip per user.
  */
 export async function POST(request: NextRequest) {
@@ -246,7 +247,7 @@ interface Booking {
 }
 
 /**
- * Checks if the user is a participant in the booking and if the trip is completed.
+ * Reviews past confirmed/completed bookings without inferring actual completion.
  */
 function validateBookingEligibility(booking: Booking, userId: string) {
   if (booking.driver_id !== userId && booking.passenger_id !== userId) {
@@ -256,18 +257,9 @@ function validateBookingEligibility(booking: Booking, userId: string) {
     };
   }
 
-  if (booking.status !== 'completed') {
-    return { error: 'You can only review completed trips', status: 400 };
-  }
-
-  // Combine date and time to check if trip has ended
-  const ride = booking.ride;
-  const tripEndDateTime = new Date(`${ride.departure_date}T${ride.departure_time}`);
-  const now = new Date();
-
-  if (now < tripEndDateTime) {
+  if (!isReviewableBooking(booking)) {
     return {
-      error: "You cannot review a trip that hasn't happened yet",
+      error: 'You can only review confirmed or completed bookings after their scheduled departure',
       status: 400,
     };
   }

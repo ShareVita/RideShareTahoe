@@ -11,9 +11,7 @@ const invitationSchema = z.object({
   ride_id: z.uuid(),
   passenger_id: z.uuid(),
   pickup_location: z.string().min(3).max(100),
-  pickup_time: z
-    .string()
-    .refine((value) => !Number.isNaN(Date.parse(value)), 'Invalid pickup timestamp'),
+  pickup_time: z.iso.datetime({ offset: true }),
   driver_notes: z.string().max(500).optional(),
 });
 

@@ -6,6 +6,7 @@ import type {
 } from '@/app/community/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
+import { tahoeDate } from '@/lib/dateFormat';
 
 // Reuse the Supabase browser client type without importing from package.json
 export type CommunitySupabaseClient = SupabaseClient<Database>;
@@ -58,7 +59,7 @@ export const fetchDriverRides = async (
     )
     .eq('posting_type', 'driver')
     .eq('status', 'active')
-    .gte('departure_date', new Date().toISOString().split('T')[0]);
+    .gte('departure_date', tahoeDate());
 
   const query = currentUser ? baseQuery.neq('poster_id', currentUser.id) : baseQuery;
 
@@ -280,7 +281,7 @@ export const fetchAllRides = async (
       { count: 'exact' }
     )
     .eq('status', 'active')
-    .gte('departure_date', new Date().toISOString().split('T')[0]);
+    .gte('departure_date', tahoeDate());
 
   // Filter by posting type if provided
   if (postingType) {

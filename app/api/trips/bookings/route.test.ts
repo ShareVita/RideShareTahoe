@@ -167,6 +167,7 @@ describe('POST /api/trips/bookings', () => {
         status: 'pending',
         confirmed_at: null,
         pickup_location: requestBody.pickup_location,
+        pickup_time: '2025-12-20T16:00:00.000Z',
         passenger_notes: requestBody.passenger_notes,
       })
     );

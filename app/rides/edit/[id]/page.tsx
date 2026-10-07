@@ -6,12 +6,14 @@ import { createClient } from '@/lib/supabase/client';
 import RideForm from '@/components/rides/RideForm';
 import { fetchRideById, updateRide } from '@/libs/community/ridesData';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
-import type { RidePostType } from '@/app/community/types';
+import type { RidePostType, Vehicle } from '@/app/community/types';
+import { toast } from 'react-hot-toast';
 
 export default function EditRidePage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const [ride, setRide] = useState<RidePostType | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,16 @@ export default function EditRidePage({ params }: Readonly<{ params: Promise<{ id
         }
 
         setRide(data);
+        try {
+          const response = await fetch('/api/community/vehicles');
+          if (!response.ok) throw new Error('Vehicle lookup failed');
+          const vehicleData = await response.json();
+          setVehicles(vehicleData.vehicles || []);
+        } catch {
+          toast.error(
+            'Could not load your vehicles. You can keep the current vehicle or try again later.'
+          );
+        }
       } catch (err) {
         console.error('Error loading ride:', err);
         setError('Failed to load ride details');
@@ -62,11 +74,17 @@ export default function EditRidePage({ params }: Readonly<{ params: Promise<{ id
     try {
       const supabase = createClient();
       await updateRide(supabase, ride.id, data);
+      if (data.start_lat == null || data.end_lat == null) {
+        toast(
+          'Ride updated. One or more locations could not be mapped, so it will not appear in those location-filtered searches. Edit the locations to try again.',
+          { duration: 10000 }
+        );
+      }
       router.push(`/community/`); // Redirect to community/my rides eventually
       router.refresh();
     } catch (err) {
       console.error('Error updating ride:', err);
-      // Could show toast here
+      toast.error('Failed to update ride. Your changes have not been saved. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -120,6 +138,7 @@ export default function EditRidePage({ params }: Readonly<{ params: Promise<{ id
               onCancel={handleCancel}
               isLoading={saving}
               isEditing={true}
+              vehicles={vehicles}
             />
           )}
         </div>

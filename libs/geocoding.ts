@@ -38,7 +38,8 @@ export async function geocodeLocation(query: string): Promise<Coordinates | null
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
         searchQuery
-      )}&limit=1&addressdetails=1&countrycodes=us`
+      )}&limit=1&addressdetails=1&countrycodes=us`,
+      { signal: AbortSignal.timeout(8000) }
     );
 
     if (!response.ok) {
@@ -54,6 +55,13 @@ export async function geocodeLocation(query: string): Promise<Coordinates | null
         lng: Number.parseFloat(result.lon),
       };
 
+      if (
+        !Number.isFinite(coords.lat) ||
+        !Number.isFinite(coords.lng) ||
+        Math.abs(coords.lat) > 90 ||
+        Math.abs(coords.lng) > 180
+      )
+        return null;
       return coords;
     }
 

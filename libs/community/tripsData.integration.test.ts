@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { updateTripBooking } from './tripsData';
 import type { TripBookingStatus } from '@/app/community/types';
 import type { Database } from '@/types/database.types';
+import { tahoeDate, tahoeDateTime } from '@/lib/dateFormat';
 
 function uuidv4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replaceAll(/[xy]/g, function (c) {
@@ -94,31 +95,39 @@ describe('Trip Bookings Integration', () => {
     passengerId = passengerAuth.user.id;
 
     // 3. Update Profiles
-    await supabaseAdmin
+    const { error: driverProfileError } = await supabaseAdmin
       .from('profiles')
-      .update({ first_name: 'Driver', last_name: 'Test', role: 'driver' })
+      .update({ first_name: 'Driver', last_name: 'Test' })
       .eq('id', driverId);
-    await supabaseAdmin
+    if (driverProfileError) throw driverProfileError;
+    const { error: passengerProfileError } = await supabaseAdmin
       .from('profiles')
-      .update({ first_name: 'Passenger', last_name: 'Test', role: 'passenger' })
+      .update({ first_name: 'Passenger', last_name: 'Test' })
       .eq('id', passengerId);
+    if (passengerProfileError) throw passengerProfileError;
 
     // 4. Sign In Driver
-    const { data: driverSession } = await supabaseAdmin.auth.signInWithPassword({
-      email: driverEmail,
-      password,
-    });
+    const { data: driverSession, error: driverSignInError } =
+      await supabaseAdmin.auth.signInWithPassword({
+        email: driverEmail,
+        password,
+      });
+    if (driverSignInError || !driverSession.session)
+      throw driverSignInError || new Error('Driver session missing');
     driverClient = createClient<Database>(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: `Bearer ${driverSession.session!.access_token}` } },
+      global: { headers: { Authorization: `Bearer ${driverSession.session.access_token}` } },
     });
 
     // 5. Sign In Passenger
-    const { data: passengerSession } = await supabaseAdmin.auth.signInWithPassword({
-      email: passengerEmail,
-      password,
-    });
+    const { data: passengerSession, error: passengerSignInError } =
+      await supabaseAdmin.auth.signInWithPassword({
+        email: passengerEmail,
+        password,
+      });
+    if (passengerSignInError || !passengerSession.session)
+      throw passengerSignInError || new Error('Passenger session missing');
     passengerClient = createClient<Database>(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: `Bearer ${passengerSession.session!.access_token}` } },
+      global: { headers: { Authorization: `Bearer ${passengerSession.session.access_token}` } },
     });
 
     // 6. Create Ride (as Driver)
@@ -126,7 +135,7 @@ describe('Trip Bookings Integration', () => {
     // Calculate tomorrow's date for a valid future ride
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const tomorrowStr = tahoeDate(tomorrow);
 
     const { error: rideError } = await driverClient.from('rides').insert({
       id: rideId,
@@ -155,7 +164,7 @@ describe('Trip Bookings Integration', () => {
     // but simple ISO string works for timestamp types usually.
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const tomorrowStr = tahoeDate(tomorrow);
 
     const { error } = await driverClient.from('trip_bookings').insert({
       id: bookingId,
@@ -163,19 +172,20 @@ describe('Trip Bookings Integration', () => {
       driver_id: driverId,
       passenger_id: passengerId,
       pickup_location: 'Reno',
-      pickup_time: `${tomorrowStr}T12:00:00`,
+      pickup_time: tahoeDateTime(tomorrowStr, '12:00')!.toISOString(),
       status: 'invited',
       driver_notes: 'Invitation from test',
     });
 
     expect(error).toBeNull();
 
-    const { data: booking } = await driverClient
+    const { data: booking, error: readError } = await driverClient
       .from('trip_bookings')
       .select('*')
       .eq('id', bookingId)
       .single();
 
+    expect(readError).toBeNull();
     expect(booking).toBeDefined();
     if (!booking) throw new Error('Booking not found');
     expect(booking.status).toBe('invited');
@@ -189,12 +199,13 @@ describe('Trip Bookings Integration', () => {
     // Passenger accepts
     await updateTripBooking(passengerClient, bookingId, updateInput);
 
-    const { data: booking } = await passengerClient
+    const { data: booking, error: readError } = await passengerClient
       .from('trip_bookings')
       .select('*')
       .eq('id', bookingId)
       .single();
 
+    expect(readError).toBeNull();
     expect(booking).toBeDefined();
     if (!booking) throw new Error('Booking not found');
     expect(booking.status).toBe('confirmed');

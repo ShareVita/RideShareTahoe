@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTripBookingSchema } from '@/libs/validations/trips';
 import { z } from 'zod';
 import { sendConversationMessage } from '@/lib/supabase/conversations';
+import { tahoeDateTime } from '@/lib/dateFormat';
 
 /**
  * Creates a new trip booking request.
@@ -51,7 +52,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already booked
-    const pickupTimestamp = new Date(`${body.pickup_date}T${body.pickup_time}:00`).toISOString();
+    const pickup = tahoeDateTime(body.pickup_date, body.pickup_time);
+    if (!pickup) {
+      return NextResponse.json({ error: 'Invalid Pacific pickup date or time' }, { status: 400 });
+    }
+    const pickupTimestamp = pickup.toISOString();
     const bookingPayload = {
       pickup_location: body.pickup_location,
       pickup_time: pickupTimestamp,

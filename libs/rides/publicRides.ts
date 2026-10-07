@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types';
 import { sanitizeLocation } from '@/libs/sanitize/location';
+import { tahoeDate } from '@/lib/dateFormat';
 
 /**
  * A ride post as shown to visitors who are not signed in.
@@ -53,17 +54,43 @@ const PUBLIC_RIDE_COLUMNS =
   'id, poster_id, posting_type, start_location, end_location, departure_date, departure_time, is_round_trip, return_date, available_seats, total_seats, price_per_seat, car_type, has_awd';
 
 /**
- * Reduce a free-form location to something safe to show publicly.
- * Drops a leading street address segment ("123 Main St, Oakland, CA" becomes
- * "Oakland, CA") and keeps at most two comma-separated parts.
+ * Only emit canonical city names, never arbitrary pickup/address segments.
+ * Without structured city fields we cannot reliably distinguish a landmark,
+ * street, apartment, or town. This intentionally incomplete regional allowlist
+ * fails closed; unknown towns need sign-in rather than a risky text heuristic.
  */
 export function toPublicPlace(location: string): string {
   const parts = sanitizeLocation(location)
     .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const withoutStreet = parts.length > 1 && /^\d/.test(parts[0]) ? parts.slice(1) : parts;
-  return withoutStreet.slice(0, 2).join(', ');
+    .map((part) => part.trim().toLowerCase());
+  const cities = [
+    'San Francisco',
+    'Oakland',
+    'Berkeley',
+    'San Jose',
+    'Sacramento',
+    'Davis',
+    'Roseville',
+    'Folsom',
+    'Auburn',
+    'Placerville',
+    'Truckee',
+    'South Lake Tahoe',
+    'Tahoe City',
+    'Tahoe Vista',
+    'Kings Beach',
+    'Carnelian Bay',
+    'Olympic Valley',
+    'Soda Springs',
+    'Incline Village',
+    'Stateline',
+    'Reno',
+    'Sparks',
+    'Carson City',
+  ];
+  return (
+    cities.find((city) => parts.includes(city.toLowerCase())) ?? 'Location shared after sign-in'
+  );
 }
 
 /** "Kaia Colban" becomes "Kaia C."; a missing name becomes "Community member". */
@@ -99,23 +126,23 @@ export function toPublicRide(ride: RideRow, profile: ProfileRow | undefined): Pu
 
 /** ISO date strings for the inclusive window of past trips to show. */
 export function recentTripWindow(today: Date, days: number): { from: string; to: string } {
-  const to = new Date(today);
+  const to = new Date(`${tahoeDate(today)}T00:00:00Z`);
   to.setUTCDate(to.getUTCDate() - 1);
-  const from = new Date(today);
+  const from = new Date(`${tahoeDate(today)}T00:00:00Z`);
   from.setUTCDate(from.getUTCDate() - days);
   return { from: from.toISOString().split('T')[0], to: to.toISOString().split('T')[0] };
 }
 
 /**
  * Upcoming active ride posts for the public Find a Ride directory.
- * Works with an anonymous Supabase client: the `rides` row-level policy
- * already allows anyone to read active rides, and `profiles` is public.
+ * Called by the server-only public projection with an elevated client after
+ * anonymous access to member base tables has been revoked.
  */
 export async function fetchPublicUpcomingRides(
   supabase: SupabaseClient<Database>,
   limit = 60
 ): Promise<PublicRide[]> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = tahoeDate();
   const { data: rides, error } = await supabase
     .from('rides')
     .select(PUBLIC_RIDE_COLUMNS)

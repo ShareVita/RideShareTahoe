@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getSEOTags } from '@/libs/seo';
-import { createAdminClient, createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import {
   fetchPublicRecentRides,
   fetchPublicUpcomingRides,
@@ -30,8 +30,9 @@ export const dynamic = 'force-dynamic';
 
 async function loadUpcoming(): Promise<PublicRide[]> {
   try {
-    const supabase = await createClient();
-    return await fetchPublicUpcomingRides(supabase);
+    // Base tables are member-only. This server-side projection exposes only
+    // the reduced public ride DTO, never private member or pickup details.
+    return await fetchPublicUpcomingRides(createAdminClient());
   } catch (error) {
     console.error('Public ride directory failed to load upcoming rides:', error);
     return [];
