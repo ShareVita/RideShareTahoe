@@ -13,10 +13,32 @@ export default defineConfig([
   ...nextTs,
   prettier,
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
-    // Next 16.4 adds compiler optimization diagnostics. Keep legacy fetch-effect
-    // loading transitions visible as warnings; React Compiler is not enabled.
-    // Correctness rules (hooks, purity, immutability, etc.) remain errors.
+    // Next 16.4 added `react-hooks/set-state-in-effect`. These files predate it
+    // and load data with fetch-in-effect; they stay visible as warnings until
+    // they move to React Query. Every other file keeps the rule as an error, so
+    // new code cannot add the pattern.
+    files: [
+      'app/community/components/FindRidesTab.tsx',
+      'app/community/components/drivers/DriversSection.tsx',
+      'app/community/components/members/CommunityMembersList.tsx',
+      'app/community/components/passengers/PassengersList.tsx',
+      'app/community/components/passengers/PassengersSection.tsx',
+      'app/community/hooks/useCommunityRides.ts',
+      'app/messages/page.tsx',
+      'app/onboarding/welcome/page.tsx',
+      'app/profile/[[]id]/page.tsx',
+      'app/profile/page.tsx',
+      'components/AppLayout.tsx',
+      'components/DeletionRequestStatus.tsx',
+      'components/ProfilesList.tsx',
+      'components/trips/MyTripsView.tsx',
+      'components/vehicles/VehicleList.tsx',
+      'contexts/BlockedUsersContext.tsx',
+      'hooks/useHasActiveBooking.ts',
+      'hooks/useIsBlocked.ts',
+      'hooks/useRideDetail.ts',
+      'hooks/useUnreadMessages.ts',
+    ],
     rules: { 'react-hooks/set-state-in-effect': 'warn' },
   },
   {

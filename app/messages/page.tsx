@@ -324,24 +324,6 @@ export default function MessagesPage() {
     fetchBookingRequests();
   }, [fetchBookingRequests]);
 
-  useEffect(() => {
-    if (!user || authLoading) return;
-
-    const markAllMessagesRead = async () => {
-      const { error } = await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('recipient_id', user.id)
-        .eq('is_read', false);
-
-      if (error) {
-        console.error('Error marking all messages as read:', error);
-      }
-    };
-
-    markAllMessagesRead();
-  }, [authLoading, supabase, user]);
-
   const markMessagesAsRead = useCallback(async () => {
     if (!currentConversation || !user) {
       return;
