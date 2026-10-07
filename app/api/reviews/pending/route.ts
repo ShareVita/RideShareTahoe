@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
+import { isReviewableBooking } from '@/libs/reviews/eligibility';
 
 interface BookingWithProfiles {
   id: string;
@@ -54,11 +55,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter for rides that have passed
-    const pastBookings = (bookings as unknown as BookingWithProfiles[]).filter((booking) => {
-      const dateTimeString = `${booking.ride.departure_date}T${booking.ride.departure_time}`;
-      const rideDate = new Date(dateTimeString);
-      return rideDate < new Date();
-    });
+    const now = new Date();
+    const pastBookings = (bookings as unknown as BookingWithProfiles[]).filter((booking) =>
+      isReviewableBooking(booking, now)
+    );
 
     if (pastBookings.length === 0) {
       return NextResponse.json({ pendingReviews: [] });

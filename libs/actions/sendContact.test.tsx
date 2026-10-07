@@ -1,5 +1,5 @@
 import { sendContact } from './sendContact';
-import { rateLimit } from '@/lib/ratelimit';
+import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import config from '@/config';
 
 type TestFormData = {
@@ -21,8 +21,12 @@ jest.mock('next/headers', () => ({
 }));
 
 // Mock rateLimit
-jest.mock('@/lib/ratelimit');
-const mockRateLimit = rateLimit as jest.Mock;
+jest.mock('@/libs/rateLimit');
+const mockRateLimit = checkSupabaseRateLimit as jest.Mock;
+const mockAdminClient = { rpc: jest.fn() };
+jest.mock('@/lib/supabase/server', () => ({
+  createAdminClient: () => mockAdminClient,
+}));
 
 // Mock resend (dynamically imported)
 const mockSendEmail = jest.fn();
@@ -59,7 +63,7 @@ describe('sendContact Server Action', () => {
     jest.clearAllMocks(); // Reset all mock implementations and call history
 
     mockHeadersGet.mockReturnValue('1.2.3.4'); // Default IP
-    mockRateLimit.mockResolvedValue(true); // Default: Not rate limited
+    mockRateLimit.mockResolvedValue({ success: true });
     mockSendEmail.mockResolvedValue({ data: { id: 'email-id' }, error: null }); // Default: Email sends
   });
 
@@ -69,7 +73,15 @@ describe('sendContact Server Action', () => {
 
     expect(result).toEqual({ ok: true });
 
-    expect(mockRateLimit).toHaveBeenCalledWith('1.2.3.4', 'contact:submit', 5, 600);
+    expect(mockRateLimit).toHaveBeenCalledWith(
+      mockAdminClient,
+      'contact:1.2.3.4',
+      'contact:submit',
+      {
+        maxRequests: 5,
+        windowSeconds: 600,
+      }
+    );
 
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
     expect(mockSendEmail).toHaveBeenCalledWith(
@@ -112,7 +124,7 @@ describe('sendContact Server Action', () => {
   });
 
   it('should return a rate limit error if rate limit is exceeded', async () => {
-    mockRateLimit.mockResolvedValue(false); // Override default mock to simulate rate limit failure
+    mockRateLimit.mockResolvedValue({ success: false });
 
     const formData = createMockFormData(validFormData);
     const result = await sendContact(formData);

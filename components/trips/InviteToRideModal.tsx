@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { fetchMyRides } from '@/libs/community/ridesData';
 import type { RidePostType, CommunityUser } from '@/app/community/types';
 import { toast } from 'react-hot-toast';
+import { tahoeDateTime, formatDateLabel } from '@/lib/dateFormat';
 
 interface InviteToRideModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export default function InviteToRideModal({
               r.posting_type === 'driver' &&
               r.status === 'active' &&
               (r.available_seats || 0) > 0 &&
-              new Date(r.departure_date) >= new Date()
+              (tahoeDateTime(r.departure_date, r.departure_time)?.getTime() ?? 0) >= Date.now()
           );
           setMyRides(driverRides);
         } catch (error) {
@@ -61,9 +62,9 @@ export default function InviteToRideModal({
 
     setInviting(true);
     try {
-      const pickupTime = new Date(
-        `${selectedRide.departure_date}T${selectedRide.departure_time}`
-      ).toISOString();
+      const pickup = tahoeDateTime(selectedRide.departure_date, selectedRide.departure_time);
+      if (!pickup) throw new Error('Invalid Pacific departure date or time');
+      const pickupTime = pickup.toISOString();
 
       const response = await fetch('/api/trips/invitations', {
         method: 'POST',
@@ -160,7 +161,7 @@ export default function InviteToRideModal({
                             {ride.title || `${ride.start_location} → ${ride.end_location}`}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {new Date(ride.departure_date).toLocaleDateString()} at{' '}
+                            {formatDateLabel(ride.departure_date)} at{' '}
                             {ride.departure_time.slice(0, 5)}
                           </p>
                           <p className="text-xs text-gray-400 mt-1">

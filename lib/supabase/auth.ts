@@ -6,6 +6,7 @@ import {
   User,
   AuthError,
 } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
 
 /**
  * Creates a standardized 401 Unauthorized response.
@@ -24,7 +25,7 @@ export function createUnauthorizedResponse(error?: unknown) {
  */
 export async function getAuthenticatedUser(
   request: NextRequest
-): Promise<{ user: User | null; authError: AuthError | null; supabase: SupabaseClient }> {
+): Promise<{ user: User | null; authError: AuthError | null; supabase: SupabaseClient<Database> }> {
   // First, try to use the cookie-based client
   const supabaseCookieClient = await createClient();
   let supabase = supabaseCookieClient;
@@ -39,7 +40,7 @@ export async function getAuthenticatedUser(
     const token = request.headers.get('Authorization')?.split(' ')[1];
     if (token) {
       // Create a new client with the token to ensure RLS works
-      supabase = createSupabaseClient(
+      supabase = createSupabaseClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
         {
@@ -69,7 +70,7 @@ export async function getAuthenticatedUser(
  * Returns a 403 Forbidden response if incomplete, or null if complete.
  */
 export async function ensureProfileComplete(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   userId: string,
   actionDescription = 'performing this action'
 ): Promise<NextResponse | null> {

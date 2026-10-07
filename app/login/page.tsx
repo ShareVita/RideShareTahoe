@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
 import config from '@/config';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { safeNextPath, withNextPath } from '@/lib/authRedirect';
 
 /**
  * Renders the signin experience for Supabase auth with Google or magic links.
@@ -17,6 +18,7 @@ function LoginContent() {
   const [isDisabled, setIsDisabled] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const next = safeNextPath(searchParams.get('next'));
 
   useEffect(() => {
     const checkSession = async () => {
@@ -25,12 +27,12 @@ function LoginContent() {
       } = await supabase.auth.getSession();
 
       if (session) {
-        router.push('/community');
+        router.push(next || '/community');
       }
     };
 
     checkSession();
-  }, [router, supabase.auth]);
+  }, [router, supabase.auth, next]);
 
   // Handle error messages from OAuth callback
   useEffect(() => {
@@ -66,7 +68,7 @@ function LoginContent() {
 
     try {
       const { type, provider } = options;
-      const redirectURL = globalThis.location.origin + '/api/auth/callback';
+      const redirectURL = globalThis.location.origin + withNextPath('/api/auth/callback', next);
 
       if (type === 'oauth' && provider) {
         // Use Supabase's built-in OAuth but with custom branding

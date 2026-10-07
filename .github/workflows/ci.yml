@@ -3,11 +3,12 @@ name: CI Pipeline
 permissions:
   contents: read
 
+# PRs and the merge queue are validated by pr.yml (the ruleset's required
+# checks). This workflow re-validates main after merge and owns the manual
+# production-migration job.
 on:
   push:
     branches: ['main']
-  # Production migrations run only when someone dispatches this workflow from
-  # main with apply_migrations checked, after every validation job passes.
   workflow_dispatch:
     inputs:
       apply_migrations:
@@ -17,16 +18,18 @@ on:
 
 jobs:
   supabase-db-push:
-    # Never on push. A merge to main used to push every pending migration to
-    # production automatically, in parallel with the tests.
+    # Only from main: a dispatch from any other branch would push that
+    # branch's unreviewed migrations to production.
     if: github.event_name == 'workflow_dispatch' && inputs.apply_migrations && github.ref == 'refs/heads/main'
     needs: [build]
-    # Dedicated environment (separate from Vercel's "Production") so required
-    # reviewers can approve each migration run.
+    # A dedicated environment, separate from the Vercel-managed "Production"
+    # one, so required reviewers can be added without affecting deployments.
     environment: supabase-production
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -36,8 +39,10 @@ jobs:
       - run: npm ci
       - name: Link to Supabase project
         run: |
-          npx supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          echo "Linked Supabase project ${{ secrets.SUPABASE_PROJECT_REF }}"
+          : "${SUPABASE_ACCESS_TOKEN:?Configure Supabase access token in the protected environment}"
+          : "${SUPABASE_PROJECT_REF:?Configure the reviewed production project reference}"
+          : "${SUPABASE_DB_PASSWORD:?Configure the production database password for noninteractive CLI access}"
+          npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Push reviewed Supabase migrations
         run: |
           npx supabase db push
@@ -51,6 +56,8 @@ jobs:
           node-version: '22.x'
           cache: 'npm'
       - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
       - run: npm run test:ci
 
   integration-test:
@@ -63,20 +70,18 @@ jobs:
           node-version: '22.x'
           cache: 'npm'
       - run: npm ci
-      - uses: supabase/setup-cli@ebf138c2969b58c7cd05dad865ca3e6e85d722ff
-        with:
-          version: 'latest'
-
       - name: Start Local Supabase and Set Environment Variables
         id: supabase_env_setup
         run: |
-          supabase start 2>&1 | tee supabase.log
+          # Use the lockfile CLI and only services exercised by these tests.
+          # Do not print local Auth/service-role keys into the workflow log.
+          npx supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta > supabase.log 2>&1
 
           MAX_ATTEMPTS=20
           SLEEP_TIME=3
           ATTEMPT=0
 
-          while ! supabase status > /dev/null 2>&1 && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          while ! npx supabase status > /dev/null 2>&1 && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
             echo "Attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS: Services not ready. Waiting ${SLEEP_TIME}s..."
             sleep $SLEEP_TIME
             ATTEMPT=$((ATTEMPT + 1))
@@ -87,35 +92,21 @@ jobs:
             exit 1
           fi
 
-          supabase status
-
-          SUPABASE_ENV_FILE="supabase.status.env"
-          supabase status -o env > "$SUPABASE_ENV_FILE"
-
-          extract_env_value() {
-            local line
-            line=$(grep -im1 "$1" "$SUPABASE_ENV_FILE" || true)
-            if [ -z "$line" ]; then
-              return
-            fi
-            echo "$line" | sed -E 's/^[^:=]*[:=]\s*"?([^"\r\n]+)"?.*/\1/' | tr -d '\r'
-          }
-
-          API_URL=$(extract_env_value "SUPABASE_URL")
-          if [ -z "$API_URL" ]; then
-            API_URL=$(extract_env_value "API_URL")
-          fi
-          ANON_KEY=$(extract_env_value "PUBLISHABLE_KEY")
-          SERVICE_KEY=$(extract_env_value "SERVICE_ROLE_KEY")
+          npx supabase status -o json > supabase.status.json
+          API_URL=$(jq -r '.API_URL // empty' supabase.status.json)
+          ANON_KEY=$(jq -r '.ANON_KEY // .PUBLISHABLE_KEY // empty' supabase.status.json)
+          SERVICE_KEY=$(jq -r '.SERVICE_ROLE_KEY // empty' supabase.status.json)
 
           if [ -z "$API_URL" ] || [ -z "$ANON_KEY" ] || [ -z "$SERVICE_KEY" ]; then
             echo "Error: Failed to extract Supabase environment variables."
             exit 1
           fi
 
-          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> $GITHUB_ENV
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_KEY"
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> "$GITHUB_ENV"
 
       - name: Verify Mapped Application Environment Variables
         run: |
@@ -147,7 +138,7 @@ jobs:
         run: npm run test:integration
         env:
           RUN_INTEGRATION_TESTS: true
-    
+
   build:
     needs: [test, integration-test]
     runs-on: ubuntu-latest
@@ -159,4 +150,3 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-

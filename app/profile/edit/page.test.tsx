@@ -148,6 +148,29 @@ describe('ProfileEditPage', () => {
     jest.clearAllMocks();
     mutateMock.mockReset();
     pushMock.mockReset();
+    window.history.replaceState({}, '', '/profile/edit');
+  });
+
+  it.each([
+    ['Jane', '/messages?thread=42', '/messages?thread=42'],
+    ['', '/messages?thread=42', '/onboarding/welcome?next=%2Fmessages%3Fthread%3D42'],
+    ['Jane', '//evil.test', '/community'],
+    ['', '/login', '/onboarding/welcome'],
+    ['Jane', '', '/community'],
+    ['', '', '/onboarding/welcome'],
+  ])('routes saved profile (%s, %s) to %s', async (firstName, next, destination) => {
+    setHooksToDefault();
+    useUserProfileMock.mockReturnValue(
+      createProfileQuery({ data: { ...defaultProfile, first_name: firstName } })
+    );
+    window.history.replaceState({}, '', `/profile/edit?next=${encodeURIComponent(next)}`);
+    render(<ProfileEditPage />);
+    fireEvent.change(screen.getByLabelText(/First name/i), { target: { value: 'Jane' } });
+    fireEvent.click(screen.getByLabelText(/I agree to the/i));
+    fireEvent.click(screen.getByRole('button', { name: /Save profile/i }));
+    expect(mutateMock).toHaveBeenCalled();
+    mutateMock.mock.calls[0][1].onSuccess();
+    expect(pushMock).toHaveBeenCalledWith(destination);
   });
 
   it('shows loading state when user or profile data is loading', () => {

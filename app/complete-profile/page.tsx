@@ -1,20 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
 import { useUserProfile } from '@/hooks/useProfile';
+import { safeNextPath, withNextPath } from '@/lib/authRedirect';
 
-export default function CompleteProfilePage() {
+function CompleteProfileContent() {
   const { data: profile, isLoading } = useUserProfile();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNextPath(searchParams.get('next'));
 
   useEffect(() => {
     // If profile exists and has a first name, redirect to community page
     if (!isLoading && profile?.first_name) {
-      router.push('/community');
+      router.push(next || '/community');
     }
-  }, [profile, isLoading, router]);
+  }, [profile, isLoading, router, next]);
 
   if (isLoading) {
     return (
@@ -41,7 +44,7 @@ export default function CompleteProfilePage() {
 
         <div className="pt-4">
           <Link
-            href="/profile/edit"
+            href={withNextPath('/profile/edit', next)}
             className="inline-flex items-center justify-center w-full px-6 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
           >
             Set up Profile
@@ -49,5 +52,13 @@ export default function CompleteProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CompleteProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <CompleteProfileContent />
+    </Suspense>
   );
 }

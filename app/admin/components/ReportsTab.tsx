@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { UserProfile } from '@/hooks/useProfile';
 
 interface Report {
   id: string;
@@ -25,7 +24,7 @@ interface Report {
 }
 
 interface ReportsTabProps {
-  readonly profile?: UserProfile | null;
+  readonly profile?: { is_admin: boolean | null } | null;
 }
 
 /**

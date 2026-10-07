@@ -19,4 +19,4 @@ See you on the road soon!
 RideShareTahoe
 Community: {{appUrl}}/community
 Post a Trip: {{appUrl}}/post-ride
-Unsubscribe: {{appUrl}}/unsubscribe?email={{userEmail}}
+Unsubscribe from promotional emails: {{unsubscribeUrl}}

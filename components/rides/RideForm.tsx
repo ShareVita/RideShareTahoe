@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import type { RidePostType, Vehicle } from '@/app/community/types';
+import { tahoeDateTime } from '@/lib/dateFormat';
+import { geocodeLocation } from '@/libs/geocoding';
 
 interface RideFormProps {
   initialData?: Partial<RidePostType>;
@@ -24,8 +26,11 @@ export default function RideForm({
   isEditing = false,
   vehicles = [],
 }: Readonly<RideFormProps>) {
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
+    isEditing && initialData?.car_type ? 'existing' : ''
+  );
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<Partial<RidePostType>>({
     posting_type: 'driver',
@@ -67,6 +72,14 @@ export default function RideForm({
     const vehicleId = e.target.value;
     setSelectedVehicleId(vehicleId);
 
+    if (vehicleId === 'existing') {
+      setFormData((prev) => ({
+        ...prev,
+        car_type: initialData?.car_type,
+        has_awd: initialData?.has_awd,
+      }));
+      return;
+    }
     if (!vehicleId) return;
 
     const vehicle = vehicles.find((v) => v.id === vehicleId);
@@ -86,14 +99,29 @@ export default function RideForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting || isLoading) return;
     setError(null);
 
+    if (formData.posting_type === 'driver' && !selectedVehicleId) {
+      setError('Select a vehicle before posting a driver ride.');
+      return;
+    }
+    const departureDateTime = tahoeDateTime(
+      formData.departure_date || '',
+      formData.departure_time || ''
+    );
+    if (!departureDateTime) {
+      setError('Enter a valid departure date and time in Pacific time.');
+      return;
+    }
+
     // Validate that return date is after departure date + time
-    if (formData.is_round_trip && formData.return_date && formData.departure_date) {
-      const departureDateTime = new Date(
-        `${formData.departure_date}T${formData.departure_time || '00:00'}`
-      );
-      const returnDateTime = new Date(`${formData.return_date}T${formData.return_time || '00:00'}`);
+    if (!isEditing && formData.is_round_trip && formData.return_date && formData.departure_date) {
+      const returnDateTime = tahoeDateTime(formData.return_date, formData.return_time || '');
+      if (!returnDateTime) {
+        setError('Enter a valid return date and time in Pacific time.');
+        return;
+      }
 
       if (returnDateTime <= departureDateTime) {
         setError('Return trip must be after the departure trip.');
@@ -101,11 +129,36 @@ export default function RideForm({
       }
     }
 
-    await onSave(formData);
+    setSubmitting(true);
+    try {
+      const [start, end] = await Promise.all([
+        initialData &&
+        formData.start_location === initialData.start_location &&
+        initialData.start_lat != null &&
+        initialData.start_lng != null
+          ? { lat: initialData.start_lat, lng: initialData.start_lng }
+          : geocodeLocation(formData.start_location || ''),
+        initialData &&
+        formData.end_location === initialData.end_location &&
+        initialData.end_lat != null &&
+        initialData.end_lng != null
+          ? { lat: initialData.end_lat, lng: initialData.end_lng }
+          : geocodeLocation(formData.end_location || ''),
+      ]);
+      await onSave({
+        ...formData,
+        start_lat: start?.lat ?? null,
+        start_lng: start?.lng ?? null,
+        end_lat: end?.lat ?? null,
+        end_lng: end?.lng ?? null,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   let submitLabel = 'Post Ride';
-  if (isLoading) {
+  if (isLoading || submitting) {
     submitLabel = 'Saving...';
   } else if (isEditing) {
     submitLabel = 'Update Ride';
@@ -235,26 +288,38 @@ export default function RideForm({
         </div>
       </div>
 
-      {/* Round Trip */}
-      <div className="flex items-center">
-        <input
-          id="is_round_trip"
-          name="is_round_trip"
-          type="checkbox"
-          checked={formData.is_round_trip}
-          onChange={handleChange}
-          className="h-4 w-4 rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800"
-        />
-        <label
-          htmlFor="is_round_trip"
-          className="ml-2 block text-sm text-gray-900 dark:text-gray-300"
-        >
-          This is a Round Trip
-        </label>
-      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Dates and times use Pacific time (America/Los_Angeles).
+      </p>
+
+      {/* Creation stores a round trip as two independently editable ride legs. */}
+      {isEditing && formData.is_round_trip ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          This is one leg of a round trip. Edit each ride’s date and route separately.
+        </p>
+      ) : (
+        !isEditing && (
+          <div className="flex items-center">
+            <input
+              id="is_round_trip"
+              name="is_round_trip"
+              type="checkbox"
+              checked={formData.is_round_trip}
+              onChange={handleChange}
+              className="h-4 w-4 rounded border-gray-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-800"
+            />
+            <label
+              htmlFor="is_round_trip"
+              className="ml-2 block text-sm text-gray-900 dark:text-gray-300"
+            >
+              This is a Round Trip
+            </label>
+          </div>
+        )
+      )}
 
       {/* Return Date and Time - Only if Round Trip */}
-      {formData.is_round_trip && (
+      {!isEditing && formData.is_round_trip && (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 bg-gray-50 dark:bg-slate-800/50 p-4 rounded-lg border border-gray-100 dark:border-slate-800">
           <div>
             <label
@@ -343,7 +408,7 @@ export default function RideForm({
       {/* Vehicle Info */}
       {formData.posting_type === 'driver' && (
         <div className="space-y-4">
-          {vehicles.length > 0 ? (
+          {vehicles.length > 0 || (isEditing && initialData?.car_type) ? (
             <div>
               <label
                 htmlFor="vehicle_select"
@@ -359,6 +424,9 @@ export default function RideForm({
                 required
               >
                 <option value="">-- Select a vehicle --</option>
+                {isEditing && initialData?.car_type && (
+                  <option value="existing">Keep current: {initialData.car_type}</option>
+                )}
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.year} {v.make} {v.model} ({v.color})
@@ -468,7 +536,7 @@ export default function RideForm({
         </button>
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || submitting}
           className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
         >
           {submitLabel}

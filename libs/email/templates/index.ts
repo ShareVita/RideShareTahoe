@@ -102,75 +102,56 @@ export async function loadEmailTemplate(
     throw new Error(`Unknown email type: ${emailType}`);
   }
 
-  // Try multiple paths for template loading (production compatibility)
-  const possiblePaths = [
-    path.join(process.cwd(), 'libs', 'email', 'templates'),
-    path.join(process.cwd(), 'email-templates'),
-    path.join(__dirname),
-    path.join(process.cwd(), 'libs', 'email', 'templates', 'email-templates'),
-  ];
-
-  let html = '';
-  let text = '';
-  let templatesDir = '';
-
-  // Try to find templates in different locations
-  for (const templatePath of possiblePaths) {
-    try {
-      const untrustedFilename = templateConfig.html;
-
-      // A robust regex to only allow alphanumeric, hyphens, underscores, and a single dot for extension.
-      if (!/^[a-zA-Z0-9_-]+\.html$/.test(untrustedFilename)) {
-        throw new Error('Invalid template filename characters.');
-      }
-
-      const joinedPath = path.join(templatePath, untrustedFilename);
-      const absoluteHtmlPath = path.resolve(joinedPath);
-      const baseDir = path.resolve(templatePath);
-
-      if (!absoluteHtmlPath.startsWith(baseDir)) {
-        throw new Error('Attempted directory traversal');
-      }
-
-      html = fs.readFileSync(absoluteHtmlPath, 'utf8');
-      templatesDir = templatePath;
-      break;
-    } catch {
-      // Continue to next path
-    }
-  }
-
-  if (!html) {
-    throw new Error(
-      `Template not found: ${templateConfig.html}. Tried paths: ${possiblePaths.join(', ')}`
-    );
-  }
-
-  // Load text template
+  // Next's production file tracing includes this canonical directory.
+  const directory = path.join(process.cwd(), 'libs', 'email', 'templates');
+  let html = fs.readFileSync(path.join(directory, templateConfig.html), 'utf8');
+  let text: string;
   try {
-    const textPath = path.join(templatesDir, templateConfig.text);
-    text = fs.readFileSync(textPath, 'utf8');
-  } catch {
-    // If text template doesn't exist, generate from HTML
+    text = fs.readFileSync(path.join(directory, templateConfig.text), 'utf8');
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'ENOENT') throw error;
     text = striptags(html).replaceAll(/\s+/g, ' ').trim();
   }
 
   // Add default variables
-  const defaultVars = {
+  const defaultVars: TemplateVariables = {
     appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://ridesharetahoe.com',
     supportEmail: config.resend.supportEmail,
+    unsubscribeUrl: `mailto:${config.resend.supportEmail}?subject=Unsubscribe`,
     ...variables,
   };
+  for (const [key, value] of Object.entries(defaultVars)) {
+    if (key.endsWith('Url') && value) {
+      const url = new URL(String(value));
+      if (
+        !['https:', 'http:'].includes(url.protocol) &&
+        !(key === 'unsubscribeUrl' && url.protocol === 'mailto:')
+      ) {
+        throw new Error(`Unsafe email URL: ${key}`);
+      }
+    }
+  }
 
   // Replace variables in templates
-  const replaceVariables = (content: string, vars: TemplateVariables) => {
-    return Object.entries(vars).reduce((acc, [key, value]) => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      return acc.replace(regex, String(value || ''));
-    }, content);
+  const replaceVariables = (content: string, vars: TemplateVariables, escapeHtml = false) => {
+    return content.replace(/{{(\w+)}}/g, (_match, key: string) => {
+      const value = String(vars[key] ?? '');
+      if (!escapeHtml) return value;
+      return value.replace(
+        /[&<>"']/g,
+        (character) =>
+          ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          })[character]!
+      );
+    });
   };
 
-  html = replaceVariables(html, defaultVars);
+  html = replaceVariables(html, defaultVars, true);
   text = replaceVariables(text, defaultVars);
 
   // Generate subject

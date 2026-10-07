@@ -11,7 +11,9 @@ interface CookieToSet {
 
 interface NextUrlLike {
   pathname: string;
-  clone: () => NextUrlLike;
+  search?: string;
+  searchParams?: URLSearchParams;
+  clone: () => NextUrlLike | URL;
 }
 
 interface RequestLike {
@@ -69,7 +71,7 @@ describe('updateSession', () => {
   it('redirects to /login when no user and path is protected', async () => {
     const mockRedirectResponse = {};
     const NextResponseMock = {
-      next: jest.fn().mockReturnValue({ cookies: { set: jest.fn() } }),
+      next: jest.fn().mockReturnValue({ cookies: { set: jest.fn(), getAll: () => [] } }),
       redirect: jest.fn().mockReturnValue(mockRedirectResponse),
     };
 
@@ -87,12 +89,11 @@ describe('updateSession', () => {
 
     const request: RequestLike = {
       cookies: { getAll: () => [], set: jest.fn() },
-      nextUrl: {
-        pathname: '/rides/create',
-        clone: function () {
-          return { pathname: this.pathname, clone: this.clone };
+      nextUrl: Object.assign(new URL('https://example.test/rides/post?trip=123&next=evil'), {
+        clone() {
+          return new URL('https://example.test/rides/post?trip=123&next=evil');
         },
-      },
+      }),
     };
 
     const res = await updateSession(request as unknown as NextRequest);
@@ -102,6 +103,8 @@ describe('updateSession', () => {
     const pathname =
       typeof calledUrl === 'string' ? calledUrl : (calledUrl as { pathname?: string }).pathname;
     expect(String(pathname)).toMatch('/login');
+    expect((calledUrl as URL).searchParams.get('next')).toBe('/rides/post?trip=123&next=evil');
+    expect((calledUrl as URL).searchParams.get('trip')).toBeNull();
     expect(res).toBe(mockRedirectResponse);
   });
 
@@ -205,6 +208,7 @@ describe('isPublicPath', () => {
       '/community-guidelines',
       '/how-to-use',
       '/tahoe-transportation',
+      '/rides',
       '/rides/find',
       '/privacy-policy',
       '/tos',
@@ -213,8 +217,8 @@ describe('isPublicPath', () => {
     }
   });
 
-  // Deny-by-default is the point: anything reading member data stays gated, and
-  // a route nobody listed is private until someone deliberately opens it.
+  // Public content classification does not gate unknown URLs; the separate
+  // private-page predicate matches the actual pages that read member data.
   it('gates everything that reads member data', async () => {
     const isPublicPath = await load();
     for (const path of [
@@ -223,7 +227,6 @@ describe('isPublicPath', () => {
       '/profile/123',
       '/profile/edit',
       '/messages',
-      '/rides',
       '/rides/post',
       '/rides/edit/123',
       '/vehicles',
@@ -242,21 +245,10 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/login')).toBe(true);
     expect(isPublicPath('/auth/callback')).toBe(true);
     expect(isPublicPath('/api/auth/confirm')).toBe(true);
+    expect(isPublicPath('/unsubscribe')).toBe(true);
+    expect(isPublicPath('/api/email/unsubscribe')).toBe(true);
     expect(isPublicPath('/robots.txt')).toBe(true);
     expect(isPublicPath('/sitemap.xml')).toBe(true);
-  });
-
-  it('passes only the exact independently authorized scheduler handlers', async () => {
-    const isPublicPath = await load();
-    for (const path of [
-      '/api/cron/process-scheduled-emails',
-      '/api/cron/process-reengage-emails',
-    ]) {
-      expect(isPublicPath(path)).toBe(true);
-      expect(isPublicPath(`${path}/extra`)).toBe(false);
-    }
-    expect(isPublicPath('/api/cron/unknown')).toBe(false);
-    expect(isPublicPath('/api/admin/process-deletions')).toBe(false);
   });
 
   // A stray trailing slash must not bounce a public page to /login.
@@ -266,11 +258,105 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/community/')).toBe(false);
   });
 
-  // Making "/rides/find" public must not open the whole /rides tree.
+  // Public discovery and its exact redirect alias must not open private ride pages.
   it('does not leak a public leaf into its parent tree', async () => {
     const isPublicPath = await load();
     expect(isPublicPath('/rides/find')).toBe(true);
     expect(isPublicPath('/rides/find/anything')).toBe(false);
-    expect(isPublicPath('/rides')).toBe(false);
+    expect(isPublicPath('/rides')).toBe(true);
+    expect(isPublicPath('/rides/post')).toBe(false);
+    expect(isPublicPath('/rides/edit/ride-id')).toBe(false);
+  });
+});
+
+describe('API and private-page routing', () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+  });
+
+  it.each([
+    '/community',
+    '/vehicles',
+    '/messages',
+    '/profile',
+    '/profile/edit',
+    '/profile/member-id',
+    '/rides/post',
+    '/rides/edit/ride-id',
+    '/admin',
+    '/admin/bulk-email',
+    '/complete-profile',
+    '/onboarding/welcome',
+  ])('gates the known private page %s', async (path) => {
+    const { isPrivatePage } = await import('./proxy');
+    expect(isPrivatePage(path)).toBe(true);
+    expect(isPrivatePage(`${path}/`)).toBe(true);
+  });
+
+  it.each([
+    '/missing',
+    '/admin/missing',
+    '/community/missing',
+    '/rides/missing',
+    '/rides/edit/id/extra',
+    '/profile/id/extra',
+    '/api/missing',
+    '/rides',
+    '/unsubscribe',
+  ])('does not gate unknown or handler-owned path %s', async (path) => {
+    const { isPrivatePage } = await import('./proxy');
+    expect(isPrivatePage(path)).toBe(false);
+  });
+
+  it.each([
+    '/api/cron/process-scheduled-emails',
+    '/api/cron/process-reengage-emails',
+    '/api/admin/process-deletions',
+    '/api/profile/me',
+    '/api/unknown',
+  ])('lets %s authorize without cookie claims', async (pathname) => {
+    const response = {};
+    const createServerClient = jest.fn();
+    const redirect = jest.fn();
+    jest.doMock('@supabase/ssr', () => ({ createServerClient }));
+    jest.doMock('next/server', () => ({ NextResponse: { next: () => response, redirect } }));
+    const { updateSession } = await import('./proxy');
+    expect(await updateSession({ nextUrl: { pathname } } as NextRequest)).toBe(response);
+    expect(createServerClient).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('rejects errored claims and preserves refreshed cookies on the login redirect', async () => {
+    const cookie = { name: 'session', value: '', path: '/', maxAge: 0 };
+    const set = jest.fn();
+    const redirect = jest.fn(() => ({ cookies: { set } }));
+    jest.doMock('next/server', () => ({
+      NextResponse: {
+        next: () => ({ cookies: { set: jest.fn(), getAll: () => [cookie] } }),
+        redirect,
+      },
+    }));
+    jest.doMock('@supabase/ssr', () => ({
+      createServerClient: () => ({
+        auth: {
+          getClaims: async () => ({
+            data: { claims: { sub: 'stale-user' } },
+            error: new Error('expired'),
+          }),
+        },
+      }),
+    }));
+    const { updateSession } = await import('./proxy');
+    const nextUrl = Object.assign(new URL('https://example.test/messages?thread=42'), {
+      clone() {
+        return new URL('https://example.test/messages?thread=42');
+      },
+    });
+    await updateSession({ nextUrl } as unknown as NextRequest);
+    expect(redirect).toHaveBeenCalledWith(
+      new URL('https://example.test/login?next=%2Fmessages%3Fthread%3D42')
+    );
+    expect(set).toHaveBeenCalledWith(cookie);
   });
 });

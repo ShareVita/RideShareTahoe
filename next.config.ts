@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
           { key: 'Expires', value: '0' },
         ],
       },
+      {
+        source: '/unsubscribe',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        source: '/api/email/unsubscribe',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
     ];
   },
 

@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
+import type { Database } from '@/types/database.types';
 
 interface ProfileSocialsRow {
   user_id: string;
@@ -12,17 +13,7 @@ interface ProfileSocialsRow {
   other_social_url?: string | null;
 }
 
-interface ProfileRow {
-  id: string;
-  first_name: string;
-  last_name: string;
-
-  profile_photo_url?: string | null;
-  city?: string | null;
-  state?: string | null;
-  bio?: string | null;
-  pronouns?: string | null;
-}
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 interface ProfileResponse {
   profile: ProfileRow | null;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
+import { createAdminClient } from '@/lib/supabase/server';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
 
@@ -18,11 +19,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit: 10 block actions per hour per user
-    const rateLimitCheck = await checkSupabaseRateLimit(supabase, user.id, 'user-block', {
-      maxRequests: 10,
-      windowSeconds: 3600,
-      message: 'Too many block actions. Please try again later.',
-    });
+    const rateLimitCheck = await checkSupabaseRateLimit(
+      createAdminClient(),
+      user.id,
+      'user-block',
+      {
+        maxRequests: 10,
+        windowSeconds: 3600,
+        message: 'Too many block actions. Please try again later.',
+      }
+    );
 
     if (!rateLimitCheck.success) {
       return NextResponse.json(

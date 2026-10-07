@@ -3,9 +3,13 @@ name: PR Validation
 permissions:
   contents: read
 
+# The `main` ruleset requires these job names (lint, typecheck, test,
+# integration-test, build) and merges through a merge queue, so this workflow
+# owns PR and merge-queue validation. It runs for every PR, including stacked
+# PRs whose base is another branch. ci.yml covers pushes to main and the manual
+# production-migration job only, so PRs are not validated twice.
 on:
   pull_request:
-    branches: ['main']
   merge_group:
 
 jobs:
@@ -42,7 +46,7 @@ jobs:
           node-version: '22.x'
           cache: 'npm'
       - run: npm ci
-      - run: npm test
+      - run: npm run test:ci
 
   integration-test:
     needs: [test]
@@ -54,20 +58,16 @@ jobs:
           node-version: '22.x'
           cache: 'npm'
       - run: npm ci
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 'latest'
-
       - name: Start Local Supabase and Set Environment Variables
         id: supabase_env_setup
         run: |
-          supabase start 2>&1 | tee supabase.log
+          npx supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta > supabase.log 2>&1
 
           MAX_ATTEMPTS=20
           SLEEP_TIME=3
           ATTEMPT=0
 
-          while ! supabase status > /dev/null 2>&1 && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          while ! npx supabase status > /dev/null 2>&1 && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
             echo "Attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS: Services not ready. Waiting ${SLEEP_TIME}s..."
             sleep $SLEEP_TIME
             ATTEMPT=$((ATTEMPT + 1))
@@ -78,35 +78,21 @@ jobs:
             exit 1
           fi
 
-          supabase status
-
-          SUPABASE_ENV_FILE="supabase.status.env"
-          supabase status -o env > "$SUPABASE_ENV_FILE"
-
-          extract_env_value() {
-            local line
-            line=$(grep -im1 "$1" "$SUPABASE_ENV_FILE" || true)
-            if [ -z "$line" ]; then
-              return
-            fi
-            echo "$line" | sed -E 's/^[^:=]*[:=]\s*"?([^"\r\n]+)"?.*/\1/' | tr -d '\r'
-          }
-
-          API_URL=$(extract_env_value "SUPABASE_URL")
-          if [ -z "$API_URL" ]; then
-            API_URL=$(extract_env_value "API_URL")
-          fi
-          ANON_KEY=$(extract_env_value "PUBLISHABLE_KEY")
-          SERVICE_KEY=$(extract_env_value "SERVICE_ROLE_KEY")
+          npx supabase status -o json > supabase.status.json
+          API_URL=$(jq -r '.API_URL // empty' supabase.status.json)
+          ANON_KEY=$(jq -r '.ANON_KEY // .PUBLISHABLE_KEY // empty' supabase.status.json)
+          SERVICE_KEY=$(jq -r '.SERVICE_ROLE_KEY // empty' supabase.status.json)
 
           if [ -z "$API_URL" ] || [ -z "$ANON_KEY" ] || [ -z "$SERVICE_KEY" ]; then
             echo "Error: Failed to extract Supabase environment variables."
             exit 1
           fi
 
-          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> $GITHUB_ENV
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_KEY"
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY" >> "$GITHUB_ENV"
 
       - name: Verify Mapped Application Environment Variables
         run: |

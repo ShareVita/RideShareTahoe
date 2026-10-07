@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
+import { createAdminClient } from '@/lib/supabase/server';
+import { getEmailsByUserId } from '@/libs/email/helpers';
+import { processScheduledDeletions } from '@/lib/accountDeletion';
 
 /**
  * Processes all account deletion requests that have passed their scheduled date.
@@ -7,20 +10,21 @@ import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase
  */
 export async function POST(request: NextRequest) {
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase: sessionClient } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
     // Verify admin role via profiles table
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await sessionClient
       .from('profiles')
-      .select('role')
+      .select('is_admin')
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'admin') {
+    if (profileError) throw profileError;
+    if (profile?.is_admin !== true) {
       return NextResponse.json(
         { error: 'Admin access required' },
         {
@@ -29,37 +33,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get deletion requests that are ready for processing (scheduled date has passed)
-    const { data: readyDeletions, error: fetchError } = await supabase
-      .from('account_deletion_requests')
-      .select('*')
-      .eq('status', 'pending')
-      .lte('scheduled_deletion_date', new Date().toISOString());
-
-    if (fetchError) {
-      throw fetchError;
+    if (process.env.ACCOUNT_DELETION_ENABLED !== 'true') {
+      return NextResponse.json({ error: 'Account deletion is disabled' }, { status: 503 });
     }
-
-    if (!readyDeletions || readyDeletions.length === 0) {
-      return NextResponse.json({
-        message: 'No deletion requests ready for processing',
-        processedCount: 0,
-      });
-    }
-
-    const processedUsers: string[] = [];
-    const errors: { userId: string; error: string }[] = [];
-
-    // Process each deletion request
-    for (const deletionRequest of readyDeletions) {
-      await processDeletionRequest(supabase, deletionRequest, processedUsers, errors);
-    }
-
+    const result = await processScheduledDeletions();
     return NextResponse.json({
-      message: `Processed ${processedUsers.length} deletion requests`,
-      processedCount: processedUsers.length,
-      processedUsers,
-      errors: errors.length > 0 ? errors : undefined,
+      message: `Processed ${result.processedCount} deletion requests`,
+      ...result,
     });
   } catch (error) {
     console.error('Error processing deletions:', error);
@@ -78,20 +58,21 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { user, authError, supabase } = await getAuthenticatedUser(request);
+    const { user, authError, supabase: sessionClient } = await getAuthenticatedUser(request);
 
     if (authError || !user) {
       return createUnauthorizedResponse(authError);
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await sessionClient
       .from('profiles')
-      .select('role')
+      .select('is_admin')
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'admin') {
+    if (profileError) throw profileError;
+    if (profile?.is_admin !== true) {
       return NextResponse.json(
         { error: 'Admin access required' },
         {
@@ -100,7 +81,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all pending deletion requests with user info (email from user_private_info)
+    const supabase = createAdminClient();
     const { data: deletionRequests, error } = await supabase
       .from('account_deletion_requests')
       .select(
@@ -109,8 +90,7 @@ export async function GET(request: NextRequest) {
         user:profiles!account_deletion_requests_user_id_fkey (
           id,
           first_name,
-          last_name,
-          user_private_info (email)
+          last_name
         )
       `
       )
@@ -120,6 +100,13 @@ export async function GET(request: NextRequest) {
     if (error) {
       throw error;
     }
+
+    // Email lives in user_private_info, which PostgREST cannot embed from
+    // profiles; read it separately.
+    const emails = await getEmailsByUserId(
+      supabase,
+      deletionRequests.map((request) => request.user_id)
+    );
 
     // Calculate days remaining for each request
     const requestsWithDaysRemaining = deletionRequests.map((request) => {
@@ -131,6 +118,7 @@ export async function GET(request: NextRequest) {
 
       return {
         ...request,
+        email: emails.get(request.user_id) ?? null,
         daysRemaining: Math.max(0, daysRemaining),
         isReadyForProcessing: daysRemaining <= 0,
       };
@@ -149,90 +137,5 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
-  }
-}
-
-async function processDeletionRequest(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  deletionRequest: any,
-  processedUsers: string[],
-  errors: { userId: string; error: string }[]
-) {
-  try {
-    // Update status to processing
-    await supabase
-      .from('account_deletion_requests')
-      .update({
-        status: 'processing',
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', deletionRequest.id);
-
-    // Get user's email before deletion for tracking (email is in user_private_info)
-    const { data: userPrivateInfo } = await supabase
-      .from('user_private_info')
-      .select('email')
-      .eq('id', deletionRequest.user_id)
-      .single();
-
-    // Record the email as deleted to prevent recreation
-    if (userPrivateInfo?.email) {
-      await supabase.from('deleted_emails').upsert(
-        {
-          email: userPrivateInfo.email.toLowerCase().trim(),
-          original_user_id: deletionRequest.user_id,
-          deletion_reason: deletionRequest.reason,
-        },
-        { onConflict: 'email', ignoreDuplicates: true }
-      );
-    }
-
-    // Delete user profile and related data
-    // Note: This will cascade delete due to ON DELETE CASCADE constraints
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', deletionRequest.user_id);
-
-    if (profileError) {
-      console.error('Error deleting profile for user ', deletionRequest.user_id, ':', profileError);
-      errors.push({
-        userId: deletionRequest.user_id,
-        error: profileError.message,
-      });
-      return;
-    }
-
-    // Delete the auth user (this requires admin privileges)
-    const { error: authError } = await supabase.auth.admin.deleteUser(deletionRequest.user_id);
-
-    if (authError) {
-      console.error('Error deleting auth user', deletionRequest.user_id, ':', authError);
-      errors.push({
-        userId: deletionRequest.user_id,
-        error: authError.message,
-      });
-      return;
-    }
-
-    // Mark deletion request as completed
-    await supabase
-      .from('account_deletion_requests')
-      .update({
-        status: 'completed',
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', deletionRequest.id);
-
-    processedUsers.push(deletionRequest.user_id);
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`Error processing deletion for user ${deletionRequest.user_id}:`, error);
-    errors.push({
-      userId: deletionRequest.user_id,
-      error: errorMessage,
-    });
   }
 }

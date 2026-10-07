@@ -28,4 +28,4 @@ The RideShareTahoe Team 🚗
 RideShareTahoe is a community platform connecting the Bay Area to Lake Tahoe.
 
 You received this email because you have a trip scheduled on RideShareTahoe. 
-You can manage your notification preferences in your account settings or unsubscribe here: {{unsubscribeUrl}}
+Promotional email preferences do not affect trip notifications. Contact support: {{supportEmail}}

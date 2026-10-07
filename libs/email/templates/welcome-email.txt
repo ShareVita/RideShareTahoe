@@ -29,6 +29,6 @@ The RideShareTahoe Team 🏂
 
 FAQ: {{appUrl}}/faq
 Safety: {{appUrl}}/safety
-Unsubscribe: {{unsubscribeUrl}}
+Email support: {{supportEmail}}
 
 RideShareTahoe is a community platform connecting the Bay Area to Lake Tahoe.

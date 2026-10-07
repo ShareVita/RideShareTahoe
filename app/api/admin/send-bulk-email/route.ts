@@ -1,24 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, createUnauthorizedResponse } from '@/lib/supabase/auth';
-import { sendEmail } from '@/libs/resend';
-import { strictRateLimit } from '@/libs/rateLimit';
+import { sendEmail } from '@/libs/email/sendEmail';
+import { checkSupabaseRateLimit } from '@/libs/rateLimit';
+import { createAdminClient } from '@/lib/supabase/server';
+import { getUsersWithEmails, type UserWithEmail } from '@/libs/email/helpers';
 
 interface BulkEmailResult {
   totalUsers: number;
   successful: number;
   failed: number;
+  skipped: number;
   errors: { email: string; error: string }[];
 }
 
 interface BatchResult {
   success: boolean;
+  skipped?: boolean;
   email: string;
   error?: string;
 }
 
 const updateResultsWithBatch = (results: BulkEmailResult, batchResults: BatchResult[]) => {
   for (const result of batchResults) {
-    if (result.success) {
+    if (result.skipped) {
+      results.skipped++;
+    } else if (result.success) {
       results.successful++;
     } else {
       results.failed++;
@@ -43,24 +49,29 @@ export async function POST(request: NextRequest) {
     return createUnauthorizedResponse(authError);
   }
 
-  // Check for admin role
-  // If user.role is not present, fetch from supabase
-  let isAdmin = false;
-  if (user.role && user.role === 'admin') {
-    isAdmin = true;
-  } else if (supabase) {
-    // Try to fetch user role from database
-    const { data, error } = await supabase.from('users').select('role').eq('id', user.id).single();
-    if (!error && data && data.role === 'admin') {
-      isAdmin = true;
-    }
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single();
+  if (profileError) {
+    return NextResponse.json({ error: 'Unable to authorize admin request' }, { status: 500 });
   }
-  if (!isAdmin) {
+  if (profile?.is_admin !== true) {
     return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }
   try {
+    const adminSupabase = createAdminClient();
     // Apply rate limiting
-    const rateLimitResult = strictRateLimit(request);
+    const rateLimitResult = await checkSupabaseRateLimit(
+      adminSupabase,
+      user.id,
+      'admin-bulk-email',
+      {
+        maxRequests: 10,
+        windowSeconds: 60,
+      }
+    );
     if (!rateLimitResult.success) {
       return NextResponse.json(
         {
@@ -109,41 +120,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all users with email addresses (email is in user_private_info)
-    const { data: users, error: usersError } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, user_private_info(email)')
-      .eq('is_banned', false)
-      .not('user_private_info.email', 'is', null)
-      .not('user_private_info.email', 'eq', '');
-
-    if (usersError) {
+    // Every non-banned member with an email address. Marketing opt-outs are
+    // enforced inside sendEmail.
+    let usersWithEmails: UserWithEmail[];
+    try {
+      usersWithEmails = await getUsersWithEmails(adminSupabase, { excludeBanned: true });
+    } catch (usersError) {
       console.error('Error fetching users:', usersError);
-      return NextResponse.json(
-        { error: 'Failed to fetch users' },
-        {
-          status: 500,
-        }
-      );
+      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
-
-    // Filter users with valid emails and transform the data
-    const usersWithEmails = (users || [])
-      .map((user) => {
-        // Handle Supabase's JOIN response format (can be array or object)
-        const privateInfo = Array.isArray(user.user_private_info)
-          ? user.user_private_info[0]
-          : user.user_private_info;
-        const email = privateInfo?.email;
-        if (!email) return null;
-        return {
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email,
-        };
-      })
-      .filter((user): user is NonNullable<typeof user> => user !== null);
 
     if (usersWithEmails.length === 0) {
       return NextResponse.json(
@@ -161,6 +146,7 @@ export async function POST(request: NextRequest) {
       totalUsers: usersWithEmails.length,
       successful: 0,
       failed: 0,
+      skipped: 0,
       errors: [],
     };
 
@@ -192,14 +178,20 @@ export async function POST(request: NextRequest) {
                   .replaceAll('{{email}}', userEmail)
               : undefined;
 
-            await sendEmail({
+            const event = await sendEmail({
+              userId: user.id,
+              emailType: 'bulk_announcement',
               to: userEmail,
               subject,
               html: personalizedHtml,
               text: personalizedText,
             });
 
-            return { success: true, email: userEmail };
+            return {
+              success: event.status === 'sent',
+              skipped: event.status === 'skipped',
+              email: userEmail,
+            };
           } catch (error: unknown) {
             lastError = error instanceof Error ? error : new Error(String(error));
             console.error(`Attempt ${attempt + 1} failed for ${userEmail}:`, lastError.message);

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getSEOTags } from '@/libs/seo';
-import { createAdminClient, createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import config from '@/config';
 import {
   fetchPublicRecentRides,
   fetchPublicUpcomingRides,
@@ -28,27 +29,36 @@ export const metadata: Metadata = getSEOTags({
 // The directory changes as people post, so render it on every request.
 export const dynamic = 'force-dynamic';
 
-async function loadUpcoming(): Promise<PublicRide[]> {
-  try {
-    const supabase = await createClient();
-    return await fetchPublicUpcomingRides(supabase);
-  } catch (error) {
-    console.error('Public ride directory failed to load upcoming rides:', error);
-    return [];
-  }
+interface LoadedRides {
+  rides: PublicRide[];
+  failed: boolean;
 }
 
-async function loadRecent(): Promise<PublicRide[]> {
+/**
+ * Base tables are member-only. This server-side projection exposes only the
+ * reduced public ride DTO, never private member or pickup details. A failure is
+ * reported to the page so visitors see "could not load", not "no rides".
+ */
+async function loadRides(
+  label: string,
+  fetchRides: () => Promise<PublicRide[]>
+): Promise<LoadedRides> {
   try {
-    return await fetchPublicRecentRides(createAdminClient());
+    return { rides: await fetchRides(), failed: false };
   } catch (error) {
-    console.error('Public ride directory failed to load recent rides:', error);
-    return [];
+    console.error(`Public ride directory failed to load ${label} rides:`, error);
+    return { rides: [], failed: true };
   }
 }
 
 export default async function FindRidePage() {
-  const [rides, recent] = await Promise.all([loadUpcoming(), loadRecent()]);
+  const [upcoming, past] = await Promise.all([
+    loadRides('upcoming', () => fetchPublicUpcomingRides(createAdminClient())),
+    loadRides('recent', () => fetchPublicRecentRides(createAdminClient())),
+  ]);
+  const rides = upcoming.rides;
+  const recent = past.rides;
+  const loadFailed = upcoming.failed;
   const nothingUpcoming = rides.length === 0;
   const drivers = rides.filter((ride) => ride.postingType !== 'passenger');
   const passengers = rides.filter((ride) => ride.postingType === 'passenger');
@@ -89,6 +99,17 @@ export default async function FindRidePage() {
         </div>
       </section>
 
+      {loadFailed && (
+        <section className="px-6 pb-10" role="alert">
+          <div className="max-w-5xl mx-auto rounded-2xl border border-amber-300 bg-amber-50 p-6 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+            <p className="font-semibold">We could not load the ride board right now.</p>
+            <p className="mt-1">
+              Please refresh in a minute. If it keeps happening, email {config.resend.supportEmail}.
+            </p>
+          </div>
+        </section>
+      )}
+
       <section className="px-6 pb-16" aria-labelledby="drivers-heading">
         <div className="max-w-5xl mx-auto">
           <h2
@@ -98,11 +119,16 @@ export default async function FindRidePage() {
             Drivers with open seats
           </h2>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            {drivers.length === 0
-              ? 'No driver posts yet for upcoming dates. Posts pick up as ski season gets closer.'
-              : `${drivers.length} upcoming ${drivers.length === 1 ? 'trip' : 'trips'} with room for passengers.`}
+            {loadFailed
+              ? 'Driver posts are unavailable while the board reloads.'
+              : drivers.length === 0
+                ? 'No driver posts yet for upcoming dates. Posts pick up as ski season gets closer.'
+                : `${drivers.length} upcoming ${drivers.length === 1 ? 'trip' : 'trips'} with room for passengers.`}
           </p>
-          <PublicRideList rides={drivers} showEmptyState={nothingUpcoming && recent.length === 0} />
+          <PublicRideList
+            rides={drivers}
+            showEmptyState={!loadFailed && nothingUpcoming && recent.length === 0}
+          />
         </div>
       </section>
 
@@ -115,9 +141,11 @@ export default async function FindRidePage() {
             Passengers looking for a ride
           </h2>
           <p className="text-slate-600 dark:text-slate-400 mb-6">
-            {passengers.length === 0
-              ? 'No ride requests yet for upcoming dates. Driving up with empty seats? Post your trip and riders will find you.'
-              : `${passengers.length} ${passengers.length === 1 ? 'person' : 'people'} hoping to join a car heading up.`}
+            {loadFailed
+              ? 'Ride requests are unavailable while the board reloads.'
+              : passengers.length === 0
+                ? 'No ride requests yet for upcoming dates. Driving up with empty seats? Post your trip and riders will find you.'
+                : `${passengers.length} ${passengers.length === 1 ? 'person' : 'people'} hoping to join a car heading up.`}
           </p>
           {passengers.length > 0 && <PublicRideList rides={passengers} />}
         </div>

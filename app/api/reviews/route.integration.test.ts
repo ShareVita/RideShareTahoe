@@ -53,6 +53,10 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
 }
 const TEST_EMAIL_DOMAIN = '@example.com';
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+// Never sign the elevated fixture client into a member session.
+const authClient = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 interface PendingReviewResponse {
   booking_id: string;
@@ -127,7 +131,7 @@ describeIntegration('Reviews API Integration Test', () => {
       .eq('id', passengerId);
 
     // Login as Driver to create Ride (RLS)
-    const { data: driverSession } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: driverSession } = await authClient.auth.signInWithPassword({
       email: driverEmail,
       password: 'TestPassword123!',
     });
@@ -164,7 +168,7 @@ describeIntegration('Reviews API Integration Test', () => {
 
     // 4. Create Completed Meeting (Past)
     // Login as Passenger to create Meeting request
-    const { data: passengerSession } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: passengerSession } = await authClient.auth.signInWithPassword({
       email: passengerEmail,
       password: 'TestPassword123!',
     });
@@ -184,8 +188,7 @@ describeIntegration('Reviews API Integration Test', () => {
         passenger_id: passengerId,
         pickup_location: 'San Francisco',
         pickup_time: pickupTime,
-        status: 'completed',
-        driver_notes: 'Integration test booking',
+        status: 'pending',
       })
       .select()
       .single();
@@ -194,10 +197,15 @@ describeIntegration('Reviews API Integration Test', () => {
     if (bookingError) console.error('Booking creation error:', bookingError);
     expect(bookingError).toBeNull();
     bookingId = booking!.id;
+    const approval = await driverClient
+      .from('trip_bookings')
+      .update({ status: 'confirmed' })
+      .eq('id', bookingId);
+    expect(approval.error).toBeNull();
   });
   it('should list pending reviews for Passenger', async () => {
     // Login as Passenger
-    const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: sessionData } = await authClient.auth.signInWithPassword({
       email: passengerEmail,
       password: 'TestPassword123!',
     });
@@ -227,7 +235,7 @@ describeIntegration('Reviews API Integration Test', () => {
 
   it('should allow Passenger to review Driver', async () => {
     // Login as Passenger
-    const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: sessionData } = await authClient.auth.signInWithPassword({
       email: passengerEmail,
       password: 'TestPassword123!',
     });
@@ -290,7 +298,7 @@ describeIntegration('Reviews API Integration Test', () => {
       .eq('id', randomId);
 
     // Login
-    const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: sessionData } = await authClient.auth.signInWithPassword({
       email: randomEmail,
       password: 'TestPassword123!',
     });
@@ -317,7 +325,8 @@ describeIntegration('Reviews API Integration Test', () => {
     });
 
     const response = await POST(req);
-    expect(response.status).toBe(403);
+    // RLS hides a non-participant's booking before endpoint eligibility checks.
+    expect(response.status).toBe(404);
 
     // Cleanup
     await supabaseAdmin.auth.admin.deleteUser(randomId);
@@ -325,7 +334,7 @@ describeIntegration('Reviews API Integration Test', () => {
 
   it('should fetch reviews for Driver', async () => {
     // Login as anyone (e.g. Passenger again)
-    const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
+    const { data: sessionData } = await authClient.auth.signInWithPassword({
       email: passengerEmail,
       password: 'TestPassword123!',
     });

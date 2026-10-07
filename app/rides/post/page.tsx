@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import RideForm from '@/components/rides/RideForm';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import type { RidePostType, Vehicle } from '@/app/community/types';
+import { toast } from 'react-hot-toast';
+import { tahoeDateTime } from '@/lib/dateFormat';
 
 /**
  * Page for creating new ride posts.
@@ -39,6 +41,27 @@ export default function CreateRidePage() {
 
   const handleSave = async (data: Partial<RidePostType>) => {
     if (!user) return;
+    const { posting_type, start_location, end_location, departure_date, departure_time } = data;
+    if (
+      !posting_type ||
+      !['driver', 'passenger', 'flexible'].includes(posting_type) ||
+      !start_location?.trim() ||
+      !end_location?.trim() ||
+      !departure_date ||
+      !departure_time ||
+      !tahoeDateTime(departure_date, departure_time)
+    ) {
+      setError('Enter a posting type, locations, and a valid Pacific departure date and time.');
+      return;
+    }
+    if (data.is_round_trip) {
+      const departure = tahoeDateTime(departure_date, departure_time);
+      const returning = tahoeDateTime(data.return_date || '', data.return_time || '');
+      if (!departure || !returning || returning <= departure) {
+        setError('Return trip must have a valid Pacific date and time after departure.');
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
 
@@ -50,10 +73,14 @@ export default function CreateRidePage() {
 
       const commonData = {
         poster_id: user.id,
-        posting_type: data.posting_type,
+        posting_type,
         title: data.title,
-        start_location: data.start_location,
-        end_location: data.end_location,
+        start_location,
+        end_location,
+        start_lat: data.start_lat,
+        start_lng: data.start_lng,
+        end_lat: data.end_lat,
+        end_lng: data.end_lng,
         price_per_seat: data.price_per_seat,
         total_seats: data.total_seats,
         available_seats: data.posting_type === 'driver' ? data.total_seats : null,
@@ -67,22 +94,26 @@ export default function CreateRidePage() {
         is_recurring: false, // Default for now
       };
 
-      const ridesToInsert = [];
-
       // 1. Departure Trip
-      ridesToInsert.push({
-        ...commonData,
-        departure_date: data.departure_date,
-        departure_time: data.departure_time,
-        trip_direction: data.is_round_trip ? 'departure' : null,
-      });
+      const ridesToInsert = [
+        {
+          ...commonData,
+          departure_date,
+          departure_time,
+          trip_direction: data.is_round_trip ? 'departure' : null,
+        },
+      ];
 
       // 2. Return Trip (if applicable)
       if (data.is_round_trip && data.return_date && data.return_time) {
         ridesToInsert.push({
           ...commonData,
-          start_location: data.end_location, // Swap locations
-          end_location: data.start_location,
+          start_location: end_location, // Swap locations
+          end_location: start_location,
+          start_lat: data.end_lat,
+          start_lng: data.end_lng,
+          end_lat: data.start_lat,
+          end_lng: data.start_lng,
           departure_date: data.return_date,
           departure_time: data.return_time,
           trip_direction: 'return',
@@ -93,6 +124,12 @@ export default function CreateRidePage() {
 
       if (insertError) throw insertError;
 
+      if (data.start_lat == null || data.end_lat == null) {
+        toast(
+          'Ride posted. One or more locations could not be mapped, so it will not appear in those location-filtered searches. Edit the locations to try again.',
+          { duration: 10000 }
+        );
+      }
       router.push('/community');
     } catch (err) {
       console.error('Error creating ride:', err);

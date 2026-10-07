@@ -167,7 +167,11 @@ export default function MessagesPage() {
 
       const safeData = Array.isArray(data) ? data : [];
       setConversations(safeData);
-      setSelectedConversationId((previous) => previous ?? safeData[0]?.id ?? null);
+      // Notification emails link to /messages?conversation=<id>; open that
+      // thread when it belongs to this member, otherwise the most recent one.
+      const linkedId = new URLSearchParams(window.location.search).get('conversation');
+      const linked = safeData.find((conversation) => conversation.id === linkedId);
+      setSelectedConversationId((previous) => previous ?? linked?.id ?? safeData[0]?.id ?? null);
     } catch (error) {
       console.error('Unable to load conversations', error);
       setFetchError('Unable to load conversations right now.');

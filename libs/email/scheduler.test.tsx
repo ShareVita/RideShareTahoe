@@ -38,6 +38,7 @@ type SupabaseMock = {
   limit: jest.Mock;
   order: jest.Mock;
   single: jest.Mock;
+  maybeSingle: jest.Mock;
 };
 
 const mockSupabase: SupabaseMock = {
@@ -52,6 +53,7 @@ const mockSupabase: SupabaseMock = {
   limit: jest.fn(() => mockSupabase),
   order: jest.fn(() => mockSupabase),
   single: jest.fn(() => mockSupabase),
+  maybeSingle: jest.fn(),
 };
 
 /**
@@ -111,7 +113,8 @@ describe('Scheduled Email Functions', () => {
     mockSupabase.order.mockImplementation(() => mockSupabase);
     mockSupabase.single.mockImplementation(() => mockSupabase);
 
-    mockedSendEmail.mockResolvedValue(undefined);
+    mockSupabase.maybeSingle.mockReset().mockResolvedValue({ data: { id: 1 }, error: null });
+    mockedSendEmail.mockResolvedValue({ status: 'sent' });
   });
   // #endregion Test Lifecycle
 
@@ -124,6 +127,7 @@ describe('Scheduled Email Functions', () => {
       run_after: '2025-11-01T09:00:00.000Z',
       payload: { subject: 'Test' },
       picked_at: null,
+      status: 'pending',
       created_at: '2025-11-01T08:00:00.000Z',
     };
     const mockUserProfile = {
@@ -175,7 +179,7 @@ describe('Scheduled Email Functions', () => {
     it('should process a scheduled email successfully', async () => {
       mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
       mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
-      mockSupabase.eq.mockResolvedValueOnce({ error: null });
+      mockSupabase.eq.mockReturnValue(mockSupabase);
       // First single() call for profiles, second for user_private_info
       mockSupabase.single.mockResolvedValueOnce({ data: mockUserProfile, error: null });
       mockSupabase.single.mockResolvedValueOnce({ data: mockUserPrivateInfo, error: null });
@@ -202,7 +206,7 @@ describe('Scheduled Email Functions', () => {
     it('should log an error if marking as picked up fails', async () => {
       mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
       mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
-      mockSupabase.eq.mockResolvedValueOnce({
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
         error: { message: 'Update failed' },
       });
 
@@ -217,10 +221,30 @@ describe('Scheduled Email Functions', () => {
       expect(mockedSendEmail).not.toHaveBeenCalled();
     });
 
+    it('does not send after another worker wins the claim', async () => {
+      mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
+      mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+      expect(await processScheduledEmails()).toEqual({ processed: 0, errors: [] });
+      expect(mockSupabase.eq).toHaveBeenCalledWith('status', 'pending');
+      expect(mockSupabase.is).toHaveBeenCalledWith('picked_at', null);
+      expect(mockedSendEmail).not.toHaveBeenCalled();
+    });
+
+    it('marks an opted-out scheduled email cancelled rather than sent', async () => {
+      mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
+      mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
+      mockSupabase.single.mockResolvedValueOnce({ data: mockUserProfile, error: null });
+      mockSupabase.single.mockResolvedValueOnce({ data: mockUserPrivateInfo, error: null });
+      mockedSendEmail.mockResolvedValueOnce({ status: 'skipped' });
+      await processScheduledEmails();
+      expect(mockSupabase.update).toHaveBeenLastCalledWith({ status: 'cancelled' });
+    });
+
     it('should log an error if user is not found', async () => {
       mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
       mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
-      mockSupabase.eq.mockResolvedValueOnce({ error: null });
+      mockSupabase.eq.mockReturnValue(mockSupabase);
       // Profile query fails
       mockSupabase.single.mockResolvedValueOnce({
         data: null,
@@ -243,7 +267,7 @@ describe('Scheduled Email Functions', () => {
 
       mockSupabase.limit.mockResolvedValueOnce({ data: [{}], error: null });
       mockSupabase.limit.mockResolvedValueOnce({ data: [mockEmail], error: null });
-      mockSupabase.eq.mockResolvedValueOnce({ error: null });
+      mockSupabase.eq.mockReturnValue(mockSupabase);
       // First single() call for profiles, second for user_private_info
       mockSupabase.single.mockResolvedValueOnce({ data: mockUserProfile, error: null });
       mockSupabase.single.mockResolvedValueOnce({ data: mockUserPrivateInfo, error: null });
@@ -256,6 +280,7 @@ describe('Scheduled Email Functions', () => {
         id: mockEmail.id,
         error: 'Email send failed',
       });
+      expect(mockSupabase.update).toHaveBeenLastCalledWith({ picked_at: null });
     });
   });
 

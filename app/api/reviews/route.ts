@@ -4,6 +4,7 @@ import {
   ensureProfileComplete,
 } from '@/lib/supabase/auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { isReviewableBooking } from '@/libs/reviews/eligibility';
 
 /**
  * Retrieves reviews, optionally filtered by userId.
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Creates a new review for a completed ride booking.
+ * Creates a new review for a past confirmed or completed ride booking.
  * Validates booking status, input fields, and ensures one review per trip per user.
  */
 export async function POST(request: NextRequest) {
@@ -118,16 +119,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine roles
-    const ride = booking.ride;
-    let roles;
-    try {
-      roles = determineReviewRoles(ride.posting_type, ride.poster_id, user.id);
-    } catch {
-      return NextResponse.json({ error: 'Invalid post type for review' }, { status: 400 });
-    }
-
-    const { reviewerRole, reviewedRole } = roles;
+    // Booking participants, not a mutable post type, determine review roles.
+    const reviewerRole = booking.driver_id === user.id ? 'driver' : 'passenger';
+    const reviewedRole = reviewerRole === 'driver' ? 'passenger' : 'driver';
 
     // Determine reviewee (the other participant)
     const revieweeId = booking.driver_id === user.id ? booking.passenger_id : booking.driver_id;
@@ -246,7 +240,7 @@ interface Booking {
 }
 
 /**
- * Checks if the user is a participant in the booking and if the trip is completed.
+ * Reviews past confirmed/completed bookings without inferring actual completion.
  */
 function validateBookingEligibility(booking: Booking, userId: string) {
   if (booking.driver_id !== userId && booking.passenger_id !== userId) {
@@ -256,43 +250,12 @@ function validateBookingEligibility(booking: Booking, userId: string) {
     };
   }
 
-  if (booking.status !== 'completed') {
-    return { error: 'You can only review completed trips', status: 400 };
-  }
-
-  // Combine date and time to check if trip has ended
-  const ride = booking.ride;
-  const tripEndDateTime = new Date(`${ride.departure_date}T${ride.departure_time}`);
-  const now = new Date();
-
-  if (now < tripEndDateTime) {
+  if (!isReviewableBooking(booking)) {
     return {
-      error: "You cannot review a trip that hasn't happened yet",
+      error: 'You can only review confirmed or completed bookings after their scheduled departure',
       status: 400,
     };
   }
 
   return null;
-}
-
-/**
- * Infers the reviewer and reviewed roles based on the original posting type.
- */
-function determineReviewRoles(postType: string, posterId: string, reviewerId: string) {
-  let reviewerRole = '';
-  let reviewedRole = '';
-
-  if (postType === 'driver' || postType === 'flexible' || postType === 'dog_available') {
-    // Poster is the driver
-    reviewerRole = reviewerId === posterId ? 'driver' : 'passenger';
-    reviewedRole = reviewerRole === 'driver' ? 'passenger' : 'driver';
-  } else if (postType === 'passenger' || postType === 'petpal_available') {
-    // Poster is the passenger
-    reviewerRole = reviewerId === posterId ? 'passenger' : 'driver';
-    reviewedRole = reviewerRole === 'passenger' ? 'driver' : 'passenger';
-  } else {
-    throw new Error('Invalid post type');
-  }
-
-  return { reviewerRole, reviewedRole };
 }

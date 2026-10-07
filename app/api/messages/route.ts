@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { TAHOE_TIME_ZONE } from '@/lib/dateFormat';
 import {
   getAuthenticatedUser,
   createUnauthorizedResponse,
@@ -8,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { checkSupabaseRateLimit } from '@/libs/rateLimit';
 import { isValidUUID } from '@/libs/validation';
 import { getAppUrl, getUserWithEmail, sendEmail } from '@/libs/email';
+import { alreadyNotifiedOfUnread } from '@/libs/email/messageNotifications';
 
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Check rate limit (20 messages per hour per user)
     // Uses database-backed rate limiting for serverless compatibility
-    const rateLimitCheck = await checkSupabaseRateLimit(supabase, user.id, 'messages', {
+    const rateLimitCheck = await checkSupabaseRateLimit(createAdminClient(), user.id, 'messages', {
       maxRequests: 20,
       windowSeconds: 3600,
       message: 'You have sent too many messages. Please try again later.',
@@ -184,13 +186,22 @@ export async function POST(request: NextRequest) {
       if (recipient_id !== user.id) {
         const adminSupabase = createAdminClient();
 
-        // Fetch both recipient (with email) and sender data in parallel
-        const [recipient, senderResult] = await Promise.all([
+        // One email per unread stretch, not one per message (see
+        // alreadyNotifiedOfUnread). If the check itself fails, send anyway: a
+        // duplicate is better than a missed notification.
+        const [recipient, senderResult, alreadyNotified] = await Promise.all([
           getUserWithEmail(adminSupabase, recipient_id),
           adminSupabase.from('profiles').select('first_name, last_name').eq('id', user.id).single(),
+          alreadyNotifiedOfUnread(adminSupabase, {
+            recipientId: recipient_id,
+            conversationId,
+          }).catch((checkError: unknown) => {
+            console.error('Could not check earlier message notifications:', checkError);
+            return false;
+          }),
         ]);
 
-        if (recipient?.email && senderResult.data) {
+        if (recipient?.email && senderResult.data && !alreadyNotified) {
           const sender = senderResult.data;
           await sendEmail({
             userId: recipient_id,
@@ -202,8 +213,12 @@ export async function POST(request: NextRequest) {
               senderInitial: (sender.first_name || 'U')[0].toUpperCase(),
               messagePreview:
                 trimmedContent.substring(0, 100) + (trimmedContent.length > 100 ? '...' : ''),
-              messageTime: new Date().toLocaleString(),
-              messageUrl: `${getAppUrl()}/messages/${message.id}`,
+              messageTime: new Date().toLocaleString('en-US', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: TAHOE_TIME_ZONE,
+              }),
+              messageUrl: `${getAppUrl()}/messages?conversation=${encodeURIComponent(conversationId)}`,
               threadId: conversationId,
             },
           });

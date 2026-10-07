@@ -2,9 +2,50 @@ import { recentTripWindow, toPosterLabel, toPublicPlace, toPublicRide } from './
 
 describe('public ride directory mapping', () => {
   it('hides street addresses and keeps the town', () => {
-    expect(toPublicPlace('123 Main St, Oakland, CA 94610')).toBe('Oakland, CA 94610');
-    expect(toPublicPlace('Rockridge BART, Oakland')).toBe('Rockridge BART, Oakland');
-    expect(toPublicPlace('Palisades Tahoe')).toBe('Palisades Tahoe');
+    expect(toPublicPlace('123 Main St, Oakland, CA 94610')).toBe('Oakland');
+    expect(toPublicPlace('Rockridge BART, Oakland')).toBe('Oakland');
+    expect(toPublicPlace('500 Main St, Apt 2, Truckee, CA')).toBe('Truckee');
+    expect(toPublicPlace('Unit 5, 1200 Main Street, Incline Village, NV')).toBe('Incline Village');
+    expect(toPublicPlace('  san francisco , CA')).toBe('San Francisco');
+  });
+
+  it.each([
+    ['Palisades Tahoe', 'Palisades Tahoe'],
+    ['Squaw Valley', 'Palisades Tahoe'],
+    ['Northstar California, Truckee, CA', 'Northstar'],
+    ['Heavenly', 'Heavenly'],
+    ['Kirkwood Mountain Resort', 'Kirkwood'],
+    ['Mt. Rose', 'Mt. Rose'],
+    ['Sierra at Tahoe', 'Sierra-at-Tahoe'],
+  ])('names the ski resort: %s', (input, expected) => {
+    expect(toPublicPlace(input)).toBe(expected);
+  });
+
+  it.each([
+    ['Mountain View, CA', 'Mountain View'],
+    ['Walnut Creek', 'Walnut Creek'],
+    ['Truckee CA', 'Truckee'],
+    ['South Lake', 'South Lake Tahoe'],
+    ['South San Francisco', 'South San Francisco'],
+    ['East Palo Alto, CA', 'East Palo Alto'],
+    ['Reno-Tahoe International Airport RNO', 'Reno-Tahoe Airport'],
+    ['Lake Tahoe', 'Lake Tahoe'],
+  ])('names the town or region without a street: %s', (input, expected) => {
+    expect(toPublicPlace(input)).toBe(expected);
+  });
+
+  it.each([
+    '123 Main St',
+    'Meet at my apartment',
+    '123 Main St, Apt 2',
+    'Unit 7, Oakland Avenue',
+    'San Francisco Blvd',
+    '42 Truckee Way',
+    'Unknown Town, CA',
+    'Secret cove or sand beach',
+    '',
+  ])('never exposes unverified freeform pickup text: %s', (input) => {
+    expect(toPublicPlace(input)).toBe('Location shared after sign-in');
   });
 
   it('reduces the poster to first name and last initial', () => {
@@ -37,8 +78,8 @@ describe('public ride directory mapping', () => {
     expect(ride).toEqual({
       id: 'ride-1',
       postingType: 'driver',
-      from: 'San Francisco, CA',
-      to: 'Northstar California, Truckee',
+      from: 'San Francisco',
+      to: 'Northstar',
       departureDate: '2026-12-13',
       departureTime: '06:00:00',
       isRoundTrip: true,
@@ -56,6 +97,13 @@ describe('public ride directory mapping', () => {
     expect(recentTripWindow(new Date('2026-10-05T12:00:00Z'), 365)).toEqual({
       from: '2025-10-05',
       to: '2026-10-04',
+    });
+  });
+
+  it('does not put today into the recent window when UTC is already tomorrow', () => {
+    expect(recentTripWindow(new Date('2026-10-05T01:00:00Z'), 7)).toEqual({
+      from: '2026-09-27',
+      to: '2026-10-03',
     });
   });
 });

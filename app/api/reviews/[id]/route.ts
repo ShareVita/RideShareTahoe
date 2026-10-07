@@ -19,9 +19,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .select(
         `
         *,
-        reviewer:profiles!reviews_reviewer_id_fkey(first_name, last_name, email, profile_photo_url),
-        reviewee:profiles!reviews_reviewee_id_fkey(first_name, last_name, email, profile_photo_url),
-        meeting:meetings(title, start_datetime, end_datetime)
+        reviewer:profiles!reviews_reviewer_id_fkey(first_name, last_name, profile_photo_url),
+        reviewee:profiles!reviews_reviewee_id_fkey(first_name, last_name, profile_photo_url),
+        booking:trip_bookings(id, ride:rides(start_location, end_location, departure_date, departure_time))
       `
       )
       .eq('id', id)
@@ -61,7 +61,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { rating, comment } = await request.json();
 
     // Validate input
-    if (rating !== undefined && (rating < 1 || rating > 5)) {
+    if (rating !== undefined && (!Number.isInteger(rating) || rating < 1 || rating > 5)) {
       return NextResponse.json(
         {
           error: 'Rating must be between 1 and 5',
@@ -70,7 +70,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       );
     }
 
-    if (comment !== undefined && comment.trim().length < 5) {
+    if (
+      comment !== undefined &&
+      (typeof comment !== 'string' || comment.trim().split(/\s+/).filter(Boolean).length < 5)
+    ) {
       return NextResponse.json(
         {
           error: 'Comment must be at least 5 words',
@@ -111,9 +114,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .select(
         `
         *,
-        reviewer:profiles!reviews_reviewer_id_fkey(first_name, last_name, email, profile_photo_url),
-        reviewee:profiles!reviews_reviewee_id_fkey(first_name, last_name, email, profile_photo_url),
-        meeting:meetings(title, start_datetime, end_datetime)
+        reviewer:profiles!reviews_reviewer_id_fkey(first_name, last_name, profile_photo_url),
+        reviewee:profiles!reviews_reviewee_id_fkey(first_name, last_name, profile_photo_url),
+        booking:trip_bookings(id, ride:rides(start_location, end_location, departure_date, departure_time))
       `
       )
       .single();
