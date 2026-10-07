@@ -86,6 +86,8 @@ The live site's responses identify Vercel. The old Cloudflare commands reference
 
 CI validates changes without writing the production database. `pr.yml` validates every pull request and the merge queue (its job names are the `main` ruleset's required checks). Production migration application is an explicit **CI Pipeline** workflow dispatch from `main` with `apply_migrations` enabled, after tests, integration tests, and the build pass. It runs in the `supabase-production` GitHub environment: add required reviewers to that environment (it is separate from the Vercel-managed `Production` environment). Review `supabase db push --dry-run` before dispatch; do not use `--include-all` to bypass migration-history disagreements.
 
+Configure `SUPABASE_ACCESS_TOKEN`, the verified `SUPABASE_PROJECT_REF`, and `SUPABASE_DB_PASSWORD` as secrets in that protected environment. The job fails before linking if any is missing; the password allows noninteractive CLI access. Never paste these values into issues, logs, or chat.
+
 Before dispatching the migration job for the October 2026 security migrations, run these read-only checks:
 
 - `npx supabase migration list --linked`: production history must match `supabase/migrations` up to `20260109000001`.
@@ -104,6 +106,8 @@ Before dispatching the migration job for the October 2026 security migrations, r
   ```
 
 Deploy the application before applying these migrations: the public ride board on the current `main` reads tables these migrations close to anonymous visitors.
+
+Coordinate this as a maintenance cutover after the service-role key is verified. The new message/block/unblock quota calls may fail closed until `20261007000001_rate_limit_service_role.sql` is applied, and new preference/login features need their migrations. Do not claim a zero-downtime rollout or activate any jobs in this interval; verify the deployed app again after migration.
 
 For database security verification when full Supabase cannot run, `scripts/test-horizontal-security.sh` replays migrations and runs real PostgreSQL RLS/trigger regression checks in a new disposable native database. It is not a substitute for Supabase authentication or browser end-to-end checks.
 
