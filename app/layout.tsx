@@ -56,11 +56,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 						function gtag(){dataLayer.push(arguments);}
 						gtag('js', new Date());
 						const safePageLocation = location.origin + location.pathname;
-						gtag('config', 'G-TGM53SZZX1', { page_location: safePageLocation });
+						gtag('config', 'G-15EWNNGDEZ', { page_location: safePageLocation });
 						gtag('config', 'AW-18056537904', { page_location: safePageLocation });
 						const analytics = document.createElement('script');
 						analytics.async = true;
-						analytics.src = 'https://www.googletagmanager.com/gtag/js?id=G-TGM53SZZX1';
+						analytics.src = 'https://www.googletagmanager.com/gtag/js?id=G-15EWNNGDEZ';
 						document.head.appendChild(analytics);
 					}
 					`}
