@@ -3,6 +3,8 @@
 import { usePathname } from 'next/navigation';
 import React, { useState, useCallback } from 'react';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
+import { useQueryClient } from '@tanstack/react-query';
+import type { Review } from '@/hooks/useReviews';
 import Footer from './Footer';
 import Header from './Header';
 import LoggedInNav from './LoggedInNav';
@@ -31,6 +33,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [mounted, setMounted] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState<PendingReview | null>(null);
+  const [reviewVersion, setReviewVersion] = useState(0);
+  const queryClient = useQueryClient();
   const pathname = usePathname();
 
   React.useEffect(() => {
@@ -45,11 +49,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     setIsReviewModalOpen(true);
   }, []);
 
-  const handleReviewSubmitted = useCallback((review: unknown) => {
-    // The review submission will be handled by the specific page components
-    // that use React Query to invalidate their caches
-    console.log('Review submitted:', review);
-  }, []);
+  const handleReviewSubmitted = useCallback(
+    (review: Review) => {
+      setReviewVersion((version) => version + 1);
+      void queryClient.invalidateQueries({ queryKey: ['reviews', review.reviewee_id] });
+    },
+    [queryClient]
+  );
 
   const handleCloseReviewModal = useCallback(() => {
     setIsReviewModalOpen(false);
@@ -68,7 +74,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Show review banner for logged-in users */}
         {mounted && user && !isAuthPage && (
           <div className="container mx-auto px-4 pt-4">
-            <ReviewBanner onReviewClick={handleReviewClick} />
+            <ReviewBanner refreshVersion={reviewVersion} onReviewClick={handleReviewClick} />
           </div>
         )}
         <ProfileGuard>{children}</ProfileGuard>

@@ -1,11 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import Header from './Header';
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
   useSearchParams: jest.fn(),
+  usePathname: jest.fn(() => '/'),
 }));
 
 // Stub next/link
@@ -70,6 +71,9 @@ describe('Header', () => {
     expect(screen.getAllByAltText('Test App logo').length).toBeGreaterThan(0);
 
     expect(screen.getAllByRole('button', { name: 'Sign In' }).length).toBeGreaterThan(0);
+    for (const link of screen.getAllByRole('link', { name: 'Find a Ride' })) {
+      expect(link).toHaveAttribute('href', '/rides/find');
+    }
   });
 
   it('opens and closes the mobile menu on click', () => {
@@ -115,5 +119,15 @@ describe('Header', () => {
 
     // 4. Verify the menu is now closed (has 'hidden' class)
     expect(mobileMenuContainer).toHaveClass('hidden');
+  });
+
+  it('closes the menu on pathname changes without changing search parameters', () => {
+    const { rerender } = render(<Header />);
+    const openButton = screen.getByRole('button', { name: 'Open main menu' });
+    fireEvent.click(openButton);
+    expect(openButton).toHaveAttribute('aria-expanded', 'true');
+    (usePathname as jest.Mock).mockReturnValue('/tahoe-transportation');
+    rerender(<Header />);
+    expect(openButton).toHaveAttribute('aria-expanded', 'false');
   });
 });

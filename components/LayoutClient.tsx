@@ -17,13 +17,13 @@ const CrispChat = () => {
   const [crispInitialized, setCrispInitialized] = useState(false);
 
   useEffect(() => {
-    if (config?.crisp?.id && !crispInitialized) {
+    if (pathname !== '/unsubscribe' && config?.crisp?.id && !crispInitialized) {
       // Set up Crisp only once
       Crisp.configure(config.crisp.id);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCrispInitialized(true);
     }
-  }, [crispInitialized]);
+  }, [crispInitialized, pathname]);
 
   useEffect(() => {
     if (crispInitialized) {

@@ -45,6 +45,7 @@ export const getSEOTags = ({
       description: openGraph?.description || config.appDescription,
       url: openGraph?.url || `https://${config.domainName}/`,
       siteName: openGraph?.title || config.appName,
+      images: [{ url: openGraph?.image || '/hero-bg.png', alt: config.appName }],
       locale: 'en_US',
       type: 'website',
     },
@@ -53,6 +54,7 @@ export const getSEOTags = ({
       title: openGraph?.title || config.appName,
       description: openGraph?.description || config.appDescription,
       card: 'summary_large_image',
+      images: [openGraph?.image || '/hero-bg.png'],
       // NOTE: no X/Twitter handle is set for RideShareTahoe yet. Add a
       // `creator` field here once there is one. It previously carried the
       // boilerplate author's handle, which credited the site to someone else

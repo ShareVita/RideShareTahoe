@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom';
 import { jest } from '@jest/globals';
+import { TextEncoder, TextDecoder } from 'node:util';
+
+// jsdom does not supply these Web APIs required by Resend's MIME decoder.
+globalThis.TextEncoder ??= TextEncoder;
+globalThis.TextDecoder ??= TextDecoder;
 
 jest.mock('next/server', () => {
   class MockNextResponse {

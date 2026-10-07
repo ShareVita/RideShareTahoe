@@ -49,17 +49,20 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
      */
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-15EWNNGDEZ"
-          strategy="beforeInteractive"
-        />
         <Script id="google-analytics" strategy="beforeInteractive">
           {`
+					if (location.pathname !== '/unsubscribe' && location.pathname !== '/unsubscribe/') {
 						globalThis.dataLayer = globalThis.dataLayer || [];
 						function gtag(){dataLayer.push(arguments);}
 						gtag('js', new Date());
-						gtag('config', 'G-15EWNNGDEZ');
-						gtag('config', 'AW-18056537904');
+						const safePageLocation = location.origin + location.pathname;
+						gtag('config', 'G-15EWNNGDEZ', { page_location: safePageLocation });
+						gtag('config', 'AW-18056537904', { page_location: safePageLocation });
+						const analytics = document.createElement('script');
+						analytics.async = true;
+						analytics.src = 'https://www.googletagmanager.com/gtag/js?id=G-15EWNNGDEZ';
+						document.head.appendChild(analytics);
+					}
 					`}
         </Script>
 

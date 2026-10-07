@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@plugin 'daisyui' {
+  themes:
+    light --default,
+    dark;
+}
+
+@custom-variant dark (&:where(.dark, .dark *, [data-theme=dark], [data-theme=dark] *));
 
 @theme {
   --background-image-gradient: linear-gradient(
@@ -33,7 +39,7 @@
   @keyframes appearfromright {
     0% {
       opacity: 0.3;
-      transform: translate(15%, 0 px);
+      transform: translate(15%, 0);
     }
 
     100% {
@@ -120,10 +126,6 @@
 
   .btn-gradient {
     @apply bg-gradient! bg-size-[300%_300%]! hover:saturate-[1.2] shadow-sm duration-100 border-0! border-transparent! bg-transparent! animate-shimmer disabled:bg-none! disabled:bg-gray-500/30! text-white!;
-  }
-
-  .btn {
-    @apply capitalize!;
   }
 
   /* Ensure all headings are pure black */

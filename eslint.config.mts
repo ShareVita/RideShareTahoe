@@ -13,11 +13,45 @@ export default defineConfig([
   ...nextTs,
   prettier,
   {
+    // Next 16.4 added `react-hooks/set-state-in-effect`. These files predate it
+    // and load data with fetch-in-effect; they stay visible as warnings until
+    // they move to React Query. Every other file keeps the rule as an error, so
+    // new code cannot add the pattern.
+    files: [
+      'app/community/components/FindRidesTab.tsx',
+      'app/community/components/drivers/DriversSection.tsx',
+      'app/community/components/members/CommunityMembersList.tsx',
+      'app/community/components/passengers/PassengersList.tsx',
+      'app/community/components/passengers/PassengersSection.tsx',
+      'app/community/hooks/useCommunityRides.ts',
+      'app/messages/page.tsx',
+      'app/onboarding/welcome/page.tsx',
+      'app/profile/[[]id]/page.tsx',
+      'app/profile/page.tsx',
+      'components/AppLayout.tsx',
+      'components/DeletionRequestStatus.tsx',
+      'components/ProfilesList.tsx',
+      'components/trips/MyTripsView.tsx',
+      'components/vehicles/VehicleList.tsx',
+      'contexts/BlockedUsersContext.tsx',
+      'hooks/useHasActiveBooking.ts',
+      'hooks/useIsBlocked.ts',
+      'hooks/useRideDetail.ts',
+      'hooks/useUnreadMessages.ts',
+    ],
+    rules: { 'react-hooks/set-state-in-effect': 'warn' },
+  },
+  {
     languageOptions: {
       parserOptions: {
         extraFileExtensions: ['.local'],
         projectService: {
-          allowDefaultProject: ['eslint.config.mts', 'next-sitemap.config.js', '.env.test.local', 'jest.config.js'],
+          allowDefaultProject: [
+            'eslint.config.mts',
+            'next-sitemap.config.js',
+            '.env.test.local',
+            'jest.config.js',
+          ],
         },
       },
     },
@@ -38,6 +72,11 @@ export default defineConfig([
     plugins: { js },
     extends: ['js/recommended'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
+  },
+  {
+    files: ['types/database.types.ts'],
+    // Supabase generates mapped type placeholders named `_`.
+    rules: { 'no-unused-vars': 'off' },
   },
   {
     files: ['**/*.json'],

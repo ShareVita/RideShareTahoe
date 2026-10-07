@@ -90,6 +90,16 @@ describe('LayoutClient', () => {
     expect(Crisp.configure).toHaveBeenCalledWith('mock-crisp-id');
   });
 
+  it('does not load customer tracking on the token-bearing unsubscribe page', () => {
+    (usePathname as jest.Mock).mockReturnValue('/unsubscribe');
+    render(
+      <ClientLayout>
+        <div>Email preferences</div>
+      </ClientLayout>
+    );
+    expect(Crisp.configure).not.toHaveBeenCalled();
+  });
+
   it('sets Crisp user data if user is logged in', () => {
     const mockUser = {
       id: 'user-123',

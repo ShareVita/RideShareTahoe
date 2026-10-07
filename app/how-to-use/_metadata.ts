@@ -39,9 +39,7 @@ export const metadata: Metadata = {
     siteName: 'RideShareTahoe',
     images: [
       {
-        url: '/og-image-how-to-use.png',
-        width: 1200,
-        height: 630,
+        url: '/hero-bg.png',
         alt: 'How to Use RideShareTahoe - Complete User Guide',
       },
     ],
@@ -53,7 +51,7 @@ export const metadata: Metadata = {
     title: 'How to Use RideShareTahoe - Complete User Guide',
     description:
       'Learn how to use RideShareTahoe to connect with drivers and passengers for trips to Lake Tahoe.',
-    images: ['/og-image-how-to-use.png'],
+    images: ['/hero-bg.png'],
     creator: '@ridesharetahoe',
   },
   robots: {

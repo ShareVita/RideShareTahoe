@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import OptimizedImage from './ui/OptimizedImage';
 import ButtonSignin from './ButtonSignin';
@@ -21,12 +21,13 @@ interface HeaderProps {
  */
 const Header = ({ transparent = false }: HeaderProps) => {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(false);
-  }, [searchParams]);
+  }, [pathname, searchParams]);
 
   return (
     <header
@@ -59,47 +60,52 @@ const Header = ({ transparent = false }: HeaderProps) => {
           </Link>
         </div>
 
-        {/* Burger button */}
-        <div className="hidden">
-          <button
-            type="button"
-            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-white"
-            onClick={() => setIsOpen(true)}
-          >
-            <span className="sr-only">Open main menu</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            </svg>
-          </button>
-        </div>
-
         {/* Nav links (desktop) */}
         <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
+          <Link href="/rides/find" className="hover:text-white transition-colors">
+            Find a Ride
+          </Link>
           <Link href="/tahoe-transportation" className="hover:text-white transition-colors">
             Transit Guide
           </Link>
         </div>
 
-        {/* CTA (desktop) */}
-        <div className="flex justify-end flex-1">{cta}</div>
+        {/* Sign in stays visible on every width; the menu button joins it below lg. */}
+        <div className="flex flex-1 items-center justify-end gap-4">
+          {cta}
+          <div className="flex lg:hidden">
+            <button
+              type="button"
+              className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-white"
+              onClick={() => setIsOpen(true)}
+              aria-expanded={isOpen}
+              aria-controls="public-mobile-menu"
+            >
+              <span className="sr-only">Open main menu</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
       </nav>
 
       {/* Mobile menu */}
-      <div className={`relative z-50 ${isOpen ? '' : 'hidden'}`}>
+      <div id="public-mobile-menu" className={`relative z-50 ${isOpen ? '' : 'hidden'}`}>
         <div
-          className={`fixed inset-y-0 right-0 z-10 w-full px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto 
-          bg-slate-950 sm:max-w-sm sm:ring-1 sm:ring-white/10 
+          className={`fixed top-0 right-0 z-10 h-dvh w-full px-4 sm:px-6 lg:px-8 py-4 overflow-y-auto
+          bg-slate-950 sm:max-w-sm sm:ring-1 sm:ring-white/10
           transform origin-right transition ease-in-out duration-300`}
         >
           {/* Logo (mobile) */}
@@ -144,6 +150,13 @@ const Header = ({ transparent = false }: HeaderProps) => {
           <div className="flow-root mt-6">
             <div className="py-4">
               <div className="flex flex-col gap-y-2 items-start">
+                <Link
+                  href="/rides/find"
+                  className="text-white font-medium py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Find a Ride
+                </Link>
                 <Link
                   href="/tahoe-transportation"
                   className="text-white font-medium py-2"

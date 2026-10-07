@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface DeletionRequest {
+  status: 'pending' | 'processing';
   daysRemaining: number;
   scheduled_deletion_date: string;
   reason?: string;
@@ -18,14 +19,9 @@ export default function DeletionRequestStatus({ userId }: DeletionRequestStatusP
   const [error, setError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  useEffect(() => {
-    if (userId) {
-      fetchDeletionStatus();
-    }
-  }, [userId]);
-
-  const fetchDeletionStatus = async () => {
+  const fetchDeletionStatus = useCallback(async () => {
     try {
+      setError(null);
       const response = await fetch('/api/account/deletion-request');
       const data = await response.json();
 
@@ -40,7 +36,18 @@ export default function DeletionRequestStatus({ userId }: DeletionRequestStatusP
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+      void fetchDeletionStatus();
+    }
+    const refresh = () => {
+      void fetchDeletionStatus();
+    };
+    window.addEventListener('account-deletion-changed', refresh);
+    return () => window.removeEventListener('account-deletion-changed', refresh);
+  }, [userId, fetchDeletionStatus]);
 
   const handleCancelDeletion = async () => {
     if (!confirm('Are you sure you want to cancel your account deletion request?')) {
@@ -48,6 +55,7 @@ export default function DeletionRequestStatus({ userId }: DeletionRequestStatusP
     }
 
     setIsCancelling(true);
+    setError(null);
     try {
       const response = await fetch('/api/account/deletion-request', {
         method: 'DELETE',
@@ -163,10 +171,14 @@ export default function DeletionRequestStatus({ userId }: DeletionRequestStatusP
         <div className="mt-3 flex gap-2">
           <button
             onClick={handleCancelDeletion}
-            disabled={isCancelling}
+            disabled={isCancelling || deletionRequest.status === 'processing'}
             className={`px-3 py-1 text-sm rounded font-medium transition-colors ${styles.button} disabled:opacity-50`}
           >
-            {isCancelling ? 'Cancelling...' : 'Cancel Deletion'}
+            {deletionRequest.status === 'processing'
+              ? 'Deletion in progress'
+              : isCancelling
+                ? 'Cancelling...'
+                : 'Cancel Deletion'}
           </button>
         </div>
 

@@ -23,6 +23,7 @@ interface MockLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
 jest.mock('next/navigation', () => ({
   useSearchParams: jest.fn(),
   usePathname: jest.fn(),
+  useRouter: jest.fn(() => ({ replace: mockReplace, refresh: mockRefresh })),
 }));
 
 jest.mock('@/components/providers/SupabaseUserProvider', () => ({
@@ -66,13 +67,14 @@ jest.mock(
 const mockedUsePathname = usePathname as jest.Mock;
 const mockedUseSearchParams = useSearchParams as jest.Mock;
 const mockedUseUser = useUser as jest.Mock;
+const mockReplace = jest.fn();
+const mockRefresh = jest.fn();
 import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 const mockedUseUnreadMessages = useUnreadMessages as jest.Mock;
 
 describe('LoggedInNav', () => {
   let mockedSignOut: jest.Mock;
   let consoleErrorSpy: jest.SpyInstance;
-  let originalLocation: Location;
   const queryClient = new QueryClient();
 
   const renderWithProviders = (ui: React.ReactElement) => {
@@ -92,16 +94,12 @@ describe('LoggedInNav', () => {
 
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    originalLocation = globalThis.location;
-    delete (globalThis as { location: Location | undefined }).location;
-    (globalThis as { location: { href: string } }).location = { href: 'http://localhost/' };
     queryClient.clear();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
     consoleErrorSpy.mockRestore();
-    globalThis.location = originalLocation;
   });
 
   test('renders correctly and mobile menu is hidden', () => {
@@ -157,7 +155,7 @@ describe('LoggedInNav', () => {
     });
 
     // Simulate a navigation
-    mockedUseSearchParams.mockReturnValue(new URLSearchParams('page=2'));
+    mockedUsePathname.mockReturnValue('/messages');
     rerender(
       <QueryClientProvider client={queryClient}>
         <LoggedInNav />
@@ -195,7 +193,8 @@ describe('LoggedInNav', () => {
       expect(mockedSignOut).toHaveBeenCalledTimes(1);
     });
 
-    expect(globalThis.location.href).toBe('http://localhost/');
+    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
   test('handles successful sign out from mobile menu', async () => {
@@ -211,7 +210,8 @@ describe('LoggedInNav', () => {
     await waitFor(() => {
       expect(mockedSignOut).toHaveBeenCalledTimes(1);
     });
-    expect(globalThis.location.href).toBe('http://localhost/');
+    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 
   test('handles failed sign out and logs an error', async () => {
@@ -229,7 +229,8 @@ describe('LoggedInNav', () => {
     });
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('Error signing out:', mockError);
-    expect(globalThis.location.href).toBe('http://localhost/');
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 
   test('displays badge when there are unread messages', () => {
