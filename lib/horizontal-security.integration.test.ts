@@ -115,6 +115,87 @@ describe('Horizontal security and lifecycle with real Auth/PostgREST', () => {
     ).toBeNull();
   });
 
+  it('enforces deletion worker ownership even through direct member REST writes', async () => {
+    expect(
+      (
+        await member
+          .from('account_deletion_requests')
+          .insert({ user_id: userId, status: 'processing' })
+      ).error?.code
+    ).toBe('42501');
+    const request = await member
+      .from('account_deletion_requests')
+      .insert({ user_id: userId, scheduled_deletion_date: new Date().toISOString() })
+      .select('id,scheduled_deletion_date')
+      .single();
+    if (request.error) throw request.error;
+    const id = request.data.id;
+    try {
+      expect(new Date(request.data.scheduled_deletion_date).getTime() - Date.now()).toBeGreaterThan(
+        29 * 24 * 60 * 60 * 1000
+      );
+      expect(
+        (
+          await member
+            .from('account_deletion_requests')
+            .update({ status: 'processing' })
+            .eq('id', id)
+        ).error?.code
+      ).toBe('42501');
+      expect(
+        (
+          await member
+            .from('account_deletion_requests')
+            .update({
+              scheduled_deletion_date: new Date().toISOString(),
+            })
+            .eq('id', id)
+        ).error?.code
+      ).toBe('42501');
+      expect(
+        (
+          await admin
+            .from('account_deletion_requests')
+            .update({
+              status: 'processing',
+              processed_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+        ).error
+      ).toBeNull();
+      expect(
+        (
+          await member
+            .from('account_deletion_requests')
+            .update({ status: 'cancelled' })
+            .eq('id', id)
+        ).error?.code
+      ).toBe('42501');
+      expect(
+        (
+          await admin
+            .from('account_deletion_requests')
+            .update({ status: 'pending', processed_at: null })
+            .eq('id', id)
+        ).error
+      ).toBeNull();
+      expect(
+        (
+          await member
+            .from('account_deletion_requests')
+            .update({ status: 'cancelled' })
+            .eq('id', id)
+        ).error
+      ).toBeNull();
+      expect(
+        (await member.from('account_deletion_requests').update({ status: 'pending' }).eq('id', id))
+          .error?.code
+      ).toBe('42501');
+    } finally {
+      await admin.from('account_deletion_requests').delete().eq('id', id);
+    }
+  });
+
   it('deletes Auth first and lets real foreign-key cascades remove profile and request', async () => {
     const { data, error } = await admin
       .from('account_deletion_requests')
