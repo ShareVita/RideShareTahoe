@@ -8,14 +8,16 @@ command -v npx >/dev/null 2>&1 || { echo >&2 "Error: npx is required but not fou
 SUPABASE_STATUS=$(npx supabase status -o env)
 
 extract_key_value() {
-  echo "$SUPABASE_STATUS" | \
-    grep "$1" | \
-    sed -E 's/.*: (sb_.*)/\1/' | \
-    tr -d '[:space:]"'
+  printf '%s\n' "$SUPABASE_STATUS" | awk -F= -v key="$1" '
+    $1 == key { value=substr($0, index($0, "=")+1); gsub(/"|\r/, "", value); print value; exit }
+  '
 }
 
 SERVICE_KEY_VALUE=$(extract_key_value "SERVICE_ROLE_KEY")
 PUBLISHABLE_KEY_VALUE=$(extract_key_value "PUBLISHABLE_KEY")
+if [ -z "$PUBLISHABLE_KEY_VALUE" ]; then
+  PUBLISHABLE_KEY_VALUE=$(extract_key_value "ANON_KEY")
+fi
 
 if [ -z "$SERVICE_KEY_VALUE" ] || [ -z "$PUBLISHABLE_KEY_VALUE" ]; then
   echo "Error: Could not retrieve dynamic Supabase keys."

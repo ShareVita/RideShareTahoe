@@ -18,7 +18,7 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 
 - **Frontend:** Next.js 16 (App Router), React, Tailwind CSS with DaisyUI
 - **Backend:** Supabase (PostgreSQL, Auth, Storage)
-- **Infra:** Cloudflare
+- **Infra:** Vercel (Next.js); production deployment requires repository-owner approval
 - **Email:** Resend for magic links and transactional notifications
 
 ## Prerequisites
@@ -76,6 +76,16 @@ RideShareTahoe connects drivers and passengers traveling between the Bay Area an
 - `task services:start` / `task services:stop`: manually control the local Supabase stack.
 - `task db:reset`: reset the database if migrations are out of sync.
 - `npm run lint`, `npm run test`, `npm run build`: validation tools the project runs in CI.
+- `npm run preview`: build and serve the production Next.js output locally.
+- `npm run db:types`: regenerate typed Supabase contracts from the local database after applying migrations. Never use production credentials for local development.
+
+## Deployment and migrations
+
+The live site's responses identify Vercel. The old Cloudflare commands referenced uninstalled adapters and have been removed; use the configured Vercel project for preview deployments and obtain owner approval before production deployment.
+
+CI validates changes without writing the production database. Production migration application is an explicit **CI Pipeline** workflow dispatch with `apply_migrations` enabled, after tests, integration tests, and the build pass. Configure the GitHub `production` environment with required reviewers. Review `supabase db push --dry-run` before dispatch; do not use `--include-all` to bypass migration-history disagreements.
+
+For database security verification when full Supabase cannot run, `scripts/test-horizontal-security.sh` replays migrations and runs real PostgreSQL RLS/trigger regression checks in a new disposable native database. It is not a substitute for Supabase authentication or browser end-to-end checks.
 
 ## Cron job helper
 
