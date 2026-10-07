@@ -246,6 +246,19 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/sitemap.xml')).toBe(true);
   });
 
+  it('passes only the exact independently authorized scheduler handlers', async () => {
+    const isPublicPath = await load();
+    for (const path of [
+      '/api/cron/process-scheduled-emails',
+      '/api/cron/process-reengage-emails',
+    ]) {
+      expect(isPublicPath(path)).toBe(true);
+      expect(isPublicPath(`${path}/extra`)).toBe(false);
+    }
+    expect(isPublicPath('/api/cron/unknown')).toBe(false);
+    expect(isPublicPath('/api/admin/process-deletions')).toBe(false);
+  });
+
   // A stray trailing slash must not bounce a public page to /login.
   it('ignores a trailing slash', async () => {
     const isPublicPath = await load();

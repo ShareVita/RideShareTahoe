@@ -35,6 +35,12 @@ const AUTH_PREFIXES = ['/login', '/auth', '/api/auth'];
 /** Crawler-facing files that must never redirect. */
 const CRAWLER_PATHS = new Set(['/robots.txt', '/sitemap.xml', '/manifest.webmanifest']);
 
+// These exact handlers authorize their scheduler independently of member login.
+const CRON_PATHS = new Set([
+  '/api/cron/process-scheduled-emails',
+  '/api/cron/process-reengage-emails',
+]);
+
 /**
  * Whether an anonymous request for this path is allowed through.
  *
@@ -43,7 +49,7 @@ const CRAWLER_PATHS = new Set(['/robots.txt', '/sitemap.xml', '/manifest.webmani
  */
 export function isPublicPath(pathname: string): boolean {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
-  if (PUBLIC_PATHS.has(path) || CRAWLER_PATHS.has(path)) return true;
+  if (PUBLIC_PATHS.has(path) || CRAWLER_PATHS.has(path) || CRON_PATHS.has(path)) return true;
   return AUTH_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
