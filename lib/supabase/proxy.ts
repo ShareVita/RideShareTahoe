@@ -10,10 +10,8 @@ import { NextResponse, type NextRequest } from 'next/server';
  * invisible in search. It also put the privacy policy and terms of service
  * behind a login, which they are not supposed to be.
  *
- * This is an allowlist, not a denylist: anything not named here stays gated, so
- * a new route is private until someone deliberately makes it public. Pages that
- * read member data (/community, /profile, /messages, /rides/post, /vehicles,
- * /admin, ...) are deliberately absent and must stay that way.
+ * Pages reading member data are gated separately below. API handlers own their
+ * authorization (including Bearer tokens), and unknown URLs must reach 404.
  */
 const PUBLIC_PATHS = new Set([
   '/',
@@ -24,13 +22,15 @@ const PUBLIC_PATHS = new Set([
   '/how-to-use',
   '/tahoe-transportation',
   '/tahoe-resorts',
+  '/rides',
   '/rides/find',
   '/privacy-policy',
   '/tos',
+  '/unsubscribe',
 ]);
 
 /** Path prefixes that must stay reachable for auth itself to work. */
-const AUTH_PREFIXES = ['/login', '/auth', '/api/auth'];
+const AUTH_PREFIXES = ['/login', '/auth', '/api/auth', '/api/email/unsubscribe'];
 
 /** Crawler-facing files that must never redirect. */
 const CRAWLER_PATHS = new Set(['/robots.txt', '/sitemap.xml', '/manifest.webmanifest']);
@@ -47,6 +47,14 @@ export function isPublicPath(pathname: string): boolean {
   return AUTH_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
+/** Match existing private pages, not arbitrary paths under their prefixes. */
+export function isPrivatePage(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, '');
+  return /^(?:\/community|\/vehicles|\/messages|\/complete-profile|\/onboarding\/welcome|\/admin(?:\/bulk-email)?|\/profile(?:\/[^/]+)?|\/rides(?:\/post|\/edit\/[^/]+))$/.test(
+    path
+  );
+}
+
 /**
  * Ensure the Supabase session for the incoming request is loaded and
  * synchronized with the response cookies. This function creates a new
@@ -60,8 +68,8 @@ export function isPublicPath(pathname: string): boolean {
  * - Callers should not execute code between client creation and
  *   `supabase.auth.getClaims()`; doing so can cause hard-to-debug session
  *   issues.
- * - If no user claims are present and the request path is not public (see
- *   `isPublicPath`), the request is redirected to `/login`.
+ * - API handlers own authorization; unknown URLs reach the router's 404.
+ * - Anonymous requests for known private pages are redirected to `/login`.
  *
  * @param request - The incoming Next.js `NextRequest` to inspect and modify.
  * @returns A `NextResponse` that preserves Supabase cookies and may redirect
@@ -69,6 +77,12 @@ export function isPublicPath(pathname: string): boolean {
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+
+  // Do not turn API 401/403/404 responses into HTML redirects, or require a
+  // cookie session for scheduler and Bearer-token authentication.
+  if (request.nextUrl.pathname === '/api' || request.nextUrl.pathname.startsWith('/api/')) {
+    return supabaseResponse;
+  }
 
   // Create a per-request Supabase server client using the request cookies.
   const supabase = createServerClient(
@@ -93,13 +107,15 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Fetch claims to ensure session state is loaded on the server.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  const { data, error } = await supabase.auth.getClaims();
+  const user = !error && data?.claims?.sub;
 
-  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+  if (!user && !isPublicPath(request.nextUrl.pathname) && isPrivatePage(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+    return response;
   }
 
   // Return the response that preserves any cookies set by Supabase.

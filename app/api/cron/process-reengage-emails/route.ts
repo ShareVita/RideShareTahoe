@@ -1,7 +1,18 @@
 import { processReengageEmails } from '@/libs/email';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const secret = process.env.CRON_SECRET_TOKEN;
+  if (!secret) {
+    return NextResponse.json(
+      { error: 'Scheduler authorization is not configured' },
+      { status: 503 }
+    );
+  }
+  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     console.log('Starting re-engagement email processing...');
 
@@ -24,7 +35,6 @@ export async function GET() {
     return NextResponse.json(
       {
         error: 'Failed to process re-engagement emails',
-        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
