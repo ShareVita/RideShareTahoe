@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { validateUUID } from '@/libs/validation';
@@ -10,8 +10,8 @@ import toast from 'react-hot-toast';
 
 interface Participant {
   id: string;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   profile_photo_url?: string | null;
 }
 
@@ -38,8 +38,8 @@ interface Message {
   sender_id: string;
   recipient_id: string;
   content: string;
-  created_at: string;
-  is_read?: boolean;
+  created_at: string | null;
+  is_read?: boolean | null;
 }
 
 interface BookingRequest {
@@ -91,7 +91,12 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
-  const [messageInput, setMessageInput] = useState('');
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const messageInput = selectedConversationId ? (drafts[selectedConversationId] ?? '') : '';
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const messageScrollRef = useRef<HTMLDivElement>(null);
+  const followLatest = useRef(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
@@ -123,11 +128,14 @@ export default function MessagesPage() {
     if (!otherParticipant) {
       return 'Conversation';
     }
-    return `${otherParticipant.first_name} ${otherParticipant.last_name}`;
+    return (
+      `${otherParticipant.first_name ?? ''} ${otherParticipant.last_name ?? ''}`.trim() ||
+      'Community member'
+    );
   }, [otherParticipant]);
 
-const hasActiveOrPendingTrip = true; // Allow messaging without booking
-  
+  const hasActiveOrPendingTrip = true; // Allow messaging without booking
+
   const loadConversations = useCallback(async () => {
     if (!user) {
       return;
@@ -157,7 +165,7 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
         throw error;
       }
 
-      const safeData = (Array.isArray(data) ? data : []) as unknown as Conversation[];
+      const safeData = Array.isArray(data) ? data : [];
       setConversations(safeData);
       setSelectedConversationId((previous) => previous ?? safeData[0]?.id ?? null);
     } catch (error) {
@@ -256,19 +264,22 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
 
       setBookingRequests(
         Array.isArray(data)
-          ? data.map((item) => {
-              const bookingIdFromRow = (item as { booking_id?: string | null }).booking_id;
-              return {
-                ...item,
-                booking_id: bookingIdFromRow ?? item.id ?? null,
-                driver: Array.isArray(item.driver)
-                  ? (item.driver[0] ?? null)
-                  : (item.driver ?? null),
-                passenger: Array.isArray(item.passenger)
-                  ? (item.passenger[0] ?? null)
-                  : (item.passenger ?? null),
-              };
-            })
+          ? data
+              .filter((item) => item.status === 'pending' || item.status === 'invited')
+              .map<BookingRequest>((item) => {
+                const bookingIdFromRow = (item as { booking_id?: string | null }).booking_id;
+                return {
+                  ...item,
+                  status: item.status === 'invited' ? 'invited' : 'pending',
+                  booking_id: bookingIdFromRow ?? item.id ?? null,
+                  driver: Array.isArray(item.driver)
+                    ? (item.driver[0] ?? null)
+                    : (item.driver ?? null),
+                  passenger: Array.isArray(item.passenger)
+                    ? (item.passenger[0] ?? null)
+                    : (item.passenger ?? null),
+                };
+              })
           : []
       );
     } catch (error) {
@@ -296,6 +307,18 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    followLatest.current = true;
+    setSendError(null);
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    const scroll = messageScrollRef.current;
+    if (scroll && followLatest.current) {
+      scroll.scrollTop = scroll.scrollHeight;
+    }
+  }, [messages, selectedConversationId]);
 
   useEffect(() => {
     fetchBookingRequests();
@@ -374,12 +397,23 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
 
   const handleSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!hasActiveOrPendingTrip || !messageInput.trim() || !user || !currentConversation) {
+    if (
+      isSending ||
+      !hasActiveOrPendingTrip ||
+      !messageInput.trim() ||
+      !user ||
+      !currentConversation ||
+      !otherParticipant
+    ) {
       return;
     }
 
     const content = messageInput.trim();
+    const conversationId = currentConversation.id;
     const tempId = `local-${Date.now()}`;
+    setIsSending(true);
+    setSendError(null);
+    followLatest.current = true;
 
     // Optimistic update
     setMessages((existing) => [
@@ -392,7 +426,7 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
         created_at: new Date().toISOString(),
       },
     ]);
-    setMessageInput('');
+    setDrafts((existing) => ({ ...existing, [conversationId]: '' }));
 
     try {
       const response = await fetch('/api/messages', {
@@ -410,11 +444,16 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
       }
 
       // Refresh messages to get the real ID and any other updates
-      loadMessages();
+      await loadMessages();
     } catch (error) {
       console.error('Error sending message:', error);
-      // Revert optimistic update or show error
-      // For now, we just log it. In a real app, we'd show a toast or retry.
+      setMessages((existing) => existing.filter((message) => message.id !== tempId));
+      setDrafts((existing) => ({ ...existing, [conversationId]: messageInput }));
+      setSendError(
+        'Your message was not confirmed as sent. Your draft has been restored. Check the thread before trying again.'
+      );
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -510,6 +549,7 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
                   <button
                     key={conversation.id}
                     type="button"
+                    disabled={isSending}
                     onClick={() => setSelectedConversationId(conversation.id)}
                     className={`text-left rounded-2xl border px-4 py-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
                     ${
@@ -519,7 +559,10 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
                     }`}
                   >
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {other ? `${other.first_name} ${other.last_name}` : 'Conversation'}
+                      {other
+                        ? `${other.first_name ?? ''} ${other.last_name ?? ''}`.trim() ||
+                          'Community member'
+                        : 'Conversation'}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                       {conversation.ride?.title ||
@@ -534,7 +577,7 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
           </div>
         </aside>
 
-        <section className="flex-1 space-y-6 rounded-3xl bg-white/80 dark:bg-slate-900/80 p-6 shadow-xl border border-white/20 dark:border-slate-800">
+        <section className="min-w-0 flex-1 space-y-6 rounded-3xl bg-white/80 dark:bg-slate-900/80 p-6 shadow-xl border border-white/20 dark:border-slate-800">
           {currentConversation ? (
             <>
               <header className="flex flex-col gap-4 border-b border-gray-100 dark:border-slate-800 pb-4">
@@ -709,7 +752,15 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
                   <p className="text-sm text-gray-500 dark:text-gray-400">No messages yet</p>
                 )}
 
-                <div className="flex max-h-[55vh] min-h-[180px] flex-col gap-3 overflow-y-auto px-1 sm:max-h-[420px] lg:max-h-[480px]">
+                <div
+                  ref={messageScrollRef}
+                  onScroll={(event) => {
+                    const scroll = event.currentTarget;
+                    followLatest.current =
+                      scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
+                  }}
+                  className="flex max-h-[55vh] min-h-[180px] flex-col gap-3 overflow-y-auto px-1 sm:max-h-[420px] lg:max-h-[480px]"
+                >
                   {messages.map((message) => {
                     const isCurrentUser = message.sender_id === user?.id;
                     return (
@@ -723,11 +774,19 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
                           }`}
                       >
                         <p className="break-words">{message.content}</p>
-                        <p className="mt-2 text-xs text-white/70 dark:text-gray-400">
-                          {new Date(message.created_at).toLocaleTimeString([], {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
+                        <p
+                          className={`mt-2 text-xs ${isCurrentUser ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}
+                        >
+                          {message.created_at
+                            ? new Date(message.created_at).toLocaleString([], {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })
+                            : 'Date unavailable'}
+                          {message.id.startsWith('local-') && ' · Sending…'}
                         </p>
                       </div>
                     );
@@ -735,27 +794,42 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
                 </div>
               </div>
 
+              {sendError && (
+                <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                  {sendError}
+                </p>
+              )}
               <form
                 className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
                 onSubmit={handleSendMessage}
               >
                 <textarea
                   rows={2}
+                  aria-label="Message"
                   className="flex-1 min-h-[120px] rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Type your message..."
                   value={messageInput}
-                  onChange={(event) => setMessageInput(event.target.value)}
-                  disabled={!hasActiveOrPendingTrip}
+                  onChange={(event) =>
+                    setDrafts((existing) => ({
+                      ...existing,
+                      [currentConversation.id]: event.target.value,
+                    }))
+                  }
+                  disabled={isSending || !hasActiveOrPendingTrip}
                 />
                 <button
                   type="submit"
                   className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                  disabled={!messageInput.trim() || !hasActiveOrPendingTrip}
+                  disabled={
+                    isSending ||
+                    !messageInput.trim() ||
+                    !hasActiveOrPendingTrip ||
+                    !otherParticipant
+                  }
                 >
-                  Send
+                  {isSending ? 'Sending…' : 'Send'}
                 </button>
               </form>
-            
             </>
           ) : (
             <div className="flex flex-col items-center justify-center space-y-3 py-12">
@@ -774,7 +848,7 @@ const hasActiveOrPendingTrip = true; // Allow messaging without booking
             isOpen={isReportModalOpen}
             onClose={() => setIsReportModalOpen(false)}
             reportedUserId={otherParticipant.id}
-            reportedUserName={`${otherParticipant.first_name} ${otherParticipant.last_name}`}
+            reportedUserName={otherParticipantName}
           />
         )}
       </div>

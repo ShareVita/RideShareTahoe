@@ -6,6 +6,9 @@ import sitemap from './sitemap';
 // are two separate lists, so this locks them together: adding a route to one
 // without the other fails here rather than silently failing in Google.
 describe('sitemap', () => {
+  it('does not claim every route was modified at request time', () => {
+    expect(sitemap().every((entry) => entry.lastModified === undefined)).toBe(true);
+  });
   it('only lists routes an anonymous visitor can actually reach', () => {
     for (const entry of sitemap()) {
       const path = new URL(entry.url).pathname;

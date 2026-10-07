@@ -1,6 +1,4 @@
 import type { Config } from 'tailwindcss';
-// @ts-expect-error - daisyui does not have types
-import daisyui from 'daisyui';
 
 const config: Config = {
   darkMode: 'class',
@@ -12,6 +10,7 @@ const config: Config = {
   theme: {
     extend: {},
   },
-  plugins: [daisyui],
+  // Tailwind v4 loads DaisyUI through app/globals.css, not this legacy config.
+  plugins: [],
 };
 export default config;

@@ -13,11 +13,23 @@ export default defineConfig([
   ...nextTs,
   prettier,
   {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    // Next 16.4 adds compiler optimization diagnostics. Keep legacy fetch-effect
+    // loading transitions visible as warnings; React Compiler is not enabled.
+    // Correctness rules (hooks, purity, immutability, etc.) remain errors.
+    rules: { 'react-hooks/set-state-in-effect': 'warn' },
+  },
+  {
     languageOptions: {
       parserOptions: {
         extraFileExtensions: ['.local'],
         projectService: {
-          allowDefaultProject: ['eslint.config.mts', 'next-sitemap.config.js', '.env.test.local', 'jest.config.js'],
+          allowDefaultProject: [
+            'eslint.config.mts',
+            'next-sitemap.config.js',
+            '.env.test.local',
+            'jest.config.js',
+          ],
         },
       },
     },
@@ -38,6 +50,11 @@ export default defineConfig([
     plugins: { js },
     extends: ['js/recommended'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
+  },
+  {
+    files: ['types/database.types.ts'],
+    // Supabase generates mapped type placeholders named `_`.
+    rules: { 'no-unused-vars': 'off' },
   },
   {
     files: ['**/*.json'],

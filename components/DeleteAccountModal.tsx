@@ -35,6 +35,7 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
       }
 
       setSuccess(true);
+      window.dispatchEvent(new Event('account-deletion-changed'));
     } catch (err: unknown) {
       console.error('Error requesting account deletion:', err);
       setError((err as Error).message || 'Failed to submit deletion request. Please try again.');
@@ -45,9 +46,16 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
 
   if (!isOpen) return null;
 
+  const closeModal = () => {
+    setSuccess(false);
+    setError(null);
+    setReason('');
+    onClose();
+  };
+
   if (success) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg max-w-md w-full p-6">
           <h2 className="text-xl font-bold text-green-600 mb-4">Deletion Request Submitted</h2>
 
@@ -57,14 +65,10 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
               Your account will be permanently deleted in 30 days. You can cancel this request at
               any time before the deletion date.
             </p>
-            <p className="text-sm mt-2 font-semibold">
-              Remember: You will not be able to recreate an account with the same email address
-              after deletion.
-            </p>
           </div>
 
           <button
-            onClick={onClose}
+            onClick={closeModal}
             className="w-full bg-green-600 text-white px-4 py-2 rounded-sm hover:bg-green-700"
           >
             Close
@@ -75,7 +79,7 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-md w-full p-6">
         <h2 className="text-xl font-bold text-red-600 mb-4">Request Account Deletion</h2>
 
@@ -84,18 +88,6 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
           <p className="text-sm mt-1">
             To prevent fraud and protect our community, account deletions require a 30-day waiting
             period. You can cancel this request at any time before the deletion date.
-          </p>
-        </div>
-
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-sm mb-4">
-          <p className="font-semibold">⚠️ Account Recreation Prevention</p>
-          <p className="text-sm mt-1">
-            <strong>
-              Deleting your account will prevent you from recreating an account with the same email
-              address.
-            </strong>{' '}
-            This policy helps maintain community trust and prevents users from avoiding negative
-            reviews by creating new accounts.
           </p>
         </div>
 
@@ -128,7 +120,7 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
 
         <div className="flex gap-3">
           <button
-            onClick={onClose}
+            onClick={closeModal}
             disabled={isSubmitting}
             className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-sm hover:bg-gray-400 disabled:opacity-50"
           >

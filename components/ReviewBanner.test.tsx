@@ -135,11 +135,29 @@ describe('ReviewBanner', () => {
       expect(screen.getByText('You have a pending review')).toBeInTheDocument();
     });
 
-    // Find the close button (SVG inside a button)
-    // It doesn't have a name, but it's the second button
-    const buttons = screen.getAllByRole('button');
-    fireEvent.click(buttons[1]); // The second button is the dismiss button
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss review reminder' }));
 
     expect(screen.queryByText('You have a pending review')).not.toBeInTheDocument();
+  });
+
+  it('refreshes the pending list after submission instead of retaining a completed reminder', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } } });
+    (globalThis.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          pendingReviews: [{ booking_id: 'booking-1', other_participant_name: 'Driver One' }],
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ pendingReviews: [] }) });
+    const { rerender } = render(
+      <ReviewBanner refreshVersion={0} onReviewClick={mockOnReviewClick} />
+    );
+    await screen.findByText('You have a pending review');
+    rerender(<ReviewBanner refreshVersion={1} onReviewClick={mockOnReviewClick} />);
+    await waitFor(() =>
+      expect(screen.queryByText('You have a pending review')).not.toBeInTheDocument()
+    );
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
   });
 });

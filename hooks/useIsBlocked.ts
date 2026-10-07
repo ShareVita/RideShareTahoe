@@ -38,13 +38,9 @@ export function useIsBlocked(otherUserId?: string) {
       if (error) {
         console.error('Error calling is_user_blocked RPC:', error);
         setIsBlockedState(false);
-      } else if (typeof data === 'boolean') {
-        setIsBlockedState(Boolean(data));
-      } else if (Array.isArray(data) && data.length > 0) {
-        // Some Supabase responses return arrays for scalar RPCs in certain setups
-        setIsBlockedState(Boolean(data[0]));
       } else {
-        setIsBlockedState(Boolean(data));
+        // The schema declares a scalar boolean, not a result-row array.
+        setIsBlockedState(data === true);
       }
     } catch (err) {
       console.error('Error checking block status:', err);

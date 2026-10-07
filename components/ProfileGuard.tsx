@@ -6,7 +6,7 @@ import { useUser } from '@/components/providers/SupabaseUserProvider';
 import { useProfileCompletionPrompt } from '@/hooks/useProfileCompletionPrompt';
 import { useUserProfile } from '@/hooks/useProfile';
 
-const PUBLIC_PATHS = new Set(['/login', '/signup', '/auth/callback', '/']);
+const PUBLIC_PATHS = new Set(['/login', '/signup', '/auth/callback', '/unsubscribe', '/']);
 const PUBLIC_PATH_PREFIXES = ['/community'];
 const PROFILE_SETUP_PATHS = new Set(['/complete-profile', '/profile/edit']);
 

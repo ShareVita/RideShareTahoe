@@ -12,7 +12,7 @@ export const metadata = getSEOTags({
     title: 'Carpool to Tahoe | RideShareTahoe',
     description:
       'Community-run carpools to and from Tahoe. Save money, reduce traffic, and meet mountain friends.',
-    image: '/og/home.jpg',
+    image: '/hero-bg.png',
   },
 });
 

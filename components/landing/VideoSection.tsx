@@ -1,5 +1,5 @@
 /**
- * "See How It Works" section — Google Drive video embed + 3-step walkthrough.
+ * "See How It Works" section — on-demand video link + 3-step walkthrough.
  */
 export default function VideoSection() {
   const steps = [
@@ -32,16 +32,18 @@ export default function VideoSection() {
           </p>
         </div>
 
-        {/* Video embed */}
-        <div className="aspect-video w-full rounded-3xl overflow-hidden shadow-2xl">
-          <iframe
-            src="https://drive.google.com/file/d/1nU3MNDIvSYrcFMCS8rYSHRGox1TuUmXY/preview"
-            title="How to use RideShareTahoe"
-            className="w-full h-full"
-            allow="autoplay"
-            allowFullScreen
-          />
-        </div>
+        <a
+          href="https://drive.google.com/file/d/1nU3MNDIvSYrcFMCS8rYSHRGox1TuUmXY/view"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col items-center gap-4 rounded-3xl bg-slate-950 px-6 py-12 text-center text-white shadow-xl transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-600"
+        >
+          <span aria-hidden="true" className="text-4xl">
+            ▶
+          </span>
+          <span className="text-xl font-semibold">Watch the RideShareTahoe walkthrough</span>
+          <span className="text-sm text-slate-300">Opens Google Drive in a new tab</span>
+        </a>
 
         {/* 3-step how it works */}
         <div className="grid gap-8 md:grid-cols-3">

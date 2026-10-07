@@ -120,7 +120,7 @@ export default function ProfilePage() {
     }
 
     return formatPronouns(profile.pronouns);
-  }, [profile?.pronouns]);
+  }, [profile]);
 
   const formattedLocation = useMemo(() => {
     if (!profile) {

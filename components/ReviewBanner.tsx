@@ -13,43 +13,44 @@ interface Review {
 
 export default function ReviewBanner({
   onReviewClick,
+  refreshVersion = 0,
 }: {
   // eslint-disable-next-line no-unused-vars
   readonly onReviewClick: (review: Review) => void;
+  readonly refreshVersion?: number;
 }) {
   const [pendingReviews, setPendingReviews] = useState<Review[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchPendingReviews();
-  }, []);
+    const fetchPendingReviews = async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-  const fetchPendingReviews = async () => {
-    try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
 
-      if (!user) {
+        const response = await fetch('/api/reviews/pending');
+        const data = await response.json();
+
+        if (response.ok) {
+          setPendingReviews(data.pendingReviews || []);
+          setIsVisible(data.pendingReviews && data.pendingReviews.length > 0);
+        }
+      } catch (error) {
+        console.error('Error fetching pending reviews:', error);
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      const response = await fetch('/api/reviews/pending');
-      const data = await response.json();
-
-      if (response.ok) {
-        setPendingReviews(data.pendingReviews || []);
-        setIsVisible(data.pendingReviews && data.pendingReviews.length > 0);
-      }
-    } catch (error) {
-      console.error('Error fetching pending reviews:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    void fetchPendingReviews();
+  }, [refreshVersion]);
 
   const handleDismiss = () => {
     setIsVisible(false);
@@ -106,7 +107,11 @@ export default function ReviewBanner({
               >
                 {reviewCount === 1 ? 'Leave Review' : 'Review Now'}
               </button>
-              <button onClick={handleDismiss} className="text-blue-400 hover:text-blue-600">
+              <button
+                onClick={handleDismiss}
+                aria-label="Dismiss review reminder"
+                className="text-blue-400 hover:text-blue-600"
+              >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"

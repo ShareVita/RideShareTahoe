@@ -80,7 +80,7 @@ export default function LandingPage() {
         }}
         secondary={{
           label: 'Browse Rides',
-          href: '/community',
+          href: '/rides/find',
         }}
       />
     </main>

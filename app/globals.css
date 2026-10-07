@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@plugin 'daisyui' {
+  themes:
+    light --default,
+    dark;
+}
+
+@custom-variant dark (&:where(.dark, .dark *, [data-theme=dark], [data-theme=dark] *));
 
 @theme {
   --background-image-gradient: linear-gradient(
@@ -33,7 +39,7 @@
   @keyframes appearfromright {
     0% {
       opacity: 0.3;
-      transform: translate(15%, 0 px);
+      transform: translate(15%, 0);
     }
 
     100% {

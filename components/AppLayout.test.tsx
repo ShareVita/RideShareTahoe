@@ -126,6 +126,23 @@ describe('AppLayout', () => {
     expect(screen.queryByTestId('mock-review-banner')).not.toBeInTheDocument();
   });
 
+  it('refreshes the reminder and reviewed user cache after a successful submission', () => {
+    mockUseUser.mockReturnValue({ loading: false, user: mockUser });
+    mockUsePathname.mockReturnValue('/profile');
+    const invalidate = jest.spyOn(QueryClient.prototype, 'invalidateQueries');
+    try {
+      renderWithQueryClient(<AppLayout>Test Children</AppLayout>);
+      expect(MockReviewBanner.mock.lastCall[0].refreshVersion).toBe(0);
+      act(() =>
+        MockReviewModal.mock.lastCall[0].onReviewSubmitted({ reviewee_id: 'reviewed-driver' })
+      );
+      expect(MockReviewBanner.mock.lastCall[0].refreshVersion).toBe(1);
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['reviews', 'reviewed-driver'] });
+    } finally {
+      invalidate.mockRestore();
+    }
+  });
+
   it('handles review modal open and close flow', () => {
     mockUseUser.mockReturnValue({ loading: false, user: mockUser });
     mockUsePathname.mockReturnValue('/dashboard');

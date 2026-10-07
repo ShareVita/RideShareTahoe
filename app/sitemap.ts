@@ -28,11 +28,8 @@ const PUBLIC_ROUTES = [
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = `https://${config.domainName}`;
-  const lastModified = new Date();
-
   return PUBLIC_ROUTES.map(({ path, changeFrequency, priority }) => ({
     url: `${baseUrl}${path}`,
-    lastModified,
     changeFrequency,
     priority,
   }));

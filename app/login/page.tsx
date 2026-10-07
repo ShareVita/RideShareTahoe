@@ -127,23 +127,21 @@ function LoginContent() {
             Sign in to {config.appName} and plan your next Tahoe trip in minutes.
           </h1>
           <p className="text-base text-slate-600 dark:text-slate-300 sm:text-lg">
-            Securely access the RideShare Tahoe community dashboard, keep track of upcoming rides,
-            and sync with your travel buddies in real time.
+            Find a carpool, share your next ride, and keep in touch with your Tahoe travel buddies.
           </p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1.2fr,0.8fr]">
+        <div className="w-full max-w-xl">
           <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-8 shadow-xl dark:shadow-[0_20px_120px_rgba(15,23,42,0.7)] backdrop-blur">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium uppercase tracking-widest text-slate-500 dark:text-slate-300">
-                  Secure access
+                  Welcome to the community
                 </p>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  Authenticate with confidence
+                  Sign in or create an account
                 </h2>
               </div>
-              <span className="text-sm text-emerald-600 dark:text-emerald-300">SaaS-grade</span>
             </div>
 
             <div className="mt-8 space-y-5">

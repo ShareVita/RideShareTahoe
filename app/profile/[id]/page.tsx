@@ -149,7 +149,7 @@ export default function PublicProfilePage() {
     }
 
     return formatPronouns(profile.pronouns);
-  }, [profile?.pronouns]);
+  }, [profile]);
 
   if (authLoading || loading) {
     return (

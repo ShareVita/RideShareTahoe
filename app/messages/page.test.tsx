@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { createClient } from '@/lib/supabase/client';
 // Import the hook so we can cast the mock
@@ -290,5 +290,84 @@ describe('MessagesPage', () => {
     // Find the *other participant's* message
     const otherMessage = screen.getByText('Hello there!').closest('.message-bubble');
     expect(otherMessage).toHaveClass('bg-white text-gray-900');
+    expect(within(otherMessage as HTMLElement).getByText(/2023/)).toHaveClass('text-gray-500');
   });
+
+  it.each(['http', 'network'])(
+    'restores the draft and removes the optimistic bubble after a %s failure',
+    async (failure) => {
+      const userId = '00000000-0000-4000-8000-000000000099';
+      const conversations = ['Jane', 'Bob'].map((name, index) => ({
+        id: `conversation-${index}`,
+        participant1_id: userId,
+        participant2_id: '00000000-0000-4000-8000-000000000002',
+        participant2: {
+          id: '00000000-0000-4000-8000-000000000002',
+          first_name: name,
+          last_name: 'Test',
+        },
+      }));
+      clientStub.from.mockImplementation((table: string) => {
+        const query: Record<string, jest.Mock> = {
+          select: jest.fn(() => query),
+          or: jest.fn(() => query),
+          eq: jest.fn(() => query),
+          in: jest.fn(() => query),
+          is: jest.fn(() => query),
+          order: jest.fn().mockResolvedValue({
+            data: table === 'conversations' ? conversations : [],
+            error: null,
+          }),
+          update: jest.fn(() => createUpdateChain()),
+        };
+        return query;
+      });
+      const originalFetch = globalThis.fetch;
+      // Type-only callback parameter names are not runtime variables.
+      // eslint-disable-next-line no-unused-vars
+      let resolveSend!: (_value: { ok: boolean }) => void;
+      // eslint-disable-next-line no-unused-vars
+      let rejectSend!: (_reason: Error) => void;
+      globalThis.fetch = jest.fn(
+        () =>
+          new Promise((resolve, reject) => {
+            resolveSend = resolve;
+            rejectSend = reject;
+          })
+      ) as jest.Mock;
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        render(<MessagesPage />);
+        const input = await screen.findByRole('textbox', { name: 'Message' });
+        await waitFor(() =>
+          expect(screen.queryByText('Loading messages…')).not.toBeInTheDocument()
+        );
+        fireEvent.change(input, { target: { value: '  Meet at the station?  ' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        expect(screen.getByText('Meet at the station?')).toBeInTheDocument();
+        expect(input).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Bob Test/ })).toBeDisabled();
+        expect(screen.getAllByText(/Sending…/)).toHaveLength(2);
+        await act(async () => {
+          if (failure === 'http') resolveSend({ ok: false });
+          else rejectSend(new Error('Network disconnected'));
+        });
+        expect(
+          screen.queryByText('Meet at the station?', { selector: 'p' })
+        ).not.toBeInTheDocument();
+        expect(input).toHaveValue('  Meet at the station?  ');
+        expect(screen.getByRole('alert')).toHaveTextContent('not confirmed as sent');
+        expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+
+        fireEvent.click(screen.getByRole('button', { name: /Bob Test/ }));
+        expect(input).toHaveValue('');
+        fireEvent.change(input, { target: { value: 'Separate draft for Bob' } });
+        fireEvent.click(screen.getByRole('button', { name: /Jane Test/ }));
+        expect(input).toHaveValue('  Meet at the station?  ');
+      } finally {
+        globalThis.fetch = originalFetch;
+        errorSpy.mockRestore();
+      }
+    }
+  );
 });
