@@ -160,8 +160,8 @@ export default function DeletionRequestStatus({ userId }: DeletionRequestStatusP
 
               <div className={`mt-3 p-2 rounded border ${styles.warningBox}`}>
                 <p className={`text-xs font-medium ${styles.warningText}`}>
-                  ⚠️ <strong>Important:</strong> After deletion, you will not be able to recreate an
-                  account with the same email address.
+                  ⚠️ <strong>Important:</strong> Deleted account data cannot be recovered. You can
+                  cancel only before deletion processing begins.
                 </p>
               </div>
             </div>
@@ -182,7 +182,7 @@ export default function DeletionRequestStatus({ userId }: DeletionRequestStatusP
           </button>
         </div>
 
-        {isVeryUrgent && (
+        {isVeryUrgent && deletionRequest.status === 'pending' && (
           <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded-sm">
             <p className="text-xs text-red-800 font-medium">
               🚨 Your account will be deleted very soon! If you want to keep your account, cancel
