@@ -1,5 +1,6 @@
 import type { TripBooking, ProfileType, RidePostType } from '@/app/community/types';
 import Image from 'next/image';
+import { formatDateLabel, formatTimeLabel, TAHOE_TIME_ZONE } from '@/lib/dateFormat';
 
 interface TripBookingCardProps {
   booking: TripBooking;
@@ -39,7 +40,7 @@ export default function TripBookingCard({
     invited: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
   };
 
-  const departureDate = new Date(ride.departure_date);
+  const departureDateLabel = formatDateLabel(ride.departure_date);
   const pickupTime = booking.pickup_time ? new Date(booking.pickup_time) : null;
 
   return (
@@ -49,12 +50,14 @@ export default function TripBookingCard({
         <div className="flex w-full flex-row items-center justify-between border-b border-gray-100 bg-gray-50 p-4 sm:w-48 sm:flex-col sm:border-b-0 sm:border-r dark:border-slate-800 dark:bg-slate-900/50">
           <div className="text-center sm:mb-4">
             <span className="block text-2xl font-bold text-gray-900 dark:text-white">
-              {departureDate.getDate()}
+              {departureDateLabel ?? 'Date TBD'}
             </span>
             <span className="block text-sm font-medium text-gray-500 dark:text-gray-400">
-              {departureDate.toLocaleString('default', { month: 'short' })}
+              Pacific time
             </span>
-            <span className="block text-xs text-gray-400">{ride.departure_time.slice(0, 5)}</span>
+            <span className="block text-xs text-gray-400">
+              {formatTimeLabel(ride.departure_time) ?? 'Time TBD'}
+            </span>
           </div>
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[booking.status]}`}
@@ -74,8 +77,13 @@ export default function TripBookingCard({
               <p className="font-medium text-gray-900 dark:text-white">Meeting Details</p>
               <p>{booking.pickup_location}</p>
               <p>
-                {pickupTime
-                  ? pickupTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                {pickupTime && Number.isFinite(pickupTime.getTime())
+                  ? pickupTime.toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      timeZone: TAHOE_TIME_ZONE,
+                      timeZoneName: 'short',
+                    })
                   : 'TBD'}
               </p>
             </div>

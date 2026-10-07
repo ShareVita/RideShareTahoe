@@ -5,6 +5,9 @@ import { rejectUnauthorizedCron } from '@/libs/cronAuth';
 export async function GET(request: NextRequest) {
   const rejection = rejectUnauthorizedCron(request);
   if (rejection) return rejection;
+  if (process.env.REENGAGEMENT_EMAILS_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Re-engagement processing is disabled' }, { status: 503 });
+  }
 
   try {
     console.log('Starting re-engagement email processing...');

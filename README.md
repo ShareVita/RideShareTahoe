@@ -96,6 +96,13 @@ Before dispatching the migration job for the October 2026 security migrations, r
   WHERE status IN ('pending', 'processing') GROUP BY user_id HAVING count(*) > 1;
   ```
 
+- Before `20261008000000_write_rules.sql`, this must return no rows. Reconcile duplicate reviews explicitly; the unique index never silently deletes existing reviews:
+
+  ```sql
+  SELECT booking_id, reviewer_id, count(*) FROM reviews
+  WHERE booking_id IS NOT NULL GROUP BY booking_id, reviewer_id HAVING count(*) > 1;
+  ```
+
 Deploy the application before applying these migrations: the public ride board on the current `main` reads tables these migrations close to anonymous visitors.
 
 For database security verification when full Supabase cannot run, `scripts/test-horizontal-security.sh` replays migrations and runs real PostgreSQL RLS/trigger regression checks in a new disposable native database. It is not a substitute for Supabase authentication or browser end-to-end checks.
@@ -109,7 +116,13 @@ For database security verification when full Supabase cannot run, `scripts/test-
 | `/api/cron/process-deletions`        | daily 11:00 | Deletes accounts whose 30-day deletion window has passed |
 | `/api/cron/process-scheduled-emails` | daily 16:00 | Sends due nurture and reminder emails                    |
 
-Vercel's scheduled runs send `CRON_SECRET`, so they return 503 until it is set. Deletion processing has two other entry points that do not depend on it:
+Authentication is not activation. All deletion entry points additionally require
+`ACCOUNT_DELETION_ENABLED=true`; scheduled email processing additionally requires
+`SCHEDULED_EMAILS_ENABLED=true`; re-engagement processing independently requires
+`REENGAGEMENT_EMAILS_ENABLED=true`. All default to disabled, even if an existing
+scheduler secret is already configured. Leave these flags disabled during rollout.
+
+Vercel's scheduled runs send `CRON_SECRET`. Deletion processing has two other entry points:
 
 - the cron routes also accept `CRON_SECRET_TOKEN` (for schedulers other than Vercel);
 - an admin can run deletion processing with `POST /api/admin/process-deletions`.
@@ -143,11 +156,11 @@ Until the reconciliation below is finished, leave **both** `CRON_SECRET` and `CR
 
    It must return exactly one row. If it returns none, the request changed state; re-run the report.
 
-3. Treat every `processing` row separately. `processing` means a worker claimed the request and may be deleting the account, and marking it cancelled does not stop a deletion in flight. No worker could run before this release, so a `processing` row that predates the deploy is an anomaly. Check in Supabase Auth whether that account still exists, then resolve the row by hand. Do not enable processing while any `processing` row is unexplained.
+3. Treat every `processing` row separately. A worker may already be deleting the account, and marking the row cancelled does not stop that request. Establish that no worker or Auth deletion remains in flight, check whether the Auth account still exists, and reconcile the exact claim before changing its state. Do not assume a legacy processing row could never have had a worker. Do not enable processing while any processing row is unexplained.
 
-4. Enable processing (set `CRON_SECRET`, and `CRON_SECRET_TOKEN` only if another scheduler needs it) only when every remaining `pending` row is a deletion you have confirmed should happen and no `processing` row is unexplained.
+4. Set `ACCOUNT_DELETION_ENABLED=true` only after reconciling all requests, confirming the account-deletion cascade policy, and verifying the deployed schema. Configure scheduler authorization separately. Set `SCHEDULED_EMAILS_ENABLED=true` only after reviewing the queued email backlog and validating unsubscribe links and delivery. Changing Vercel environment variables requires a deployment to take effect.
 
-`/api/cron/process-reengage-emails` is deliberately **not** scheduled: its inactivity query still matches almost every member. `scripts/setup-deletion-cron.sh` prints instructions for schedulers other than Vercel.
+`/api/cron/process-reengage-emails` is deliberately **not** scheduled. Its indexed latest-login lookup now uses server-ingested, post-rollout evidence; missing legacy history means unknown, not inactive. Login activity recording is best-effort and does not block authentication. Before enabling `REENGAGEMENT_EMAILS_ENABLED`, verify ingestion reliability and the selected audience, and review opt-outs and recent successful-send history. `scripts/setup-deletion-cron.sh` prints instructions for schedulers other than Vercel.
 
 ## Verification checklist
 

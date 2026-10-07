@@ -22,49 +22,14 @@ export function MyPostsTab({
   deletingPost,
 }: Readonly<MyRidesTabProps>) {
   const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
-  // Group round trips together
-  const groupedRides = useMemo(() => {
-    const groups: { [key: string]: RidePostType[] } = {};
-    const standalone: RidePostType[] = [];
-
-    for (const ride of myRides) {
-      if (ride.round_trip_group_id) {
-        if (!groups[ride.round_trip_group_id]) {
-          groups[ride.round_trip_group_id] = [];
-        }
-        groups[ride.round_trip_group_id].push(ride);
-      } else {
-        standalone.push(ride);
-      }
-    }
-
-    const mergedGroups = Object.values(groups).map((groupRides) => {
-      // If we only have one leg, return as is
-      if (groupRides.length === 1) return groupRides[0];
-
-      // Find departure and return legs
-      const departureLeg =
-        groupRides.find((r) => r.trip_direction === 'departure') || groupRides[0];
-      const returnLeg = groupRides.find((r) => r.trip_direction === 'return');
-
-      if (returnLeg) {
-        // Merge return info into departure leg for display
-        return {
-          ...departureLeg,
-          return_date: returnLeg.departure_date,
-          return_time: returnLeg.departure_time,
-        };
-      }
-      return departureLeg;
-    });
-
-    // Combine and sort by created_at (most recent first)
-    return [...standalone, ...mergedGroups].sort(
+  // Each stored leg has its own identity and actions; never merge destructive targets.
+  const sortedRides = useMemo(() => {
+    return [...myRides].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   }, [myRides]);
 
-  const postsSummary = `${groupedRides.length} ${groupedRides.length === 1 ? 'post' : 'posts'}`;
+  const postsSummary = `${sortedRides.length} ${sortedRides.length === 1 ? 'post' : 'posts'}`;
 
   return (
     <div className="space-y-6">
@@ -72,9 +37,9 @@ export function MyPostsTab({
         <p className="text-sm text-gray-600 dark:text-gray-400">{postsSummary}</p>
       </div>
 
-      {groupedRides.length > 0 ? (
+      {sortedRides.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {groupedRides.map((post) => (
+          {sortedRides.map((post) => (
             <RidePostCard
               key={post.id}
               post={post}

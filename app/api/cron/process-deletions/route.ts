@@ -5,6 +5,9 @@ import { rejectUnauthorizedCron } from '@/libs/cronAuth';
 export async function GET(request: NextRequest) {
   const rejection = rejectUnauthorizedCron(request);
   if (rejection) return rejection;
+  if (process.env.ACCOUNT_DELETION_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Account deletion is disabled' }, { status: 503 });
+  }
 
   try {
     const result = await processScheduledDeletions();

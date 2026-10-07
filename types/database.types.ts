@@ -14,6 +14,7 @@ export type Database = {
           updated_at: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string | null;
           id?: string;
@@ -38,6 +39,7 @@ export type Database = {
           {
             foreignKeyName: 'account_deletion_requests_user_id_fkey';
             columns: ['user_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -53,6 +55,7 @@ export type Database = {
           ride_id: string | null;
           updated_at: string | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string | null;
           id?: string;
@@ -75,18 +78,21 @@ export type Database = {
           {
             foreignKeyName: 'conversations_participant1_id_fkey';
             columns: ['participant1_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'conversations_participant2_id_fkey';
             columns: ['participant2_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'conversations_ride_id_fkey';
             columns: ['ride_id'];
+            isOneToOne: false;
             referencedRelation: 'rides';
             referencedColumns: ['id'];
           },
@@ -106,6 +112,7 @@ export type Database = {
           updated_at: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string | null;
           email_type: string;
@@ -147,6 +154,7 @@ export type Database = {
           subject: string | null;
           updated_at: string | null;
         };
+        ComputedFields: never;
         Insert: {
           content: string;
           conversation_id?: string | null;
@@ -175,24 +183,28 @@ export type Database = {
           {
             foreignKeyName: 'messages_conversation_id_fkey';
             columns: ['conversation_id'];
+            isOneToOne: false;
             referencedRelation: 'conversations';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'messages_recipient_id_fkey';
             columns: ['recipient_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'messages_ride_id_fkey';
             columns: ['ride_id'];
+            isOneToOne: false;
             referencedRelation: 'rides';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'messages_sender_id_fkey';
             columns: ['sender_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -209,6 +221,7 @@ export type Database = {
           updated_at: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           airbnb_url?: string | null;
           created_at?: string | null;
@@ -233,6 +246,7 @@ export type Database = {
           {
             foreignKeyName: 'profile_socials_user_id_fkey';
             columns: ['user_id'];
+            isOneToOne: true;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -258,6 +272,7 @@ export type Database = {
           state: string | null;
           updated_at: string | null;
         };
+        ComputedFields: never;
         Insert: {
           bio?: string | null;
           city?: string | null;
@@ -307,6 +322,7 @@ export type Database = {
           request_count: number;
           window_start: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string;
           endpoint: string;
@@ -336,6 +352,7 @@ export type Database = {
           status: string | null;
           updated_at: string | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string | null;
           details?: string | null;
@@ -360,12 +377,14 @@ export type Database = {
           {
             foreignKeyName: 'reports_reported_id_fkey';
             columns: ['reported_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'reports_reporter_id_fkey';
             columns: ['reporter_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -389,6 +408,7 @@ export type Database = {
           status: string | null;
           updated_at: string | null;
         };
+        ComputedFields: never;
         Insert: {
           booking_id?: string | null;
           comment: string;
@@ -427,24 +447,28 @@ export type Database = {
           {
             foreignKeyName: 'reviews_booking_id_fkey';
             columns: ['booking_id'];
+            isOneToOne: false;
             referencedRelation: 'trip_bookings';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'reviews_conversation_id_fkey';
             columns: ['conversation_id'];
+            isOneToOne: false;
             referencedRelation: 'conversations';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'reviews_reviewee_id_fkey';
             columns: ['reviewee_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'reviews_reviewer_id_fkey';
             columns: ['reviewer_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -465,6 +489,7 @@ export type Database = {
           updated_at: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           booking_id?: string | null;
           conversation_id: string;
@@ -497,24 +522,28 @@ export type Database = {
           {
             foreignKeyName: 'reviews_pending_booking_id_fkey';
             columns: ['booking_id'];
+            isOneToOne: false;
             referencedRelation: 'trip_bookings';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'reviews_pending_conversation_id_fkey';
             columns: ['conversation_id'];
+            isOneToOne: false;
             referencedRelation: 'conversations';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'reviews_pending_other_participant_id_fkey';
             columns: ['other_participant_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'reviews_pending_user_id_fkey';
             columns: ['user_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -557,6 +586,7 @@ export type Database = {
           trip_direction: string | null;
           updated_at: string | null;
         };
+        ComputedFields: never;
         Insert: {
           available_seats?: number | null;
           car_type?: string | null;
@@ -633,6 +663,7 @@ export type Database = {
           {
             foreignKeyName: 'rides_poster_id_fkey';
             columns: ['poster_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -649,6 +680,7 @@ export type Database = {
           status: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string | null;
           email_type: string;
@@ -688,6 +720,7 @@ export type Database = {
           status: string;
           updated_at: string | null;
         };
+        ComputedFields: never;
         Insert: {
           confirmed_at?: string | null;
           created_at?: string | null;
@@ -724,18 +757,21 @@ export type Database = {
           {
             foreignKeyName: 'trip_bookings_driver_id_fkey';
             columns: ['driver_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'trip_bookings_passenger_id_fkey';
             columns: ['passenger_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'trip_bookings_ride_id_fkey';
             columns: ['ride_id'];
+            isOneToOne: false;
             referencedRelation: 'rides';
             referencedColumns: ['id'];
           },
@@ -749,6 +785,7 @@ export type Database = {
           metadata: Json | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           at?: string | null;
           event: string;
@@ -772,6 +809,7 @@ export type Database = {
           created_at: string | null;
           id: string;
         };
+        ComputedFields: never;
         Insert: {
           blocked_id: string;
           blocker_id: string;
@@ -788,12 +826,14 @@ export type Database = {
           {
             foreignKeyName: 'user_blocks_blocked_id_fkey';
             columns: ['blocked_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'user_blocks_blocker_id_fkey';
             columns: ['blocker_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -809,6 +849,7 @@ export type Database = {
           user_agent: string | null;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           accepted_at?: string;
           document_type: string;
@@ -829,6 +870,22 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_latest_login: {
+        Row: {
+          last_login_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          last_login_at: string;
+          user_id: string;
+        };
+        Update: {
+          last_login_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       user_private_info: {
         Row: {
           created_at: string | null;
@@ -843,6 +900,7 @@ export type Database = {
           updated_at: string | null;
           zip_code: string | null;
         };
+        ComputedFields: never;
         Insert: {
           created_at?: string | null;
           email?: string | null;
@@ -884,6 +942,7 @@ export type Database = {
           updated_at: string | null;
           year: number;
         };
+        ComputedFields: never;
         Insert: {
           color: string;
           created_at?: string | null;
@@ -912,6 +971,7 @@ export type Database = {
           {
             foreignKeyName: 'vehicles_owner_id_fkey';
             columns: ['owner_id'];
+            isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
@@ -931,17 +991,11 @@ export type Database = {
         };
         Returns: Json;
       };
-      cleanup_old_rate_limits: {
-        Args: { p_older_than_hours?: number };
-        Returns: number;
-      };
+      cleanup_old_rate_limits: { Args: { p_older_than_hours?: number }; Returns: number };
       get_user_average_rating: { Args: { user_id: string }; Returns: number };
       get_user_review_count: { Args: { user_id: string }; Returns: number };
-      has_active_booking_with: {
-        Args: { other_user_id: string };
-        Returns: boolean;
-      };
-      is_profile_admin: { Args: never; Returns: boolean };
+      has_active_booking_with: { Args: { other_user_id: string }; Returns: boolean };
+      is_profile_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_user_blocked: { Args: { other_user_id: string }; Returns: boolean };
       search_users: {
         Args: { page_number: number; page_size: number; search_term: string };
@@ -981,9 +1035,7 @@ export type Tables<
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R;
@@ -1007,9 +1059,7 @@ export type TablesInsert<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I;
     }
@@ -1032,9 +1082,7 @@ export type TablesUpdate<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U;
     }
@@ -1057,9 +1105,7 @@ export type Enums<
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
     ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
@@ -1074,9 +1120,7 @@ export type CompositeTypes<
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
     ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]

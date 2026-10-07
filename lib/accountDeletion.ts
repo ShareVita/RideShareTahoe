@@ -9,6 +9,9 @@ export async function processScheduledDeletions(): Promise<{
   processedUsers: string[];
   errors: { userId: string; error: string }[];
 }> {
+  if (process.env.ACCOUNT_DELETION_ENABLED !== 'true') {
+    throw new Error('Account deletion is disabled pending backlog reconciliation');
+  }
   const supabase = createAdminClient();
   const cutoff = new Date(Date.now() - DELETION_LEASE_MS).toISOString();
   const { data, error } = await supabase

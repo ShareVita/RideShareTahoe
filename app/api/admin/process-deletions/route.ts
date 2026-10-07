@@ -33,6 +33,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (process.env.ACCOUNT_DELETION_ENABLED !== 'true') {
+      return NextResponse.json({ error: 'Account deletion is disabled' }, { status: 503 });
+    }
     const result = await processScheduledDeletions();
     return NextResponse.json({
       message: `Processed ${result.processedCount} deletion requests`,

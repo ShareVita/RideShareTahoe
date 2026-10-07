@@ -125,6 +125,8 @@ it('fences a rejected initial worker’s release with its exact claim timestamp'
 });
 
 it('constructs the elevated runner client only on invocation and selects due pending/expired processing', async () => {
+  const originalFlag = process.env.ACCOUNT_DELETION_ENABLED;
+  process.env.ACCOUNT_DELETION_ENABLED = 'true';
   const query = {
     select: jest.fn().mockReturnThis(),
     lte: jest.fn().mockReturnThis(),
@@ -142,4 +144,15 @@ it('constructs the elevated runner client only on invocation and selects due pen
   expect(query.or).toHaveBeenCalledWith(
     expect.stringMatching(/^status.eq.pending,and\(status.eq.processing,processed_at.lt./)
   );
+  if (originalFlag === undefined) delete process.env.ACCOUNT_DELETION_ENABLED;
+  else process.env.ACCOUNT_DELETION_ENABLED = originalFlag;
+});
+
+it('does not construct an admin client or delete while activation is disabled', async () => {
+  const originalFlag = process.env.ACCOUNT_DELETION_ENABLED;
+  delete process.env.ACCOUNT_DELETION_ENABLED;
+  jest.clearAllMocks();
+  await expect(processScheduledDeletions()).rejects.toThrow('disabled');
+  expect(createAdminClient).not.toHaveBeenCalled();
+  if (originalFlag !== undefined) process.env.ACCOUNT_DELETION_ENABLED = originalFlag;
 });

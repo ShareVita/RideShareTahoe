@@ -9,6 +9,7 @@ import { fetchAllRides } from '@/libs/community/ridesData';
 import { RidePostCard } from '@/app/community/components/rides-posts/RidePostCard';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import PostDetailModal from '@/app/community/components/PostDetailModal';
+import { safeNextPath } from '@/lib/authRedirect';
 
 export default function WelcomePage() {
   const { user } = useUser();
@@ -16,6 +17,11 @@ export default function WelcomePage() {
   const [ridePosts, setRidePosts] = useState<RidePostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<RidePostType | null>(null);
+  const finishOnboarding = () => {
+    router.push(
+      safeNextPath(new URLSearchParams(window.location.search).get('next')) || '/community'
+    );
+  };
 
   const fetchNearbyRidePosts = useCallback(async () => {
     try {
@@ -98,7 +104,7 @@ export default function WelcomePage() {
               More people are posting rides every day! Check back soon or browse the community.
             </p>
             <button
-              onClick={() => router.push('/community')}
+              onClick={finishOnboarding}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
             >
               Browse Community
@@ -116,7 +122,7 @@ export default function WelcomePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <button
-              onClick={() => router.push('/community')}
+              onClick={finishOnboarding}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               Browse Community →

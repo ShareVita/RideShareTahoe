@@ -5,6 +5,9 @@ import { rejectUnauthorizedCron } from '@/libs/cronAuth';
 export async function GET(request: NextRequest) {
   const rejection = rejectUnauthorizedCron(request);
   if (rejection) return rejection;
+  if (process.env.SCHEDULED_EMAILS_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Scheduled emails are disabled' }, { status: 503 });
+  }
 
   try {
     console.log('Starting scheduled email processing...');

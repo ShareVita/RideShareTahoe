@@ -119,16 +119,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine roles
-    const ride = booking.ride;
-    let roles;
-    try {
-      roles = determineReviewRoles(ride.posting_type, ride.poster_id, user.id);
-    } catch {
-      return NextResponse.json({ error: 'Invalid post type for review' }, { status: 400 });
-    }
-
-    const { reviewerRole, reviewedRole } = roles;
+    // Booking participants, not a mutable post type, determine review roles.
+    const reviewerRole = booking.driver_id === user.id ? 'driver' : 'passenger';
+    const reviewedRole = reviewerRole === 'driver' ? 'passenger' : 'driver';
 
     // Determine reviewee (the other participant)
     const revieweeId = booking.driver_id === user.id ? booking.passenger_id : booking.driver_id;
@@ -265,26 +258,4 @@ function validateBookingEligibility(booking: Booking, userId: string) {
   }
 
   return null;
-}
-
-/**
- * Infers the reviewer and reviewed roles based on the original posting type.
- */
-function determineReviewRoles(postType: string, posterId: string, reviewerId: string) {
-  let reviewerRole = '';
-  let reviewedRole = '';
-
-  if (postType === 'driver' || postType === 'flexible' || postType === 'dog_available') {
-    // Poster is the driver
-    reviewerRole = reviewerId === posterId ? 'driver' : 'passenger';
-    reviewedRole = reviewerRole === 'driver' ? 'passenger' : 'driver';
-  } else if (postType === 'passenger' || postType === 'petpal_available') {
-    // Poster is the passenger
-    reviewerRole = reviewerId === posterId ? 'passenger' : 'driver';
-    reviewedRole = reviewerRole === 'passenger' ? 'driver' : 'passenger';
-  } else {
-    throw new Error('Invalid post type');
-  }
-
-  return { reviewerRole, reviewedRole };
 }

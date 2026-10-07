@@ -11,7 +11,9 @@ interface CookieToSet {
 
 interface NextUrlLike {
   pathname: string;
-  clone: () => NextUrlLike;
+  search?: string;
+  searchParams?: URLSearchParams;
+  clone: () => NextUrlLike | URL;
 }
 
 interface RequestLike {
@@ -87,12 +89,11 @@ describe('updateSession', () => {
 
     const request: RequestLike = {
       cookies: { getAll: () => [], set: jest.fn() },
-      nextUrl: {
-        pathname: '/rides/post',
-        clone: function () {
-          return { pathname: this.pathname, clone: this.clone };
+      nextUrl: Object.assign(new URL('https://example.test/rides/post?trip=123&next=evil'), {
+        clone() {
+          return new URL('https://example.test/rides/post?trip=123&next=evil');
         },
-      },
+      }),
     };
 
     const res = await updateSession(request as unknown as NextRequest);
@@ -102,6 +103,8 @@ describe('updateSession', () => {
     const pathname =
       typeof calledUrl === 'string' ? calledUrl : (calledUrl as { pathname?: string }).pathname;
     expect(String(pathname)).toMatch('/login');
+    expect((calledUrl as URL).searchParams.get('next')).toBe('/rides/post?trip=123&next=evil');
+    expect((calledUrl as URL).searchParams.get('trip')).toBeNull();
     expect(res).toBe(mockRedirectResponse);
   });
 
@@ -345,9 +348,15 @@ describe('API and private-page routing', () => {
       }),
     }));
     const { updateSession } = await import('./proxy');
-    const nextUrl = { pathname: '/messages', clone: () => ({ pathname: '/messages' }) };
+    const nextUrl = Object.assign(new URL('https://example.test/messages?thread=42'), {
+      clone() {
+        return new URL('https://example.test/messages?thread=42');
+      },
+    });
     await updateSession({ nextUrl } as unknown as NextRequest);
-    expect(redirect).toHaveBeenCalledWith({ pathname: '/login' });
+    expect(redirect).toHaveBeenCalledWith(
+      new URL('https://example.test/login?next=%2Fmessages%3Fthread%3D42')
+    );
     expect(set).toHaveBeenCalledWith(cookie);
   });
 });

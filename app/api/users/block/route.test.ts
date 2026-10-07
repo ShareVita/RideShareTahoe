@@ -2,6 +2,10 @@ import type { NextRequest } from 'next/server';
 import { POST } from './route';
 import { getAuthenticatedUser } from '@/lib/supabase/auth';
 
+jest.mock('@/lib/supabase/server', () => ({
+  createAdminClient: jest.fn(() => ({ rpc: jest.fn() })),
+}));
+
 jest.mock('@/lib/supabase/auth', () => ({
   getAuthenticatedUser: jest.fn(),
   createUnauthorizedResponse: jest.fn(),

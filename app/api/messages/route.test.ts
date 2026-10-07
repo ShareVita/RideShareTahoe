@@ -1,6 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { POST } from './route';
 import { getAuthenticatedUser } from '@/lib/supabase/auth';
+import { createAdminClient } from '@/lib/supabase/server';
+import { checkSupabaseRateLimit } from '@/libs/rateLimit';
+
+jest.mock('@/lib/supabase/server', () => ({
+  createAdminClient: jest.fn(() => ({ rpc: jest.fn() })),
+}));
 
 jest.mock('@/lib/supabase/auth', () => ({
   getAuthenticatedUser: jest.fn(),
@@ -44,6 +50,12 @@ describe('POST /api/messages', () => {
     const res = await POST(request);
 
     expect(res.status).toBe(400);
+    expect(checkSupabaseRateLimit).toHaveBeenCalledWith(
+      (createAdminClient as jest.Mock).mock.results[0].value,
+      validUserId,
+      'messages',
+      expect.anything()
+    );
     const json = await res.json();
     expect(json.error).toBe('You cannot message yourself');
   });

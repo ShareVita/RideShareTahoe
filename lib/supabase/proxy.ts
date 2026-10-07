@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { safeNextPath } from '@/lib/authRedirect';
 
 /**
  * Routes an anonymous visitor may read.
@@ -112,7 +113,10 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublicPath(request.nextUrl.pathname) && isPrivatePage(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
+    const next = safeNextPath(request.nextUrl.pathname + request.nextUrl.search);
     url.pathname = '/login';
+    url.search = '';
+    if (next) url.searchParams.set('next', next);
     const response = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
     return response;

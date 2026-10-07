@@ -1,203 +1,118 @@
-import {
-  processReengageEmails,
-  getReengageCandidates,
-  scheduleReengageEmails,
-  __testExports,
-} from './reengage';
+import { getReengageCandidates, processReengageEmails, scheduleReengageEmails } from './reengage';
 import { sendEmail, scheduleEmail } from './sendEmail';
 
-// --- Global Mocks and Setup ---
-jest.mock('./sendEmail', () => ({
-  sendEmail: jest.fn(),
-  scheduleEmail: jest.fn(),
-}));
+jest.mock('./sendEmail', () => ({ sendEmail: jest.fn(), scheduleEmail: jest.fn() }));
+jest.mock('@/lib/supabase/server', () => ({ createAdminClient: () => ({ from: mockFrom }) }));
 
-const mockChain = {
-  select: jest.fn().mockReturnThis(),
-  eq: jest.fn().mockReturnThis(),
-  lt: jest.fn().mockReturnThis(),
-  not: jest.fn().mockReturnThis(),
-  order: jest.fn().mockReturnThis(),
-  limit: jest.fn().mockReturnThis(),
-  gte: jest.fn().mockReturnThis(),
-  single: jest.fn(),
-};
-const mockFrom = jest.fn(() => mockChain);
-const mockSupabaseClient = { from: mockFrom };
-jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(() => mockSupabaseClient),
-  createAdminClient: jest.fn(() => mockSupabaseClient),
-}));
-
-const inactiveUser1: MockData = {
-  id: 2,
-  first_name: 'Alice',
-  user_private_info: { email: 'user1@test.com' },
-  user_activity: [{ at: '2025-10-20T00:00:00.000Z' }],
-};
-const activeUser: MockData = {
-  id: 3,
-  first_name: 'Charlie',
-  user_private_info: { email: 'user3@test.com' },
-  user_activity: [{ at: new Date().toISOString() }],
-};
-
-type MockData = {
-  id: number;
-  first_name?: string;
-  user_private_info?: { email: string };
-  user_activity?: { at: string }[];
-};
-
-type MockResult = {
-  data: MockData[] | null;
-  error: { message: string } | null;
-};
-
-const mockSuccess = (data: MockData[] | null): MockResult => ({ data, error: null });
-const mockError = (message: string): MockResult => ({ data: null, error: { message } });
-const shouldSendReengageEmail = __testExports.shouldSendReengageEmail as (
-  // eslint-disable-next-line no-unused-vars
-  userId: string
-) => Promise<boolean>;
-
-let consoleLogSpy: jest.SpyInstance;
-
-beforeAll(() => {
-  jest.useFakeTimers();
-  jest.setSystemTime(new Date('2025-11-01T12:00:00.000Z'));
-  consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-});
-afterEach(() => {
-  jest.clearAllMocks();
-  for (const key in mockChain) {
-    if (key === 'single') {
-      continue;
-    }
-    const mockFn = mockChain[key as keyof typeof mockChain];
-    mockFn.mockReturnThis();
-  }
-});
-afterAll(() => {
-  jest.useRealTimers();
-  consoleLogSpy.mockRestore();
-});
-
-// Helper to enforce correct return values for complex chains:
-// This is necessary because the original code uses .not().not(), which breaks simple mockReturnThis() chains.
-const setupComplexNotChain = (result: MockResult) => {
-  // Mock the *first* .not call to return a mock object where the SECOND .not call resolves the promise.
-  mockChain.not.mockImplementationOnce(() => ({
-    not: jest.fn().mockResolvedValue(result),
-    eq: jest.fn().mockReturnThis(),
-    lt: jest.fn().mockReturnThis(),
+type Login = { user_id: string; last_login_at: string | null };
+let logins: Login[];
+let lookupFailure: string | null;
+let historyFailure: boolean;
+let recentEmail: boolean;
+const mockRanges = jest.fn();
+const mockChunks = jest.fn();
+const mockFrom = jest.fn((table: string) => {
+  let ids: string[] = [];
+  const result = () => {
+    if (table === lookupFailure) return { data: null, error: { message: 'lookup failed' } };
+    if (table === 'profiles')
+      return { data: ids.map((id) => ({ id, first_name: 'Member' })), error: null };
+    if (table === 'user_private_info')
+      return { data: ids.map((id) => ({ id, email: `${id}@example.test` })), error: null };
+    throw new Error(`Unexpected table ${table}`);
+  };
+  const chain = {
     select: jest.fn().mockReturnThis(),
-  }));
-};
-
-// Helper for the getReengageCandidates chain which ends in .order() after double .not()
-const setupGetCandidatesChain = (result: MockResult) => {
-  // We mock the *first* .not call to return a mock object where the final .order() resolves the promise.
-  mockChain.not.mockImplementationOnce(() => ({
-    not: jest.fn().mockReturnThis(), // Second .not() returns a chainable object
-    order: jest.fn().mockResolvedValue(result), // The final call resolves the promise
     eq: jest.fn().mockReturnThis(),
+    lte: jest.fn().mockReturnThis(),
+    gte: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    in: jest.fn(function (this: unknown, _key: string, values: string[]) {
+      ids = values;
+      mockChunks(table, values.length);
+      return this;
+    }),
+    range: jest.fn((from: number, to: number) => {
+      mockRanges(from, to);
+      return Promise.resolve(
+        table === lookupFailure
+          ? { data: null, error: { message: 'lookup failed' } }
+          : { data: logins.slice(from, to + 1), error: null }
+      );
+    }),
+    limit: jest.fn(() =>
+      Promise.resolve({
+        data: recentEmail ? [{ id: 1 }] : [],
+        error: historyFailure ? { message: 'history failed' } : null,
+      })
+    ),
+    then: (resolve: Parameters<Promise<ReturnType<typeof result>>['then']>[0]) =>
+      Promise.resolve(result()).then(resolve),
+  };
+  return chain;
+});
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.useFakeTimers().setSystemTime(new Date('2026-10-20T00:00:00Z'));
+  logins = [{ user_id: 'inactive', last_login_at: '2026-10-10T00:00:00Z' }];
+  lookupFailure = null;
+  historyFailure = recentEmail = false;
+  (sendEmail as jest.Mock).mockResolvedValue({ status: 'sent' });
+});
+afterEach(() => jest.useRealTimers());
+
+it('targets only the materialized latest login, not an older login or unknown history', async () => {
+  // A member with old + recent history has only the recent materialized value.
+  logins.push({ user_id: 'old-and-recent', last_login_at: '2026-10-19T00:00:00Z' });
+  logins.push({ user_id: 'unknown', last_login_at: null });
+  expect((await getReengageCandidates()).map((user) => user.id)).toEqual(['inactive']);
+  expect(mockFrom).not.toHaveBeenCalledWith('user_activity');
+});
+it('does not infer inactivity for members without post-rollout evidence', async () => {
+  logins = [];
+  expect(await getReengageCandidates()).toEqual([]);
+  expect(mockFrom).not.toHaveBeenCalledWith('profiles');
+});
+it('pages beyond 1000 members and chunks profile/private lookups', async () => {
+  logins = Array.from({ length: 1205 }, (_, i) => ({
+    user_id: `member-${i}`,
+    last_login_at: '2026-10-10T00:00:00Z',
   }));
-};
-
-describe('shouldSendReengageEmail', () => {
-  it('should return true if no recent email was sent', async () => {
-    mockChain.single.mockResolvedValue(mockSuccess(null));
-    const result = await shouldSendReengageEmail('user-new');
-    expect(result).toBe(true);
-  });
-
-  it('should return false if a recent email was sent', async () => {
-    mockChain.single.mockResolvedValue(mockSuccess([{ id: 1 }]));
-    const result = await shouldSendReengageEmail('user-recent');
-    expect(result).toBe(false);
-  });
+  expect(await getReengageCandidates()).toHaveLength(1205);
+  expect(mockRanges.mock.calls).toEqual([
+    [0, 999],
+    [1000, 1999],
+  ]);
+  expect(mockChunks.mock.calls.every(([, size]) => size <= 100)).toBe(true);
+  expect(mockChunks.mock.calls.filter(([table]) => table === 'user_private_info')).toHaveLength(13);
 });
-
-describe('processReengageEmails', () => {
-  it('should successfully send emails to eligible users (Happy Path)', async () => {
-    mockChain.limit.mockResolvedValue(mockSuccess([{ id: 1 }]));
-    setupComplexNotChain(mockSuccess([inactiveUser1]));
-    mockChain.single.mockResolvedValue(mockSuccess(null));
-    (sendEmail as jest.Mock).mockResolvedValue({ status: 'sent' });
-
-    const result = await processReengageEmails();
-
-    expect(result.sent).toBe(1);
-    expect(result.processed).toBe(1);
-    expect(result.errors).toEqual([]);
-    expect(sendEmail).toHaveBeenCalledTimes(1);
-  });
-
-  it('should return 0 processed if user activity table does not exist', async () => {
-    mockChain.limit.mockResolvedValue(mockError("Could not find the table named 'user_activity'"));
-
-    const result = await processReengageEmails();
-
-    expect(result.processed).toBe(0);
-  });
-
-  it('should track an error if sending an email fails', async () => {
-    mockChain.limit.mockResolvedValue(mockSuccess([{ id: 1 }]));
-    setupComplexNotChain(mockSuccess([inactiveUser1]));
-    mockChain.single.mockResolvedValue(mockSuccess(null));
-    (sendEmail as jest.Mock).mockRejectedValue(new Error('SMTP Failure'));
-
-    const result = await processReengageEmails();
-
-    expect(result.sent).toBe(0);
-    expect(result.errors).toHaveLength(1);
-  });
+it.each(['user_latest_login', 'profiles', 'user_private_info'])(
+  'fails closed on %s lookup errors',
+  async (table) => {
+    lookupFailure = table;
+    await expect(processReengageEmails()).rejects.toBeDefined();
+    await expect(scheduleReengageEmails()).rejects.toBeDefined();
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(scheduleEmail).not.toHaveBeenCalled();
+  }
+);
+it('fails closed on sent-history errors for sends and schedules', async () => {
+  historyFailure = true;
+  expect((await processReengageEmails()).errors).toHaveLength(1);
+  expect((await scheduleReengageEmails()).errors).toHaveLength(1);
+  expect(sendEmail).not.toHaveBeenCalled();
+  expect(scheduleEmail).not.toHaveBeenCalled();
 });
-
-// --- 3. Test Suite: getReengageCandidates ---
-describe('getReengageCandidates', () => {
-  it('should return only users inactive for 7+ days', async () => {
-    setupGetCandidatesChain(mockSuccess([inactiveUser1, activeUser]));
-
-    const result = await getReengageCandidates();
-
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe(2); // Only inactiveUser1 should be returned
-  });
-
-  it('should throw an error if data fetching fails', async () => {
-    mockChain.not.mockImplementationOnce(() => ({
-      not: jest.fn().mockReturnThis(),
-      order: jest.fn().mockResolvedValue(mockError('DB Timeout')),
-      eq: jest.fn().mockReturnThis(),
-    }));
-
-    await expect(getReengageCandidates()).rejects.toThrow(
-      'Failed to fetch re-engage candidates: DB Timeout'
-    );
-  });
+it('skips recent sent emails without depending on single-row errors', async () => {
+  recentEmail = true;
+  expect((await processReengageEmails()).skipped).toBe(1);
+  expect((await scheduleReengageEmails()).scheduled).toBe(0);
 });
-
-// --- 4. Test Suite: scheduleReengageEmails ---
-describe('scheduleReengageEmails', () => {
-  it('should successfully schedule emails for all eligible candidates (Happy Path)', async () => {
-    setupGetCandidatesChain(mockSuccess([inactiveUser1]));
-    mockChain.single.mockResolvedValue(mockSuccess(null));
-    (scheduleEmail as jest.Mock).mockResolvedValue(undefined);
-
-    const result = await scheduleReengageEmails();
-
-    expect(result.scheduled).toBe(1);
-    expect(result.errors).toEqual([]);
-    expect(scheduleEmail).toHaveBeenCalledTimes(1);
-  });
-
-  it('should not schedule if getReengageCandidates returns no users', async () => {
-    setupGetCandidatesChain(mockSuccess([]));
-
-    const result = await scheduleReengageEmails();
-
-    expect(result.scheduled).toBe(0);
-  });
+it('uses private email lookup for eligible sends and schedules', async () => {
+  expect((await processReengageEmails()).sent).toBe(1);
+  expect((await scheduleReengageEmails()).scheduled).toBe(1);
+  expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: 'inactive@example.test' }));
+  expect(scheduleEmail).toHaveBeenCalledWith(
+    expect.objectContaining({ payload: { userName: 'Member', userEmail: 'inactive@example.test' } })
+  );
 });

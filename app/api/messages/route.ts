@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Check rate limit (20 messages per hour per user)
     // Uses database-backed rate limiting for serverless compatibility
-    const rateLimitCheck = await checkSupabaseRateLimit(supabase, user.id, 'messages', {
+    const rateLimitCheck = await checkSupabaseRateLimit(createAdminClient(), user.id, 'messages', {
       maxRequests: 20,
       windowSeconds: 3600,
       message: 'You have sent too many messages. Please try again later.',

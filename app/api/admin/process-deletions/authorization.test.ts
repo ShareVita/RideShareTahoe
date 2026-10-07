@@ -19,8 +19,14 @@ describe.each([
   let single: jest.Mock;
   let select: jest.Mock;
   let eq: jest.Mock;
+  const originalFlag = process.env.ACCOUNT_DELETION_ENABLED;
+  afterAll(() => {
+    if (originalFlag === undefined) delete process.env.ACCOUNT_DELETION_ENABLED;
+    else process.env.ACCOUNT_DELETION_ENABLED = originalFlag;
+  });
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.ACCOUNT_DELETION_ENABLED = 'true';
     single = jest.fn().mockResolvedValue({ data: { is_admin: false }, error: null });
     eq = jest.fn().mockReturnValue({ single });
     select = jest.fn().mockReturnValue({ eq });
@@ -88,4 +94,13 @@ describe.each([
       expect(processScheduledDeletions).not.toHaveBeenCalled();
     }
   });
+
+  if (_method === 'POST') {
+    it('does not process even for an admin until reconciliation is enabled', async () => {
+      single.mockResolvedValue({ data: { is_admin: true }, error: null });
+      delete process.env.ACCOUNT_DELETION_ENABLED;
+      expect((await handler(request)).status).toBe(503);
+      expect(processScheduledDeletions).not.toHaveBeenCalled();
+    });
+  }
 });

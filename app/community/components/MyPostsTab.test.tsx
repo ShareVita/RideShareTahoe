@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MyPostsTab } from './MyPostsTab';
 import type { RidePostType } from '../types';
+import { RidePostActions } from './rides-posts/RidePostActions';
 
 // Mock dependency
 jest.mock('@/app/community/components/rides-posts/RidePostCard', () => ({
@@ -16,6 +17,15 @@ jest.mock('@/app/community/components/rides-posts/RidePostCard', () => ({
   }) => (
     <div data-testid="ride-card">
       {post.id}
+      <RidePostActions
+        post={post}
+        isOwner
+        onMessage={jest.fn()}
+        onDelete={onDelete}
+        deleting={deleting}
+        onOpenBooking={jest.fn()}
+        showBookingButton={false}
+      />
       <button onClick={() => onDelete(post.id)} data-testid={`delete-${post.id}`}>
         Delete
       </button>
@@ -71,7 +81,7 @@ describe('MyPostsTab', () => {
     expect(screen.getAllByTestId('ride-card')).toHaveLength(2);
   });
 
-  it('should group round trips', () => {
+  it('keeps each stored round-trip leg independently actionable', () => {
     const rides = [
       { id: '1', created_at: '2023-01-01', round_trip_group_id: 'g1', trip_direction: 'departure' },
       { id: '2', created_at: '2023-01-01', round_trip_group_id: 'g1', trip_direction: 'return' },
@@ -88,9 +98,15 @@ describe('MyPostsTab', () => {
       />
     );
 
-    // Should be 2 cards: one group + ride 3
-    expect(screen.getByText('2 posts')).toBeInTheDocument();
-    expect(screen.getAllByTestId('ride-card')).toHaveLength(2);
+    expect(screen.getByText('3 posts')).toBeInTheDocument();
+    expect(screen.getAllByTestId('ride-card')).toHaveLength(3);
+    expect(
+      screen.getAllByRole('link', { name: 'Edit' }).map((link) => link.getAttribute('href'))
+    ).toEqual(expect.arrayContaining(['/rides/edit/1', '/rides/edit/2', '/rides/edit/3']));
+    fireEvent.click(screen.getByTestId('delete-2'));
+    expect(mockDeletePost).toHaveBeenCalledTimes(1);
+    expect(mockDeletePost).toHaveBeenCalledWith('2');
+    expect(screen.getByTestId('delete-1')).toBeInTheDocument();
   });
 
   it('should handle delete interaction', () => {

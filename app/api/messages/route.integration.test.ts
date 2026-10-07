@@ -48,9 +48,15 @@ const TEST_EMAIL_DOMAIN = '@example.com';
 // Skip this test if not in integration test mode
 const isIntegrationTest = process.env.RUN_INTEGRATION_TESTS === 'true';
 const describeIntegration = isIntegrationTest ? describe : describe.skip;
+// CI's database-only run does not launch Next. Report HTTP cases as skipped,
+// never passing without executing them. Opt in with a real local app URL.
+const describeHttp = process.env.RUN_HTTP_INTEGRATION_TESTS === 'true' ? describe : describe.skip;
 
 describeIntegration('Messages API Integration Test', () => {
   let supabaseAdmin: ReturnType<typeof createClient>;
+  let authClient: ReturnType<typeof createClient>;
+  let rideId: string | undefined;
+  let bookingId: string | undefined;
   let userAId: string;
   let userBId: string;
   let userAEmail: string;
@@ -71,6 +77,10 @@ describeIntegration('Messages API Integration Test', () => {
         persistSession: false,
       },
     });
+    // Member sign-ins must never replace the fixture client's service authorization.
+    authClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Generate unique test user emails
     const timestamp = Date.now();
@@ -79,15 +89,24 @@ describeIntegration('Messages API Integration Test', () => {
   });
 
   afterAll(async () => {
-    // Cleanup: Delete test users and their data
-    if (userAId) {
-      await supabaseAdmin.from('profiles').delete().eq('id', userAId);
-      await supabaseAdmin.auth.admin.deleteUser(userAId);
+    // Remove only this run's disposable fixtures, including partial setup.
+    const errors: unknown[] = [];
+    const clean = async (query: PromiseLike<{ error: unknown }>) => {
+      const { error } = await query;
+      if (error) errors.push(error);
+    };
+    const userIds = [userAId, userBId].filter(Boolean);
+    if (userIds.length) {
+      await clean(supabaseAdmin.from('messages').delete().in('sender_id', userIds));
+      await clean(supabaseAdmin.from('conversations').delete().in('participant1_id', userIds));
     }
-    if (userBId) {
-      await supabaseAdmin.from('profiles').delete().eq('id', userBId);
-      await supabaseAdmin.auth.admin.deleteUser(userBId);
+    if (rideId) {
+      await clean(supabaseAdmin.from('trip_bookings').delete().eq('ride_id', rideId));
+      await clean(supabaseAdmin.from('rides').delete().eq('id', rideId));
     }
+    for (const id of userIds) await clean(supabaseAdmin.auth.admin.deleteUser(id));
+    await authClient.auth.signOut();
+    expect(errors).toEqual([]);
   });
 
   describe('Setup: Create Test Users', () => {
@@ -193,9 +212,6 @@ describeIntegration('Messages API Integration Test', () => {
   });
 
   describe('Setup: Establish active booking', () => {
-    let rideId: string | undefined;
-    let bookingId: string | undefined;
-
     beforeAll(async () => {
       if (!userAId || !userBId) {
         throw new Error('Users must exist before setting up a booking');
@@ -203,7 +219,7 @@ describeIntegration('Messages API Integration Test', () => {
 
       // Driver creates a ride (using User A credentials)
       const { data: driverSession, error: driverSessionError } =
-        await supabaseAdmin.auth.signInWithPassword({
+        await authClient.auth.signInWithPassword({
           email: userAEmail,
           password: 'TestPassword123!',
         });
@@ -244,11 +260,10 @@ describeIntegration('Messages API Integration Test', () => {
       expect(rideError).toBeNull();
       const createdRideId = ride!.id;
       rideId = createdRideId;
-      await userAClient.auth.signOut();
 
       // Passenger creates the booking (using User B credentials)
       const { data: passengerSession, error: passengerSessionError } =
-        await supabaseAdmin.auth.signInWithPassword({
+        await authClient.auth.signInWithPassword({
           email: userBEmail,
           password: 'TestPassword123!',
         });
@@ -272,13 +287,27 @@ describeIntegration('Messages API Integration Test', () => {
           passenger_id: userBId,
           pickup_location: 'San Francisco',
           pickup_time: new Date().toISOString(),
-          status: 'confirmed',
+          status: 'pending',
         })
         .select()
         .single();
 
       expect(bookingError).toBeNull();
+      expect(booking?.status).toBe('pending');
       bookingId = booking?.id;
+
+      // The driver accepts the passenger's request through the member write rules.
+      const { data: approvedBooking, error: approvalError } = await userAClient
+        .from('trip_bookings')
+        .update({ status: 'confirmed' })
+        .eq('id', bookingId!)
+        .select()
+        .single();
+
+      expect(approvalError).toBeNull();
+      expect(approvedBooking?.status).toBe('confirmed');
+      expect(approvedBooking?.confirmed_at).toBeTruthy();
+      await userAClient.auth.signOut();
       await userBClient.auth.signOut();
     });
 
@@ -291,12 +320,10 @@ describeIntegration('Messages API Integration Test', () => {
   describe('Messaging Flow', () => {
     it('should allow User A to send a message to User B', async () => {
       // Sign in as User A
-      const { data: sessionData, error: signInError } = await supabaseAdmin.auth.signInWithPassword(
-        {
-          email: userAEmail,
-          password: 'TestPassword123!',
-        }
-      );
+      const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({
+        email: userAEmail,
+        password: 'TestPassword123!',
+      });
 
       expect(signInError).toBeNull();
       expect(sessionData.session).toBeDefined();
@@ -354,12 +381,10 @@ describeIntegration('Messages API Integration Test', () => {
 
     it('should allow User B to see the message from User A', async () => {
       // Sign in as User B
-      const { data: sessionData, error: signInError } = await supabaseAdmin.auth.signInWithPassword(
-        {
-          email: userBEmail,
-          password: 'TestPassword123!',
-        }
-      );
+      const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({
+        email: userBEmail,
+        password: 'TestPassword123!',
+      });
 
       expect(signInError).toBeNull();
       expect(sessionData.session).toBeDefined();
@@ -415,12 +440,10 @@ describeIntegration('Messages API Integration Test', () => {
 
     it('should allow User B to reply to User A', async () => {
       // Sign in as User B
-      const { data: sessionData, error: signInError } = await supabaseAdmin.auth.signInWithPassword(
-        {
-          email: userBEmail,
-          password: 'TestPassword123!',
-        }
-      );
+      const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({
+        email: userBEmail,
+        password: 'TestPassword123!',
+      });
 
       expect(signInError).toBeNull();
       expect(sessionData.session).toBeDefined();
@@ -464,12 +487,10 @@ describeIntegration('Messages API Integration Test', () => {
 
     it('should allow User A to see the reply from User B', async () => {
       // Sign in as User A
-      const { data: sessionData, error: signInError } = await supabaseAdmin.auth.signInWithPassword(
-        {
-          email: userAEmail,
-          password: 'TestPassword123!',
-        }
-      );
+      const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({
+        email: userAEmail,
+        password: 'TestPassword123!',
+      });
 
       expect(signInError).toBeNull();
       expect(sessionData.session).toBeDefined();
@@ -517,12 +538,10 @@ describeIntegration('Messages API Integration Test', () => {
   describe('RLS (Row Level Security) Verification', () => {
     it('should prevent User A from seeing messages not involving them', async () => {
       // Sign in as User A
-      const { data: sessionData, error: signInError } = await supabaseAdmin.auth.signInWithPassword(
-        {
-          email: userAEmail,
-          password: 'TestPassword123!',
-        }
-      );
+      const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({
+        email: userAEmail,
+        password: 'TestPassword123!',
+      });
 
       expect(signInError).toBeNull();
 
@@ -562,25 +581,19 @@ describeIntegration('Messages API Integration Test', () => {
     });
   });
 
-  describe('API Endpoint Testing', () => {
-    let isServerRunning = false;
-
+  describeHttp('API Endpoint Testing', () => {
     beforeAll(async () => {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}`);
-        if (res.ok || res.status < 500) {
-          isServerRunning = true;
-        }
-      } catch {
-        // Dev server not running
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      if (!['localhost', '127.0.0.1'].includes(new URL(appUrl).hostname)) {
+        throw new Error('HTTP messaging fixtures require a local app');
       }
+      const res = await fetch(appUrl);
+      expect(res.status).toBeLessThan(500);
     });
 
     it('should send a message via POST /api/messages', async () => {
-      if (!isServerRunning) return;
-
       // Sign in as User A
-      const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
+      const { data: sessionData } = await authClient.auth.signInWithPassword({
         email: userAEmail,
         password: 'TestPassword123!',
       });
@@ -616,10 +629,8 @@ describeIntegration('Messages API Integration Test', () => {
     });
 
     it('should fetch messages via GET /api/messages', async () => {
-      if (!isServerRunning) return;
-
       // Sign in as User A
-      const { data: sessionData } = await supabaseAdmin.auth.signInWithPassword({
+      const { data: sessionData } = await authClient.auth.signInWithPassword({
         email: userAEmail,
         password: 'TestPassword123!',
       });

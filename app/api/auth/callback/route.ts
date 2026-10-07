@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { safeNextPath, withNextPath } from '@/lib/authRedirect';
 import {
   type EmailOtpType,
   type Session,
@@ -8,7 +9,6 @@ import {
 } from '@supabase/supabase-js';
 import {
   getAppUrl,
-  recordUserActivity,
   sanitizeForLog,
   scheduleCommunityGrowthEmail,
   scheduleNurtureEmail,
@@ -33,14 +33,17 @@ interface Profile {
 function determineRedirectPath(
   finalRedirectBaseUrl: string,
   profile: Profile,
-  isNewUser: boolean
+  isNewUser: boolean,
+  next: string | null
 ): string {
   const cacheBust: string = `_t=${Date.now()}`;
+  const profileEdit = new URL(withNextPath('/profile/edit', next), finalRedirectBaseUrl);
+  profileEdit.searchParams.set('_t', String(Date.now()));
 
   // NEW USERS → Always go to profile edit
   if (isNewUser) {
     console.log('🆕 NEW USER → Redirecting to /profile/edit');
-    return `${finalRedirectBaseUrl}/profile/edit?${cacheBust}`;
+    return profileEdit.toString();
   }
 
   // Check profile completeness for existing users. This must match what the
@@ -58,10 +61,12 @@ function determineRedirectPath(
 
   if (hasNames && hasLocation) {
     console.log('✅ PROFILE COMPLETE → Redirecting to /community');
-    return `${finalRedirectBaseUrl}/community?${cacheBust}`;
+    return next
+      ? new URL(next, finalRedirectBaseUrl).toString()
+      : `${finalRedirectBaseUrl}/community?${cacheBust}`;
   } else {
     console.log('📝 PROFILE INCOMPLETE → Redirecting to /profile/edit');
-    return `${finalRedirectBaseUrl}/profile/edit?${cacheBust}`;
+    return profileEdit.toString();
   }
 }
 
@@ -69,10 +74,10 @@ function determineRedirectPath(
  * Check if welcome email was already sent to this user (idempotent check).
  */
 async function hasWelcomeEmailBeenSent(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createAdminClient>,
   userId: string
 ): Promise<boolean> {
-  const { data: welcomeEmailRecord } = await supabase
+  const { data: welcomeEmailRecord, error } = await supabase
     .from('email_events')
     .select('id')
     .eq('user_id', userId)
@@ -81,6 +86,7 @@ async function hasWelcomeEmailBeenSent(
     .limit(1)
     .maybeSingle();
 
+  if (error) throw new Error(`Failed to check welcome history: ${error.message}`);
   return !!welcomeEmailRecord;
 }
 
@@ -94,19 +100,33 @@ async function processAuthenticatedUser(
   user: User
 ): Promise<NextResponse> {
   const finalRedirectBaseUrl: string = requestUrl.origin;
+  const supabaseAdmin = createAdminClient();
+  // Every established OAuth / OTP session, independent of welcome history or email.
+  // The service-only ingestion trigger atomically materializes the latest login.
+  try {
+    const { error: activityError } = await supabaseAdmin.from('user_activity').insert({
+      user_id: user.id,
+      event: 'login',
+      metadata: { source: 'auth_callback' },
+    });
+    if (activityError) console.error('Failed to record login activity:', activityError);
+  } catch (activityError) {
+    console.error('Failed to record login activity:', activityError);
+  }
 
   const userMetadata: UserMetadata = user.user_metadata || {};
   const googleGivenName: string | undefined = userMetadata.given_name || userMetadata.first_name;
   const googleFamilyName: string | undefined = userMetadata.family_name || userMetadata.last_name;
   const googlePicture: string | undefined = userMetadata.picture || userMetadata.avatar_url;
 
-  const { data: existingProfile } = await supabase
+  const { data: existingProfile, error: lookupError } = await supabase
     .from('profiles')
     .select<string, Profile>('*')
     .eq('id', user.id)
     .single();
 
-  const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabase, user.id);
+  if (lookupError && lookupError.code !== 'PGRST116') throw lookupError;
+  const welcomeAlreadySent = await hasWelcomeEmailBeenSent(supabaseAdmin, user.id);
   const isNewUser: boolean = !existingProfile?.first_name;
   console.log(
     isNewUser
@@ -117,7 +137,6 @@ async function processAuthenticatedUser(
   console.log(`[Auth] User email: ${user.email || 'NOT AVAILABLE'}`);
   if (user.email) {
     try {
-      const supabaseAdmin = createAdminClient();
       const { error: privateInfoError } = await supabaseAdmin
         .from('user_private_info')
         .upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
@@ -133,23 +152,22 @@ async function processAuthenticatedUser(
     console.error('❌ No email available from user object');
   }
 
-  const upsertData: Partial<Profile> & { id: string } = {
-    id: user.id,
-    first_name: googleGivenName || existingProfile?.first_name || null,
-    last_name: googleFamilyName || existingProfile?.last_name || null,
-    profile_photo_url: googlePicture || existingProfile?.profile_photo_url || null,
-  };
-
-  const { data: updatedProfile, error: profileError } = await supabase
-    .from('profiles')
-    .upsert(upsertData, { onConflict: 'id' })
-    .select()
-    .single<Profile>();
-
-  if (profileError) {
-    console.error('❌ Profile upsert error:', profileError);
-  } else {
-    console.log('✅ Profile upserted');
+  // Provider metadata seeds only a missing profile. Existing member fields,
+  // including deliberately cleared names/photos, are never overwritten on login.
+  let updatedProfile = existingProfile;
+  if (!existingProfile) {
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        first_name: googleGivenName || null,
+        last_name: googleFamilyName || null,
+        profile_photo_url: googlePicture || null,
+      })
+      .select()
+      .single<Profile>();
+    if (profileError) console.error('❌ Profile insert error:', profileError);
+    updatedProfile = data;
   }
 
   if (!updatedProfile) {
@@ -159,18 +177,12 @@ async function processAuthenticatedUser(
 
   if (!welcomeAlreadySent && user.email) {
     try {
-      await recordUserActivity({
-        userId: user.id,
-        event: 'login',
-        metadata: { source: 'welcome_email_trigger' },
-      });
-
       await sendEmail({
         userId: user.id,
         to: user.email,
         emailType: 'welcome',
         payload: {
-          userName: googleGivenName || '',
+          userName: updatedProfile.first_name || '',
           appUrl: getAppUrl(),
         },
       });
@@ -184,7 +196,12 @@ async function processAuthenticatedUser(
     }
   }
 
-  const redirectPath = determineRedirectPath(finalRedirectBaseUrl, updatedProfile, isNewUser);
+  const redirectPath = determineRedirectPath(
+    finalRedirectBaseUrl,
+    updatedProfile,
+    isNewUser,
+    safeNextPath(requestUrl.searchParams.get('next'))
+  );
 
   return NextResponse.redirect(redirectPath);
 }

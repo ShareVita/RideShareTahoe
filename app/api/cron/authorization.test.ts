@@ -18,14 +18,26 @@ describe.each([
   ['deletions POST', postDeletions, processScheduledDeletions],
 ] as const)('%s cron authorization', (_name, handler, processor) => {
   const originalSecret = process.env.CRON_SECRET_TOKEN;
+  const originalDeletionFlag = process.env.ACCOUNT_DELETION_ENABLED;
+  const originalEmailFlag = process.env.SCHEDULED_EMAILS_ENABLED;
+  const originalReengageFlag = process.env.REENGAGEMENT_EMAILS_ENABLED;
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.CRON_SECRET_TOKEN = 'local-scheduler-secret';
+    process.env.ACCOUNT_DELETION_ENABLED = 'true';
+    process.env.SCHEDULED_EMAILS_ENABLED = 'true';
+    process.env.REENGAGEMENT_EMAILS_ENABLED = 'true';
     (processor as jest.Mock).mockResolvedValue({ processed: 0, errors: [] });
   });
   afterAll(() => {
     if (originalSecret === undefined) delete process.env.CRON_SECRET_TOKEN;
     else process.env.CRON_SECRET_TOKEN = originalSecret;
+    if (originalDeletionFlag === undefined) delete process.env.ACCOUNT_DELETION_ENABLED;
+    else process.env.ACCOUNT_DELETION_ENABLED = originalDeletionFlag;
+    if (originalEmailFlag === undefined) delete process.env.SCHEDULED_EMAILS_ENABLED;
+    else process.env.SCHEDULED_EMAILS_ENABLED = originalEmailFlag;
+    if (originalReengageFlag === undefined) delete process.env.REENGAGEMENT_EMAILS_ENABLED;
+    else process.env.REENGAGEMENT_EMAILS_ENABLED = originalReengageFlag;
   });
 
   it.each([
@@ -66,6 +78,24 @@ describe.each([
     );
     expect(response.status).toBe(200);
     expect(processor).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([undefined, 'false'])('cannot run while its activation flag is %s', async (flag) => {
+    const key =
+      _name === 'scheduled'
+        ? 'SCHEDULED_EMAILS_ENABLED'
+        : _name === 'reengage'
+          ? 'REENGAGEMENT_EMAILS_ENABLED'
+          : 'ACCOUNT_DELETION_ENABLED';
+    if (flag === undefined) delete process.env[key];
+    else process.env[key] = flag;
+    const response = await handler(
+      new NextRequest('http://localhost/api/cron/test', {
+        headers: { authorization: 'Bearer local-scheduler-secret' },
+      })
+    );
+    expect(response.status).toBe(503);
+    expect(processor).not.toHaveBeenCalled();
   });
 
   it('does not expose internal failures to the caller', async () => {
