@@ -15,9 +15,12 @@ for migration in supabase/migrations/*.sql; do
     psql -X -v ON_ERROR_STOP=1 <<'SQL'
 INSERT INTO auth.users (id,email,raw_user_meta_data)
   VALUES ('11111111-1111-4111-8111-111111111111','legacy@example.test','{}');
+ALTER TABLE public.profiles DISABLE TRIGGER update_profiles_updated_at;
 UPDATE public.profiles SET display_lat=39.123456, display_lng=-120.987654,
-  display_lat_offset=39.123456, display_lng_offset=-120.987654
+  display_lat_offset=39.123456, display_lng_offset=-120.987654,
+  updated_at='2020-01-01T00:00:00Z'
   WHERE id='11111111-1111-4111-8111-111111111111';
+ALTER TABLE public.profiles ENABLE TRIGGER update_profiles_updated_at;
 SQL
   fi
   psql -X -v ON_ERROR_STOP=1 -f "$migration"
@@ -27,8 +30,9 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.profiles
     WHERE id='11111111-1111-4111-8111-111111111111'
     AND display_lat=39.12 AND display_lng=-120.99
-    AND display_lat_offset IS NULL AND display_lng_offset IS NULL)
-  THEN RAISE EXCEPTION 'FAIL legacy coordinate backfill'; END IF;
+    AND display_lat_offset IS NULL AND display_lng_offset IS NULL
+    AND updated_at='2020-01-01T00:00:00Z')
+  THEN RAISE EXCEPTION 'FAIL legacy coordinate backfill (or it bumped updated_at)'; END IF;
   RAISE NOTICE 'PASS legacy coordinate backfill';
 END $$;
 SQL
