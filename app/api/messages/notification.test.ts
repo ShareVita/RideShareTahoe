@@ -39,7 +39,15 @@ function memberClient() {
       select: () => ({ single: async () => ({ data: { id: 'message-2' }, error: null }) }),
     }),
   };
-  return { from: (table: string) => (table === 'conversations' ? conversations : messages) };
+  const profiles = {
+    select: () => ({
+      eq: () => ({ single: async () => ({ data: { deleted_at: null }, error: null }) }),
+    }),
+  };
+  return {
+    from: (table: string) =>
+      table === 'profiles' ? profiles : table === 'conversations' ? conversations : messages,
+  };
 }
 
 /** The service-role client: only the sender's name is read directly. */

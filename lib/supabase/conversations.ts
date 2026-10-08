@@ -111,6 +111,14 @@ export async function sendConversationMessage(
   options: SendConversationMessageOptions
 ): Promise<void> {
   const { supabase, senderId, recipientId, rideId, content, subject = null } = options;
+  const { data: recipient, error: recipientError } = await supabase
+    .from('profiles')
+    .select('deleted_at')
+    .eq('id', recipientId)
+    .single();
+  if (recipientError || !recipient || recipient.deleted_at) {
+    throw new Error('This member is no longer available for messages');
+  }
   const conversation = await ensureConversationForRide(
     supabase,
     senderId,

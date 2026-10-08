@@ -39,7 +39,10 @@ describe('Horizontal security and lifecycle with real Auth/PostgREST', () => {
   });
 
   afterAll(async () => {
-    if (userId) await admin.auth.admin.deleteUser(userId);
+    if (userId) {
+      await admin.auth.admin.deleteUser(userId);
+      await admin.from('profiles').delete().eq('id', userId);
+    }
   });
 
   it.each(['profiles', 'rides', 'vehicles'] as const)(
@@ -196,7 +199,7 @@ describe('Horizontal security and lifecycle with real Auth/PostgREST', () => {
     }
   });
 
-  it('deletes Auth first and lets real foreign-key cascades remove profile and request', async () => {
+  it('deletes Auth first and retains an anonymous profile and completed request', async () => {
     const { data, error } = await admin
       .from('account_deletion_requests')
       .insert({
@@ -212,9 +215,11 @@ describe('Horizontal security and lifecycle with real Auth/PostgREST', () => {
     expect(errors).toEqual([]);
     expect(processed).toEqual([userId]);
     expect((await admin.auth.admin.getUserById(userId)).error).not.toBeNull();
-    expect((await admin.from('profiles').select('id').eq('id', userId)).data).toEqual([]);
     expect(
-      (await admin.from('account_deletion_requests').select('id').eq('user_id', userId)).data
-    ).toEqual([]);
+      (await admin.from('profiles').select('first_name,deleted_at').eq('id', userId)).data
+    ).toEqual([{ first_name: 'Deleted member', deleted_at: expect.any(String) }]);
+    expect(
+      (await admin.from('account_deletion_requests').select('status').eq('user_id', userId)).data
+    ).toEqual([{ status: 'completed' }]);
   });
 });

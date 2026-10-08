@@ -88,6 +88,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message content cannot be empty' }, { status: 400 });
     }
 
+    const { data: recipient, error: recipientError } = await supabase
+      .from('profiles')
+      .select('deleted_at')
+      .eq('id', recipient_id)
+      .single();
+    if (recipientError || !recipient || recipient.deleted_at) {
+      return NextResponse.json(
+        { error: 'This member is no longer available for messages' },
+        { status: 410 }
+      );
+    }
+
     // Find existing conversation with optimized query
     // Check both orderings: (user, recipient) or (recipient, user) AND filter by ride_id
     let conversationQuery = supabase

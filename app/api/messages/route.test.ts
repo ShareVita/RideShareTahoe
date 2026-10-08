@@ -28,6 +28,22 @@ describe('POST /api/messages', () => {
   const validUserId = '123e4567-e89b-12d3-a456-426614174000';
   const validRecipientId = '123e4567-e89b-12d3-a456-426614174001';
 
+  it('rejects a deleted recipient before creating a conversation or sending email', async () => {
+    const single = jest.fn().mockResolvedValue({ data: { deleted_at: '2026-10-08' }, error: null });
+    const supabase = { from: jest.fn(() => ({ select: () => ({ eq: () => ({ single }) }) })) };
+    (getAuthenticatedUser as jest.Mock).mockResolvedValue({
+      user: { id: validUserId },
+      authError: null,
+      supabase,
+    });
+    const res = await POST({
+      json: async () => ({ recipient_id: validRecipientId, content: 'Hello' }),
+    } as unknown as NextRequest);
+    expect(res.status).toBe(410);
+    expect(supabase.from).toHaveBeenCalledTimes(1);
+    expect(supabase.from).toHaveBeenCalledWith('profiles');
+  });
+
   it('returns 400 when trying to message yourself', async () => {
     const supabase = {
       from: jest.fn(),

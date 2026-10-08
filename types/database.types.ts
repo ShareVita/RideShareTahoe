@@ -257,6 +257,7 @@ export type Database = {
           bio: string | null;
           city: string | null;
           created_at: string | null;
+          deleted_at: string | null;
           display_lat: number | null;
           display_lat_offset: number | null;
           display_lng: number | null;
@@ -277,6 +278,7 @@ export type Database = {
           bio?: string | null;
           city?: string | null;
           created_at?: string | null;
+          deleted_at?: string | null;
           display_lat?: number | null;
           display_lat_offset?: number | null;
           display_lng?: number | null;
@@ -296,6 +298,7 @@ export type Database = {
           bio?: string | null;
           city?: string | null;
           created_at?: string | null;
+          deleted_at?: string | null;
           display_lat?: number | null;
           display_lat_offset?: number | null;
           display_lng?: number | null;
@@ -995,6 +998,8 @@ export type Database = {
       get_user_average_rating: { Args: { user_id: string }; Returns: number };
       get_user_review_count: { Args: { user_id: string }; Returns: number };
       has_active_booking_with: { Args: { other_user_id: string }; Returns: boolean };
+      is_auth_retention_maintenance: { Args: Record<PropertyKey, never>; Returns: boolean };
+      is_live_account: { Args: { account_id?: string }; Returns: boolean };
       is_profile_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_user_blocked: { Args: { other_user_id: string }; Returns: boolean };
       search_users: {

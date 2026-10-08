@@ -13,6 +13,7 @@ interface Participant {
   first_name: string | null;
   last_name: string | null;
   profile_photo_url?: string | null;
+  deleted_at?: string | null;
 }
 
 interface Ride {
@@ -134,7 +135,7 @@ export default function MessagesPage() {
     );
   }, [otherParticipant]);
 
-  const hasActiveOrPendingTrip = true; // Allow messaging without booking
+  const hasActiveOrPendingTrip = !!otherParticipant && !otherParticipant.deleted_at;
 
   const loadConversations = useCallback(async () => {
     if (!user) {
@@ -153,8 +154,8 @@ export default function MessagesPage() {
         .select(
           `
           *,
-          participant1:profiles!conversations_participant1_id_fkey(id, first_name, last_name, profile_photo_url),
-          participant2:profiles!conversations_participant2_id_fkey(id, first_name, last_name, profile_photo_url),
+          participant1:profiles!conversations_participant1_id_fkey(id, first_name, last_name, profile_photo_url, deleted_at),
+          participant2:profiles!conversations_participant2_id_fkey(id, first_name, last_name, profile_photo_url, deleted_at),
           ride:rides(id, title, start_location, end_location, departure_date)
         `
         )
@@ -783,6 +784,12 @@ export default function MessagesPage() {
               {sendError && (
                 <p role="alert" className="text-sm text-red-600 dark:text-red-400">
                   {sendError}
+                </p>
+              )}
+              {otherParticipant?.deleted_at && (
+                <p className="mt-4 text-sm text-gray-500">
+                  This member deleted their account. Your conversation history is retained, but new
+                  messages cannot be sent.
                 </p>
               )}
               <form

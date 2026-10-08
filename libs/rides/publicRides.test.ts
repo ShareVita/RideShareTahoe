@@ -1,4 +1,13 @@
-import { recentTripWindow, toPosterLabel, toPublicPlace, toPublicRide } from './publicRides';
+import {
+  fetchPublicUpcomingRides,
+  fetchPublicRecentRides,
+  recentTripWindow,
+  toPosterLabel,
+  toPublicPlace,
+  toPublicRide,
+} from './publicRides';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
 
 describe('public ride directory mapping', () => {
   it('hides street addresses and keeps the town', () => {
@@ -106,4 +115,45 @@ describe('public ride directory mapping', () => {
       to: '2026-10-03',
     });
   });
+
+  it.each([fetchPublicUpcomingRides, fetchPublicRecentRides])(
+    'does not advertise deleted posters, including completed history',
+    async (fetchRides) => {
+      const ride = { posting_type: 'driver', start_location: 'Truckee', end_location: 'Reno' };
+      const ridesQuery = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        in: jest.fn().mockReturnThis(),
+        gte: jest.fn().mockReturnThis(),
+        lte: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue({
+          data: [
+            { ...ride, id: 'live-ride', poster_id: 'live' },
+            { ...ride, id: 'deleted-ride', poster_id: 'deleted' },
+          ],
+          error: null,
+        }),
+      };
+      const profilesQuery = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { id: 'live', first_name: 'Live', last_name: null, deleted_at: null },
+            {
+              id: 'deleted',
+              first_name: 'Deleted member',
+              last_name: null,
+              deleted_at: '2026-10-08T00:00:00Z',
+            },
+          ],
+          error: null,
+        }),
+      };
+      const client = {
+        from: (table: string) => (table === 'rides' ? ridesQuery : profilesQuery),
+      } as unknown as SupabaseClient<Database>;
+      expect((await fetchRides(client)).map((r) => r.id)).toEqual(['live-ride']);
+    }
+  );
 });

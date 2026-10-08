@@ -3,6 +3,33 @@ import { createAdminClient } from '@/lib/supabase/server';
 
 const DELETION_LEASE_MS = 15 * 60 * 1000;
 
+/** Walk all pages before removing objects so offset pagination cannot skip files. */
+export async function removeOwnedProfilePhotos(supabase: SupabaseClient, userId: string) {
+  const bucket = supabase.storage.from('profile-photos');
+  const paths: string[] = [];
+  async function walk(prefix: string) {
+    for (let offset = 0; ; offset += 100) {
+      const { data, error } = await bucket.list(prefix, {
+        limit: 100,
+        offset,
+        sortBy: { column: 'name', order: 'asc' },
+      });
+      if (error) throw error;
+      for (const item of data || []) {
+        const path = `${prefix}/${item.name}`;
+        if (item.id) paths.push(path);
+        else await walk(path);
+      }
+      if (!data || data.length < 100) break;
+    }
+  }
+  await walk(userId);
+  for (let index = 0; index < paths.length; index += 100) {
+    const { error } = await bucket.remove(paths.slice(index, index + 100));
+    if (error) throw error;
+  }
+}
+
 /** Caller must authorize before invoking this elevated runner. */
 export async function processScheduledDeletions(): Promise<{
   processedCount: number;
@@ -75,7 +102,7 @@ export async function processDeletionRequest(
 
   let rejected = false;
   try {
-    // Auth deletion cascades into profiles, private info and the request itself.
+    // Hard Auth deletion transactionally anonymizes the retained profile/history.
     // Never remove the profile first: failed Auth deletion must remain recoverable.
     const { error } = await supabase.auth.admin.deleteUser(request.user_id);
     if (error && error.code !== 'user_not_found') {
@@ -86,7 +113,19 @@ export async function processDeletionRequest(
         error.status < 500;
       throw error;
     }
-    processedUsers.push(request.user_id);
+    // After Auth success, failures must never reopen cancellation.
+    rejected = false;
+    await removeOwnedProfilePhotos(supabase, request.user_id);
+    const { data: completed, error: completionError } = await supabase
+      .from('account_deletion_requests')
+      .update({ status: 'completed' })
+      .eq('id', request.id)
+      .eq('status', 'processing')
+      .eq('processed_at', claimTimestamp)
+      .select('id')
+      .maybeSingle();
+    if (completionError) throw completionError;
+    if (completed) processedUsers.push(request.user_id);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     // A transport failure may mean Auth is still deleting. A reclaimed lease may

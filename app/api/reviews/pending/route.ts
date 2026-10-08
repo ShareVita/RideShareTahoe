@@ -14,8 +14,18 @@ interface BookingWithProfiles {
     start_location: string;
     end_location: string;
   };
-  driver: { id: string; first_name: string; last_name: string } | null;
-  passenger: { id: string; first_name: string; last_name: string } | null;
+  driver: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    deleted_at: string | null;
+  } | null;
+  passenger: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    deleted_at: string | null;
+  } | null;
   [key: string]: unknown;
 }
 
@@ -41,8 +51,8 @@ export async function GET(request: NextRequest) {
         passenger_id,
         status,
         ride:rides(title, departure_date, departure_time, start_location, end_location),
-        driver:profiles!trip_bookings_driver_id_fkey(id, first_name, last_name),
-        passenger:profiles!trip_bookings_passenger_id_fkey(id, first_name, last_name)
+        driver:profiles!trip_bookings_driver_id_fkey(id, first_name, last_name, deleted_at),
+        passenger:profiles!trip_bookings_passenger_id_fkey(id, first_name, last_name, deleted_at)
       `
       )
       .or(`driver_id.eq.${user.id},passenger_id.eq.${user.id}`)
@@ -56,9 +66,10 @@ export async function GET(request: NextRequest) {
 
     // Filter for rides that have passed
     const now = new Date();
-    const pastBookings = (bookings as unknown as BookingWithProfiles[]).filter((booking) =>
-      isReviewableBooking(booking, now)
-    );
+    const pastBookings = (bookings as unknown as BookingWithProfiles[]).filter((booking) => {
+      const counterpart = booking.driver_id === user.id ? booking.passenger : booking.driver;
+      return counterpart && !counterpart.deleted_at && isReviewableBooking(booking, now);
+    });
 
     if (pastBookings.length === 0) {
       return NextResponse.json({ pendingReviews: [] });
@@ -83,7 +94,8 @@ export async function GET(request: NextRequest) {
         const isDriver = booking.driver_id === user.id;
         const otherParticipant = isDriver ? booking.passenger : booking.driver;
         const otherName = otherParticipant
-          ? `${otherParticipant.first_name} ${otherParticipant.last_name}`
+          ? `${otherParticipant.first_name ?? ''} ${otherParticipant.last_name ?? ''}`.trim() ||
+            'Community member'
           : 'Unknown User';
 
         return {

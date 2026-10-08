@@ -167,6 +167,13 @@ describe('sendConversationMessage', () => {
         if (tableName === 'messages') {
           return { insert };
         }
+        if (tableName === 'profiles') {
+          return {
+            select: () => ({
+              eq: () => ({ single: async () => ({ data: { deleted_at: null }, error: null }) }),
+            }),
+          };
+        }
         throw new Error(`Unexpected table ${tableName}`);
       }),
     } as unknown as SupabaseClient;

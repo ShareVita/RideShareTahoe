@@ -20,6 +20,34 @@ const booking = {
 } as unknown as TripBooking;
 
 describe('TripBookingCard', () => {
+  it('retains the deleted counterpart name and history without actionable contact or booking controls', () => {
+    const onUpdateStatus = jest.fn();
+    const onMessage = jest.fn();
+    render(
+      <TripBookingCard
+        booking={{
+          ...booking,
+          passenger: {
+            ...booking.passenger!,
+            first_name: 'Deleted member',
+            last_name: null,
+            deleted_at: '2026-10-08',
+          },
+        }}
+        role="driver"
+        onUpdateStatus={onUpdateStatus}
+        onMessage={onMessage}
+      />
+    );
+    expect(screen.getByText('Deleted member')).toBeInTheDocument();
+    expect(screen.getByText(/Trip history is retained/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Message' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Message' }));
+    expect(onMessage).not.toHaveBeenCalled();
+    expect(onUpdateStatus).not.toHaveBeenCalled();
+  });
+
   it('displays the scheduled calendar date and Pacific pickup, not UTC or host time', () => {
     render(
       <TripBookingCard
