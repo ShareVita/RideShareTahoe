@@ -40,6 +40,19 @@ fences writes against concurrent deletion: deletion waits for an accepted write
 and then scrubs it, or the losing writer fails instead of committing after the
 scrub. Read-only requests use the stable lookup without taking write locks.
 
+Migration `20261009000001_storage_retention_fence.sql` separately fences Storage
+metadata publication by the object's owner and the UUID profile-photo prefix,
+including service-role writes. Storage v1.79.36 rolls back the member permission
+probe, writes the bytes, then publishes metadata with service-role JWT scope;
+the member-only fence cannot protect that final phase. Deletes remain permitted
+after Auth removal so the cleanup worker can finish.
+
+An upload rejected during final publication may already have written an
+unpublished physical version. Storage schedules version-specific orphan cleanup;
+that is not the account worker's metadata-backed list/remove operation. Verify
+the production Storage cleanup queue and retries before enabling deletion, and
+do not promise immediate removal of in-flight unpublished bytes or CDN caches.
+
 ## Worker completion and recovery
 
 The worker preserves due-date checks, 15-minute leases, original-status/timestamp
@@ -66,13 +79,26 @@ tests fail without write fencing and pass with it.
 Real Storage fixtures upload 102 objects including a nested path, inject cleanup
 failure after Auth success, reject a stale JWT upload, reclaim an expired lease,
 race duplicate workers and verify public object download fails after cleanup.
+Another real Storage upload is paused immediately before privileged metadata
+publication while the genuine deletion worker finishes Auth deletion and cleanup.
+It wrongly succeeds without the Storage fence, but is rejected with no published
+object after the fence. The opposite ordering pauses an accepted final insert:
+real GoTrue deletion waits for its Auth-row lock, then the worker removes the
+committed object. Both Storage ordering tests fail without the owner fence.
+Local file-backend inspection also found no remaining
+in-flight fixture bytes after rejection and cleanup; production orphan cleanup
+has not been exercised.
 
 Local `storage.objects` constraints were inspected: only bucket FK and object PK,
 no Auth-owner FK. The local Storage service was initially absent and was started
 as a supervised isolated disposable service for these tests. Auth hard deletion
 succeeded while owned physical objects remained; removal was verified separately
 through Storage downloads. This is local evidence, not proof of production's
-current schema or deployed GoTrue version.
+current schema or deployed GoTrue version. The manual local Storage service now
+uses the actual GoTrue public JWKS to accept its ES256 member tokens alongside
+the CLI HS256 service key. The initial stale-upload rejection was a signature
+configuration error, not RLS evidence; it was rerun successfully with genuine
+signature verification and the retention guards.
 
 Before rollout: review migration/guards against the deployed schema and GoTrue;
 deploy migration and compatible application/worker together with flags still

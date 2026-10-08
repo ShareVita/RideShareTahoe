@@ -1,6 +1,7 @@
 /** @jest-environment node */
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
+import { processDeletionRequest } from './accountDeletion';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 if (!['localhost', '127.0.0.1'].includes(new URL(url).hostname))
@@ -21,6 +22,9 @@ const env = {
 const args = ['-X', '-qAt', '-v', 'ON_ERROR_STOP=1'];
 const users: string[] = [];
 const processes: { child: ChildProcessWithoutNullStreams; exit: Promise<number | null> }[] = [];
+const uploads: Promise<{ error: unknown }>[] = [];
+const workers: Promise<void>[] = [];
+const paths: string[] = [];
 const must = (result: { error: unknown }) => {
   if (result.error) throw result.error;
 };
@@ -75,10 +79,16 @@ function insert(sender: string, recipient: string) {
 afterEach(async () => {
   for (const process of processes) if (!process.child.stdin.destroyed) process.child.stdin.end();
   await Promise.all(processes.map((process) => process.exit));
+  await Promise.all(uploads);
+  await Promise.all(workers);
+  workers.length = 0;
+  uploads.length = 0;
   processes.length = 0;
   sql(
-    'DROP TRIGGER IF EXISTS pause_retention_race_message ON public.messages; DROP FUNCTION IF EXISTS public.pause_retention_race_message();'
+    'DROP TRIGGER IF EXISTS pause_retention_race_message ON public.messages; DROP FUNCTION IF EXISTS public.pause_retention_race_message(); DROP TRIGGER IF EXISTS aaa_pause_retention_storage ON storage.objects; DROP FUNCTION IF EXISTS public.pause_retention_storage();'
   );
+  if (paths.length) must(await admin.storage.from('profile-photos').remove(paths));
+  paths.length = 0;
   for (const id of users) {
     const deleted = await admin.auth.admin.deleteUser(id);
     if (deleted.error?.code !== 'user_not_found') must(deleted);
@@ -141,4 +151,95 @@ it('a write whose live-account snapshot predates deletion cannot commit after de
   writer.child.stdin.end();
   expect(await writer.exit).not.toBe(0);
   expect((await admin.from('messages').select('id').eq('sender_id', author.id)).data).toEqual([]);
+}, 20000);
+
+it('a real upload cannot publish privileged metadata after deletion and cleanup finish', async () => {
+  const author = await fixture();
+  const path = `${author.id}/in-flight-photo.png`;
+  paths.push(path);
+  const key = 729315;
+  // Storage first rolls back its member permission probe, writes physical bytes,
+  // then publishes metadata as service_role. Pause that final, real API phase
+  // before the live-account fence, not a mocked SDK call or inferred timing.
+  sql(`CREATE FUNCTION public.pause_retention_storage() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.name='${path}' AND auth.role()='service_role' THEN PERFORM pg_advisory_xact_lock(${key}); END IF; RETURN NEW; END $$;
+    CREATE TRIGGER aaa_pause_retention_storage BEFORE INSERT OR UPDATE ON storage.objects FOR EACH ROW EXECUTE FUNCTION public.pause_retention_storage();`);
+  const holder = session(`SELECT pg_advisory_lock(${key}); SELECT 'held';`);
+  await until(() => holder.output().includes('held'));
+  const upload = author.member.storage
+    .from('profile-photos')
+    .upload(path, Buffer.from('Disposable in-flight photo'), { contentType: 'image/png' });
+  uploads.push(upload);
+  await until(
+    () =>
+      sql(
+        `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE wait_event='advisory' AND ${holder.pid()}=ANY(pg_blocking_pids(pid)));`
+      ) === 't'
+  );
+  const request = await admin
+    .from('account_deletion_requests')
+    .insert({
+      user_id: author.id,
+      scheduled_deletion_date: new Date(Date.now() - 1000).toISOString(),
+    })
+    .select('*')
+    .single();
+  must(request);
+  const processed: string[] = [];
+  const errors: { userId: string; error: string }[] = [];
+  await processDeletionRequest(admin, request.data!, processed, errors);
+  expect(errors).toEqual([]);
+  expect(processed).toEqual([author.id]);
+  holder.child.stdin.end(`SELECT pg_advisory_unlock(${key});\n`);
+  expect((await upload).error).not.toBeNull();
+  expect(sql(`SELECT count(*) FROM storage.objects WHERE name='${path}';`)).toBe('0');
+  expect((await admin.storage.from('profile-photos').download(path)).error).not.toBeNull();
+}, 20000);
+
+it('deletion waits for accepted privileged Storage publication and then removes the object', async () => {
+  const author = await fixture();
+  const path = `${author.id}/accepted-in-flight-photo.png`;
+  paths.push(path);
+  const key = 729316;
+  sql(`CREATE FUNCTION public.pause_retention_storage() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.name='${path}' AND auth.role()='service_role' THEN PERFORM pg_advisory_xact_lock(${key}); END IF; RETURN NEW; END $$;
+    CREATE TRIGGER aaa_pause_retention_storage AFTER INSERT OR UPDATE ON storage.objects FOR EACH ROW EXECUTE FUNCTION public.pause_retention_storage();`);
+  const holder = session(`SELECT pg_advisory_lock(${key}); SELECT 'held';`);
+  await until(() => holder.output().includes('held'));
+  const upload = author.member.storage
+    .from('profile-photos')
+    .upload(path, Buffer.from('Disposable accepted in-flight photo'), { contentType: 'image/png' });
+  uploads.push(upload);
+  const writerPid = () =>
+    sql(
+      `SELECT pid FROM pg_stat_activity WHERE wait_event='advisory' AND ${holder.pid()}=ANY(pg_blocking_pids(pid));`
+    );
+  await until(() => !!writerPid());
+  const pid = Number(writerPid());
+  const request = await admin
+    .from('account_deletion_requests')
+    .insert({
+      user_id: author.id,
+      scheduled_deletion_date: new Date(Date.now() - 1000).toISOString(),
+    })
+    .select('*')
+    .single();
+  must(request);
+  const processed: string[] = [];
+  const errors: { userId: string; error: string }[] = [];
+  const deletion = processDeletionRequest(admin, request.data!, processed, errors);
+  workers.push(deletion);
+  await until(
+    () =>
+      sql(
+        `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE usename='supabase_auth_admin' AND ${pid}=ANY(pg_blocking_pids(pid)));`
+      ) === 't'
+  );
+  holder.child.stdin.end(`SELECT pg_advisory_unlock(${key});\n`);
+  must(await upload);
+  await deletion;
+  expect(errors).toEqual([]);
+  expect(processed).toEqual([author.id]);
+  expect(sql(`SELECT count(*) FROM storage.objects WHERE name='${path}';`)).toBe('0');
+  expect((await admin.storage.from('profile-photos').download(path)).error).not.toBeNull();
 }, 20000);
