@@ -61,7 +61,7 @@ jobs:
       - name: Start Local Supabase and Set Environment Variables
         id: supabase_env_setup
         run: |
-          npx supabase start -x studio,imgproxy,storage-api,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta > supabase.log 2>&1
+          npx supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor,postgres-meta > supabase.log 2>&1
 
           MAX_ATTEMPTS=20
           SLEEP_TIME=3

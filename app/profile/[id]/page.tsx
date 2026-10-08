@@ -266,7 +266,12 @@ export default function PublicProfilePage() {
               )}
 
               {/* Action Buttons for Other Users */}
-              {currentUser.id !== profile.id && (
+              {profile.deleted_at && (
+                <p className="mt-3 text-sm text-gray-500">
+                  This account has been deleted. Shared trip and review history is retained.
+                </p>
+              )}
+              {currentUser.id !== profile.id && !profile.deleted_at && (
                 <>
                   {/* Only show Message button if not blocked */}
                   {!isUserBlocked && (

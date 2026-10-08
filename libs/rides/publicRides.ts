@@ -308,13 +308,15 @@ export async function fetchPublicUpcomingRides(
   const posterIds = Array.from(new Set(rides.map((ride) => ride.poster_id)));
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name')
+    .select('id, first_name, last_name, deleted_at')
     .in('id', posterIds);
 
   if (profilesError) throw profilesError;
 
   const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
-  return rides.map((ride) => toPublicRide(ride, profilesById.get(ride.poster_id)));
+  return rides
+    .filter((ride) => !profilesById.get(ride.poster_id)?.deleted_at)
+    .map((ride) => toPublicRide(ride, profilesById.get(ride.poster_id)));
 }
 
 /**
@@ -346,11 +348,13 @@ export async function fetchPublicRecentRides(
   const posterIds = Array.from(new Set(rides.map((ride) => ride.poster_id)));
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name')
+    .select('id, first_name, last_name, deleted_at')
     .in('id', posterIds);
 
   if (profilesError) throw profilesError;
 
   const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
-  return rides.map((ride) => toPublicRide(ride, profilesById.get(ride.poster_id)));
+  return rides
+    .filter((ride) => !profilesById.get(ride.poster_id)?.deleted_at)
+    .map((ride) => toPublicRide(ride, profilesById.get(ride.poster_id)));
 }

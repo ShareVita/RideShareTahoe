@@ -39,6 +39,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ride not found' }, { status: 404 });
     }
 
+    const { data: driver, error: driverError } = await supabase
+      .from('profiles')
+      .select('deleted_at')
+      .eq('id', ride.poster_id)
+      .maybeSingle();
+    if (driverError || !driver || driver.deleted_at) {
+      return NextResponse.json(
+        { error: 'This member is no longer available for bookings' },
+        { status: 410 }
+      );
+    }
+
     if (ride.poster_id === user.id) {
       return NextResponse.json({ error: 'You cannot book your own ride' }, { status: 400 });
     }

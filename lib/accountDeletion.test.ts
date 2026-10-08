@@ -1,6 +1,10 @@
 /** @jest-environment node */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { processDeletionRequest, processScheduledDeletions } from './accountDeletion';
+import {
+  processDeletionRequest,
+  processScheduledDeletions,
+  removeOwnedProfilePhotos,
+} from './accountDeletion';
 import { createAdminClient } from '@/lib/supabase/server';
 jest.mock('@/lib/supabase/server', () => ({ createAdminClient: jest.fn() }));
 
@@ -24,12 +28,71 @@ function database(claim: unknown, deletionError: Error | null = null, resetError
     client: {
       from: jest.fn(() => chain),
       auth: { admin: { deleteUser } },
+      storage: {
+        from: jest.fn(() => ({
+          list: jest.fn().mockResolvedValue({ data: [], error: null }),
+          remove: jest.fn().mockResolvedValue({ error: null }),
+        })),
+      },
     } as unknown as SupabaseClient,
   };
 }
 const request = { id: 'request-1', user_id: 'user-1' };
 
-it('claims only due pending requests and deletes Auth first, relying on FK cascades', async () => {
+it('walks paginated nested Storage paths before removing any object', async () => {
+  const firstPage = Array.from({ length: 99 }, (_, i) => ({ id: `${i}`, name: `photo-${i}` }));
+  const bucket = {
+    list: jest.fn(async (prefix: string, { offset }: { offset: number }) => ({
+      data:
+        prefix === 'user-1/nested'
+          ? [{ id: 'nested', name: 'photo.png' }]
+          : offset === 0
+            ? [...firstPage, { id: null, name: 'nested' }]
+            : [{ id: 'last', name: 'last.png' }],
+      error: null,
+    })),
+    remove: jest.fn().mockResolvedValue({ error: null }),
+  };
+  await removeOwnedProfilePhotos(
+    { storage: { from: () => bucket } } as unknown as SupabaseClient,
+    'user-1'
+  );
+  expect(bucket.list).toHaveBeenCalledWith('user-1', expect.objectContaining({ offset: 100 }));
+  expect(bucket.remove.mock.calls.flatMap((call) => call[0])).toContain('user-1/nested/photo.png');
+  expect(bucket.remove.mock.calls.flatMap((call) => call[0])).toHaveLength(101);
+  expect(bucket.list.mock.invocationCallOrder.at(-1)).toBeLessThan(
+    bucket.remove.mock.invocationCallOrder[0]
+  );
+});
+
+it('never completes or reopens cancellation after Storage cleanup failure', async () => {
+  const db = database({ data: { id: request.id }, error: null });
+  (db.client.storage.from as jest.Mock).mockReturnValue({
+    list: jest.fn().mockResolvedValue({ data: null, error: new Error('Storage unavailable') }),
+  });
+  const processed: string[] = [];
+  const errors: { userId: string; error: string }[] = [];
+  await processDeletionRequest(db.client, request, processed, errors);
+  expect(db.chain.update).toHaveBeenCalledTimes(1);
+  expect(processed).toEqual([]);
+  expect(errors[0].error).toBe('Storage unavailable');
+});
+
+it('does not report completion after losing the worker fence', async () => {
+  const db = database({ data: { id: request.id }, error: null });
+  db.chain.maybeSingle
+    .mockResolvedValueOnce({ data: { id: request.id }, error: null })
+    .mockResolvedValueOnce({ data: null, error: null });
+  const processed: string[] = [];
+  await processDeletionRequest(db.client, request, processed, []);
+  expect(processed).toEqual([]);
+  expect(db.chain.eq).toHaveBeenLastCalledWith(
+    'processed_at',
+    db.chain.update.mock.calls[0][0].processed_at
+  );
+});
+
+it('claims due requests, deletes Auth then cleans Storage and completes the retained request', async () => {
   const db = database({ data: { id: request.id }, error: null });
   const processed: string[] = [];
   const errors: { userId: string; error: string }[] = [];
@@ -37,7 +100,7 @@ it('claims only due pending requests and deletes Auth first, relying on FK casca
   expect(db.chain.eq).toHaveBeenCalledWith('status', 'pending');
   expect(db.chain.lte).toHaveBeenCalledWith('scheduled_deletion_date', expect.any(String));
   expect(db.deleteUser).toHaveBeenCalledWith('user-1');
-  expect(db.client.from).toHaveBeenCalledTimes(1);
+  expect(db.client.from).toHaveBeenCalledTimes(2);
   expect(processed).toEqual(['user-1']);
   expect(errors).toEqual([]);
 });

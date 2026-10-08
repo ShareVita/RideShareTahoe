@@ -36,6 +36,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You cannot invite yourself' }, { status: 400 });
     }
 
+    const { data: passenger, error: passengerError } = await supabase
+      .from('profiles')
+      .select('deleted_at')
+      .eq('id', body.passenger_id)
+      .maybeSingle();
+    if (passengerError || !passenger || passenger.deleted_at) {
+      return NextResponse.json(
+        { error: 'This member is no longer available for invitations' },
+        { status: 410 }
+      );
+    }
+
     const { data: ride, error: rideError } = await supabase
       .from('rides')
       .select(

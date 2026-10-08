@@ -43,6 +43,7 @@ export interface ProfileType {
   first_name: string | null;
   last_name: string | null;
   profile_photo_url: string | null;
+  deleted_at?: string | null;
   city: string | null;
   state: string | null;
   bio: string | null;

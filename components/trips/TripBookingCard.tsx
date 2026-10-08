@@ -30,7 +30,8 @@ export default function TripBookingCard({
 
   const isRideActive = ride.status === 'active';
   // Allow messaging if the ride is active.
-  const canMessage = isRideActive;
+  const counterpartDeleted = !!otherPerson.deleted_at;
+  const canMessage = isRideActive && !counterpartDeleted;
 
   const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -110,6 +111,12 @@ export default function TripBookingCard({
             </div>
           </div>
 
+          {counterpartDeleted && (
+            <p className="mb-3 text-sm text-gray-500">
+              This member deleted their account. Trip history is retained, but messaging and booking
+              actions are unavailable.
+            </p>
+          )}
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
             {/* Message Button - Available for both roles */}
@@ -117,24 +124,33 @@ export default function TripBookingCard({
               onClick={() => onMessage(otherPerson, ride)}
               disabled={!canMessage}
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800"
-              title={canMessage ? 'Message' : 'Messaging is disabled for inactive trips'}
+              title={
+                counterpartDeleted
+                  ? 'This member deleted their account'
+                  : canMessage
+                    ? 'Message'
+                    : 'Messaging is disabled for inactive trips'
+              }
             >
               Message
             </button>
 
-            {!isDriver && booking.status === 'pending' && onCancelRequest && (
-              <button
-                type="button"
-                onClick={() => void onCancelRequest(booking.id)}
-                disabled={isCancelling}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isCancelling ? 'Cancelling…' : 'Cancel request'}
-              </button>
-            )}
+            {!counterpartDeleted &&
+              !isDriver &&
+              booking.status === 'pending' &&
+              onCancelRequest && (
+                <button
+                  type="button"
+                  onClick={() => void onCancelRequest(booking.id)}
+                  disabled={isCancelling}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isCancelling ? 'Cancelling…' : 'Cancel request'}
+                </button>
+              )}
 
             {/* Driver Actions for Pending Requests */}
-            {isDriver && booking.status === 'pending' && (
+            {!counterpartDeleted && isDriver && booking.status === 'pending' && (
               <>
                 <button
                   className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
@@ -152,7 +168,7 @@ export default function TripBookingCard({
             )}
 
             {/* Passenger Actions for Invitations */}
-            {!isDriver && booking.status === 'invited' && (
+            {!counterpartDeleted && !isDriver && booking.status === 'invited' && (
               <>
                 <button
                   className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
@@ -169,7 +185,7 @@ export default function TripBookingCard({
               </>
             )}
 
-            {isDriver && booking.status === 'invited' && (
+            {!counterpartDeleted && isDriver && booking.status === 'invited' && (
               <span className="self-center text-sm font-medium text-indigo-600 dark:text-indigo-400">
                 Invitation Sent
               </span>

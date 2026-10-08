@@ -29,6 +29,15 @@ export const createTripBooking = async (
     throw new Error('Ride not found');
   }
 
+  const { data: driver, error: driverError } = await supabase
+    .from('profiles')
+    .select('deleted_at')
+    .eq('id', ride.poster_id)
+    .single();
+  if (driverError || !driver || driver.deleted_at) {
+    throw new Error('This member is no longer available for bookings');
+  }
+
   if (ride.available_seats !== null && ride.available_seats <= 0) {
     throw new Error('No seats available on this ride');
   }
@@ -94,7 +103,7 @@ export const fetchRideBookings = async (
       `
       *,
       passenger:profiles!trip_bookings_passenger_id_fkey (
-        id, first_name, last_name, profile_photo_url
+        id, first_name, last_name, profile_photo_url, deleted_at
       )
     `
     )
@@ -138,7 +147,7 @@ export const fetchMyDriverTrips = async (
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, profile_photo_url')
+    .select('id, first_name, last_name, profile_photo_url, deleted_at')
     .in('id', passengerIds);
 
   if (profilesError) {
@@ -192,7 +201,7 @@ export const fetchMyPassengerTrips = async (
 
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, profile_photo_url')
+    .select('id, first_name, last_name, profile_photo_url, deleted_at')
     .in('id', driverIds);
 
   if (profilesError) {
