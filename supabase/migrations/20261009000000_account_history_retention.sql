@@ -11,6 +11,48 @@ $$;
 REVOKE ALL ON FUNCTION public.is_live_account(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_live_account(uuid) TO authenticated, service_role;
 
+-- A snapshot-only RLS check cannot fence an already-started write against Auth
+-- deletion. Hold the live Auth row until the member's write transaction ends:
+-- deletion then scrubs committed writes, or a losing write finds no live row.
+-- Keep this out of the read helper: member GETs can run in read-only transactions.
+CREATE FUNCTION public.lock_live_account_write()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE participants uuid[] := ARRAY[]::uuid[]; locked integer;
+BEGIN
+  IF auth.role() = 'authenticated' THEN
+    PERFORM id FROM auth.users WHERE id = auth.uid() FOR KEY SHARE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Account is no longer available' USING ERRCODE = '42501';
+    END IF;
+    IF TG_OP = 'INSERT' AND TG_TABLE_NAME = 'messages' THEN
+      participants := ARRAY[NEW.recipient_id];
+    ELSIF TG_OP = 'INSERT' AND TG_TABLE_NAME = 'conversations' THEN
+      participants := ARRAY[NEW.participant1_id, NEW.participant2_id];
+    ELSIF TG_OP <> 'DELETE' AND TG_TABLE_NAME = 'trip_bookings' THEN
+      participants := ARRAY[NEW.driver_id, NEW.passenger_id];
+    ELSIF TG_OP = 'INSERT' AND TG_TABLE_NAME = 'reviews' THEN
+      participants := ARRAY[NEW.reviewee_id];
+    END IF;
+    PERFORM id FROM auth.users WHERE id = ANY(participants) ORDER BY id FOR KEY SHARE;
+    GET DIAGNOSTICS locked = ROW_COUNT;
+    IF locked <> cardinality(participants) THEN
+      RAISE EXCEPTION 'Participant is no longer available' USING ERRCODE = '42501';
+    END IF;
+  END IF;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION public.lock_live_account_write() FROM PUBLIC;
+DO $$ DECLARE t text; BEGIN
+  FOREACH t IN ARRAY ARRAY['profiles','profile_socials','user_private_info','vehicles','rides',
+    'conversations','messages','trip_bookings','reviews','reviews_pending','reports',
+    'account_deletion_requests','user_consents','user_blocks'] LOOP
+    EXECUTE format('CREATE TRIGGER lock_live_account_write BEFORE INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.lock_live_account_write()', t);
+  END LOOP;
+END $$;
+CREATE TRIGGER lock_live_account_write BEFORE INSERT OR UPDATE OR DELETE ON storage.objects
+FOR EACH ROW EXECUTE FUNCTION public.lock_live_account_write();
+
 -- Only nested triggers during this Auth deletion may maintain protected rows.
 -- A member can set a custom GUC but cannot forge session_user. SECURITY
 -- DEFINER alone does not change session_user.

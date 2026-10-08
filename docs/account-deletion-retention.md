@@ -34,6 +34,12 @@ through bookings or conversations. New messaging, conversations, bookings and
 invitations to a deleted counterpart are rejected at the database boundary.
 Routes additionally return explanatory unavailable-member errors.
 
+Member writes also hold a key-share lock on the live Auth actor and, when
+creating shared records, the required counterpart Auth rows until commit. This
+fences writes against concurrent deletion: deletion waits for an accepted write
+and then scrubs it, or the losing writer fails instead of committing after the
+scrub. Read-only requests use the stable lookup without taking write locks.
+
 ## Worker completion and recovery
 
 The worker preserves due-date checks, 15-minute leases, original-status/timestamp
@@ -53,6 +59,10 @@ Real local GoTrue/PostgREST fixtures cover three asymmetric members, deleted rid
 poster, surviving-to-surviving conversation on the retained ride, authored versus
 received messages/reviews, future cancellation, past confirmed status, stale
 legitimate JWT reads/writes, profile forgery and tombstone resurrection denial.
+Deterministic native transaction barriers with real GoTrue fixtures cover both
+orders of the write/deletion race; the accepted-writer case uses real GoTrue
+deletion and verifies the survivor sees only redacted text. Both concurrency
+tests fail without write fencing and pass with it.
 Real Storage fixtures upload 102 objects including a nested path, inject cleanup
 failure after Auth success, reject a stale JWT upload, reclaim an expired lease,
 race duplicate workers and verify public object download fails after cleanup.
