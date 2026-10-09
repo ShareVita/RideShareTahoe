@@ -57,9 +57,9 @@ export default function TripBookingsList({
           return (
             <details
               key={rideId}
-              className="group min-w-0 rounded-2xl border border-gray-200 bg-white shadow-sm md:aspect-square md:open:aspect-auto dark:border-slate-800 dark:bg-slate-900"
+              className="group min-w-0 rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
-              <summary className="flex h-full min-h-64 cursor-pointer list-none flex-col gap-3 p-4 group-open:h-auto group-open:min-h-0 [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 [&::-webkit-details-marker]:hidden">
                 <div>
                   <p className="font-bold text-gray-900 dark:text-white">
                     {formatDateLabel(ride.departure_date) ?? 'Date TBD'}
@@ -76,7 +76,7 @@ export default function TripBookingsList({
                     ? `${ride.available_seats} of ${ride.total_seats} seats available`
                     : 'Seat count not specified'}
                 </p>
-                <span className="mt-auto flex min-h-11 items-center justify-between gap-2 rounded-lg bg-blue-50 px-3 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                <span className="flex min-h-11 items-center justify-between gap-2 rounded-lg bg-blue-50 px-3 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
                   <span>Manage passengers ({passengers.length})</span>
                   <span aria-hidden="true" className="group-open:rotate-180">
                     ⌄
