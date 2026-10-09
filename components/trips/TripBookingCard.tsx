@@ -12,6 +12,7 @@ interface TripBookingCardProps {
   // eslint-disable-next-line no-unused-vars
   onCancelRequest?: (bookingId: string) => Promise<void>;
   readonly isSaving?: boolean;
+  readonly compact?: boolean;
 }
 
 export default function TripBookingCard({
@@ -21,6 +22,7 @@ export default function TripBookingCard({
   onMessage,
   onCancelRequest,
   isSaving,
+  compact = false,
 }: Readonly<TripBookingCardProps>) {
   const isDriver = role === 'driver';
   const otherPerson = isDriver ? booking.passenger : booking.driver;
@@ -43,32 +45,46 @@ export default function TripBookingCard({
 
   const departureDateLabel = formatDateLabel(ride.departure_date);
   const pickupTime = booking.pickup_time ? new Date(booking.pickup_time) : null;
+  const statusBadge = (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[booking.status]}`}
+    >
+      {booking.status}
+    </span>
+  );
 
   return (
-    <div className="grid min-h-max min-w-0 grid-rows-[auto_1fr] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:aspect-square dark:border-slate-800 dark:bg-slate-900">
+    <div
+      className={
+        compact
+          ? 'min-w-0 rounded-xl border border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+          : 'grid min-h-max min-w-0 grid-rows-[auto_1fr] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:aspect-square dark:border-slate-800 dark:bg-slate-900'
+      }
+    >
       {/* Date & Status */}
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
-        <div className="min-w-0">
-          <span className="block text-base font-bold text-gray-900 dark:text-white">
-            {departureDateLabel ?? 'Date TBD'}
-          </span>
-          <span className="block text-xs text-gray-500 dark:text-gray-400">
-            <span>{formatTimeLabel(ride.departure_time) ?? 'Time TBD'}</span> ·{' '}
-            <span>Pacific time</span>
-          </span>
+      {!compact && (
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+          <div className="min-w-0">
+            <span className="block text-base font-bold text-gray-900 dark:text-white">
+              {departureDateLabel ?? 'Date TBD'}
+            </span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400">
+              <span>{formatTimeLabel(ride.departure_time) ?? 'Time TBD'}</span> ·{' '}
+              <span>Pacific time</span>
+            </span>
+          </div>
+          {statusBadge}
         </div>
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[booking.status]}`}
-        >
-          {booking.status}
-        </span>
-      </div>
+      )}
 
       {/* Ride Details */}
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="mb-3 break-words text-base font-semibold text-gray-900 dark:text-white">
-          {ride.start_location} → {ride.end_location}
-        </h3>
+        {compact && <div className="mb-3">{statusBadge}</div>}
+        {!compact && (
+          <h3 className="mb-3 break-words text-base font-semibold text-gray-900 dark:text-white">
+            {ride.start_location} → {ride.end_location}
+          </h3>
+        )}
 
         <div className="mb-4 grid grid-cols-2 gap-3 text-sm text-gray-600 dark:text-gray-300">
           <div className="min-w-0 break-words">
