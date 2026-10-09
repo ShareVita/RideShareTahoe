@@ -57,9 +57,11 @@ describe('public ride directory mapping', () => {
     expect(toPublicPlace(input)).toBe('Location shared after sign-in');
   });
 
-  it('reduces the poster to first name and last initial', () => {
-    expect(toPosterLabel({ id: 'a', first_name: 'Kaia', last_name: 'Colban' })).toBe('Kaia C.');
-    expect(toPosterLabel({ id: 'a', first_name: 'Maya', last_name: null })).toBe('Maya');
+  it('exposes only the first name, even when a surname is available', () => {
+    const profile = { id: 'a', first_name: '  Kaia  ', last_name: 'Colban' };
+    expect(toPosterLabel(profile)).toBe('Kaia');
+    expect(toPosterLabel({ id: 'a', first_name: 'Maya' })).toBe('Maya');
+    expect(toPosterLabel({ id: 'a', first_name: ' ' })).toBe('Community member');
     expect(toPosterLabel(undefined)).toBe('Community member');
   });
 
@@ -81,7 +83,7 @@ describe('public ride directory mapping', () => {
         car_type: 'SUV',
         has_awd: true,
       },
-      { id: 'user-1', first_name: 'Chris', last_name: 'Nguyen' }
+      { id: 'user-1', first_name: 'Chris' }
     );
 
     expect(ride).toEqual({
@@ -97,7 +99,7 @@ describe('public ride directory mapping', () => {
       pricePerSeat: 25,
       carType: 'SUV',
       hasAwd: true,
-      posterLabel: 'Chris N.',
+      posterLabel: 'Chris',
     });
     expect(ride).not.toHaveProperty('poster_id');
   });

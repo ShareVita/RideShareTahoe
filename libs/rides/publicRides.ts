@@ -6,8 +6,8 @@ import { tahoeDate } from '@/lib/dateFormat';
 /**
  * A ride post as shown to visitors who are not signed in.
  *
- * Only trip facts are exposed. Poster identity is reduced to a first name and
- * last initial, and anything that could carry a street address (exact pickup
+ * Only trip facts are exposed. Poster identity is reduced to a first name,
+ * and anything that could carry a street address (exact pickup
  * text, special instructions, free-form description) is left out. Signing in
  * is required to see profiles or to message anyone.
  */
@@ -45,10 +45,7 @@ type RideRow = Pick<
   | 'has_awd'
 >;
 
-type ProfileRow = Pick<
-  Database['public']['Tables']['profiles']['Row'],
-  'id' | 'first_name' | 'last_name'
->;
+type ProfileRow = Pick<Database['public']['Tables']['profiles']['Row'], 'id' | 'first_name'>;
 
 const PUBLIC_RIDE_COLUMNS =
   'id, poster_id, posting_type, start_location, end_location, departure_date, departure_time, is_round_trip, return_date, available_seats, total_seats, price_per_seat, car_type, has_awd';
@@ -243,12 +240,9 @@ export function toPublicPlace(location: string): string {
   return PUBLIC_PLACE_HIDDEN;
 }
 
-/** "Kaia Colban" becomes "Kaia C."; a missing name becomes "Community member". */
+/** Only the first name is public; a missing name becomes "Community member". */
 export function toPosterLabel(profile: ProfileRow | undefined): string {
-  const first = profile?.first_name?.trim();
-  if (!first) return 'Community member';
-  const lastInitial = profile?.last_name?.trim().charAt(0);
-  return lastInitial ? `${first} ${lastInitial.toUpperCase()}.` : first;
+  return profile?.first_name?.trim() || 'Community member';
 }
 
 function toPostingType(value: string): PublicRide['postingType'] {
@@ -308,7 +302,7 @@ export async function fetchPublicUpcomingRides(
   const posterIds = Array.from(new Set(rides.map((ride) => ride.poster_id)));
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, deleted_at')
+    .select('id, first_name, deleted_at')
     .in('id', posterIds);
 
   if (profilesError) throw profilesError;
@@ -348,7 +342,7 @@ export async function fetchPublicRecentRides(
   const posterIds = Array.from(new Set(rides.map((ride) => ride.poster_id)));
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, deleted_at')
+    .select('id, first_name, deleted_at')
     .in('id', posterIds);
 
   if (profilesError) throw profilesError;
