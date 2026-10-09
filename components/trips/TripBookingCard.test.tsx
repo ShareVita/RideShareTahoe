@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { createClient } from '@supabase/supabase-js';
 import TripBookingCard from './TripBookingCard';
 import MyTripsView from './MyTripsView';
+import TripBookingsList from './TripBookingsList';
 import {
   fetchMyDriverTrips,
   fetchMyPassengerTrips,
@@ -30,10 +31,47 @@ const booking = {
     departure_time: '16:30:00',
     start_location: 'Tahoe',
     end_location: 'San Francisco',
+    total_seats: 5,
+    available_seats: 3,
   },
 } as unknown as TripBooking;
 
 describe('TripBookingCard', () => {
+  it('groups driver bookings by ride identity and keeps passenger actions inside management', () => {
+    const onUpdateStatus = jest.fn();
+    const onMessage = jest.fn();
+    const ride = { ...booking.ride!, total_seats: 5, available_seats: 3 };
+    const confirmed = { ...booking, id: 'confirmed-booking', status: 'confirmed' as const, ride };
+    const invited = { ...booking, id: 'invited-booking', status: 'invited' as const, ride };
+    const otherRide = { ...booking, id: 'other-booking', ride: { ...ride, id: 'separate-leg' } };
+    render(
+      <TripBookingsList
+        bookings={[{ ...booking, ride }, otherRide, confirmed, invited]}
+        role="driver"
+        onUpdateStatus={onUpdateStatus}
+        onMessage={onMessage}
+        onCancelRequest={jest.fn()}
+        bookingActionLoadingIds={[]}
+      />
+    );
+    expect(screen.getAllByRole('heading', { name: 'Tahoe → San Francisco' })).toHaveLength(2);
+    expect(screen.getAllByText('3 of 5 seats available')).toHaveLength(2);
+    const summary = screen.getByText('Manage passengers (3)');
+    const group = summary.closest('details')!;
+    expect(group).not.toHaveAttribute('open');
+    fireEvent.click(summary);
+    expect(group).toHaveAttribute('open');
+    expect(within(group).getByText('pending')).toBeInTheDocument();
+    expect(within(group).getByText('confirmed')).toBeInTheDocument();
+    expect(within(group).getByText('Invitation Sent')).toBeInTheDocument();
+    fireEvent.click(within(group).getByRole('button', { name: 'Accept' }));
+    expect(onUpdateStatus).toHaveBeenCalledWith('return-booking', 'confirmed');
+    fireEvent.click(within(group).getAllByRole('button', { name: 'Message' })[1]);
+    expect(onMessage).toHaveBeenCalledWith(confirmed.passenger, ride);
+    fireEvent.click(summary);
+    expect(group).not.toHaveAttribute('open');
+  });
+
   it('keeps a rejected My Trips approval pending, shows the conflict, and permits retry', async () => {
     const log = jest.spyOn(console, 'error').mockImplementation(() => {});
     try {
@@ -50,7 +88,8 @@ describe('TripBookingCard', () => {
           onMessage={jest.fn()}
         />
       );
-      const accept = await screen.findByRole('button', { name: 'Accept' });
+      fireEvent.click(await screen.findByText('Manage passengers (1)'));
+      const accept = screen.getByRole('button', { name: 'Accept' });
       fireEvent.click(accept);
       expect(accept).toBeDisabled();
       expect(screen.getByRole('button', { name: 'Decline' })).toBeDisabled();
@@ -62,8 +101,15 @@ describe('TripBookingCard', () => {
       expect(screen.queryByText('confirmed')).not.toBeInTheDocument();
       expect(accept).toBeEnabled();
       jest.mocked(updateTripBooking).mockResolvedValueOnce(undefined);
+      jest
+        .mocked(fetchMyDriverTrips)
+        .mockResolvedValue([
+          { ...booking, status: 'confirmed', ride: { ...booking.ride!, available_seats: 2 } },
+        ]);
       fireEvent.click(accept);
       expect(await screen.findByText('confirmed')).toBeInTheDocument();
+      expect(await screen.findByText('2 of 5 seats available')).toBeInTheDocument();
+      expect(screen.getByText('Manage passengers (1)').closest('details')).toHaveAttribute('open');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     } finally {
       log.mockRestore();

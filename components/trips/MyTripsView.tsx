@@ -25,21 +25,24 @@ export default function MyTripsView({ user, supabase, onMessage }: Readonly<MyTr
   const [bookingActionLoadingIds, setBookingActionLoadingIds] = useState<string[]>([]);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
-  const loadTrips = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [dt, pt] = await Promise.all([
-        fetchMyDriverTrips(supabase, user.id),
-        fetchMyPassengerTrips(supabase, user.id),
-      ]);
-      setDriverTrips(dt);
-      setPassengerTrips(pt);
-    } catch (error) {
-      console.error('Error loading trips:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase, user.id]);
+  const loadTrips = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) setLoading(true);
+      try {
+        const [dt, pt] = await Promise.all([
+          fetchMyDriverTrips(supabase, user.id),
+          fetchMyPassengerTrips(supabase, user.id),
+        ]);
+        setDriverTrips(dt);
+        setPassengerTrips(pt);
+      } catch (error) {
+        console.error('Error loading trips:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [supabase, user.id]
+  );
 
   useEffect(() => {
     loadTrips();
@@ -59,6 +62,8 @@ export default function MyTripsView({ user, supabase, onMessage }: Readonly<MyTr
       setPassengerTrips((prev) =>
         prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
       );
+      // Reload authoritative seat counts without closing passenger management.
+      await loadTrips(false);
     } catch (error) {
       console.error('Error updating booking:', error);
       setBookingError(
