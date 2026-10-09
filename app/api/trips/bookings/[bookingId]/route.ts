@@ -14,38 +14,12 @@ const bookingActionSchema = z.object({
   action: z.enum(['approve', 'deny', 'cancel']),
 });
 
-/**
- * Valid booking status values from the database schema.
- * These values must match the CHECK constraint in the trip_bookings table.
- */
-const VALID_BOOKING_STATUSES = [
-  'pending',
-  'confirmed',
-  'cancelled',
-  'completed',
-  'invited',
-] as const;
-type BookingStatus = (typeof VALID_BOOKING_STATUSES)[number];
-
-/**
- * Validates that a status value is a valid booking status.
- */
-function isValidBookingStatus(status: string): status is BookingStatus {
-  return VALID_BOOKING_STATUSES.includes(status as BookingStatus);
-}
-
 type TripBookingRow = Database['public']['Tables']['trip_bookings']['Row'];
 type RideRow = Database['public']['Tables']['rides']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 type BookingRide = Pick<
   RideRow,
-  | 'id'
-  | 'title'
-  | 'start_location'
-  | 'end_location'
-  | 'departure_date'
-  | 'departure_time'
-  | 'available_seats'
+  'id' | 'title' | 'start_location' | 'end_location' | 'departure_date' | 'departure_time'
 >;
 type BookingProfile = Pick<ProfileRow, 'id' | 'first_name' | 'last_name'>;
 type BookingWithRelations = TripBookingRow & {
@@ -107,44 +81,30 @@ export async function PATCH(
       );
     }
 
-    const nextStatus: BookingStatus = body.action === 'approve' ? 'confirmed' : 'cancelled';
+    const nextStatus = body.action === 'approve' ? 'confirmed' : 'cancelled';
 
-    const bookingRide = booking.ride;
-    // Only decrement seats when confirming a pending booking (driver approving passenger request)
-    // For invited bookings (passenger accepting invitation), seats were already decremented when invitation was created
-    if (
-      nextStatus === 'confirmed' &&
-      booking.status === 'pending' &&
-      bookingRide &&
-      bookingRide.available_seats !== null
-    ) {
-      const seatResult = await handleSeatUpdate(supabase, bookingRide);
-      if (seatResult !== true) {
-        return NextResponse.json({ error: seatResult }, { status: 400 });
+    // The database owns capacity accounting; only mutate the state we authorized above.
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('trip_bookings')
+      .update({
+        status: nextStatus,
+        confirmed_at: nextStatus === 'confirmed' ? new Date().toISOString() : null,
+      })
+      .eq('id', bookingId)
+      .eq('status', booking.status)
+      .select('id')
+      .maybeSingle();
+    if (updateError) {
+      if (updateError.code === 'P0001' && updateError.message === 'No seats available') {
+        return NextResponse.json({ error: 'No seats available' }, { status: 409 });
       }
+      throw updateError;
     }
-
-    // If cancelling/denying an invitation, restore the seat since it was decremented when invitation was created
-    if (
-      nextStatus === 'cancelled' &&
-      booking.status === 'invited' &&
-      bookingRide &&
-      bookingRide.available_seats !== null
-    ) {
-      const { error: seatRestoreError } = await supabase
-        .from('rides')
-        .update({ available_seats: bookingRide.available_seats + 1 })
-        .eq('id', bookingRide.id);
-
-      if (seatRestoreError) {
-        console.error('Failed to restore seat after invitation denial', seatRestoreError);
-        // Continue anyway - the cancellation should still proceed
-      }
-    }
-
-    const updateResult = await updateBookingStatus(supabase, bookingId, nextStatus);
-    if (updateResult !== true) {
-      throw updateResult;
+    if (!updatedBooking) {
+      return NextResponse.json(
+        { error: 'Booking status changed; please refresh and try again' },
+        { status: 409 }
+      );
     }
 
     const content = buildBookingMessage({
@@ -188,7 +148,7 @@ async function fetchBooking(
     .from('trip_bookings')
     .select(
       `*,
-      ride:rides(id, title, start_location, end_location, departure_date, departure_time, available_seats),
+      ride:rides(id, title, start_location, end_location, departure_date, departure_time),
       driver:profiles!trip_bookings_driver_id_fkey(id, first_name, last_name),
       passenger:profiles!trip_bookings_passenger_id_fkey(id, first_name, last_name)`
     )
@@ -247,53 +207,6 @@ function getActionType(
     }
   }
   return 'invalid';
-}
-
-/**
- * Handles seat update for confirmed bookings.
- */
-async function handleSeatUpdate(
-  supabase: SupabaseClient<Database>,
-  ride: BookingRide
-): Promise<true | string> {
-  if (!ride.available_seats || ride.available_seats <= 0) {
-    return 'No seats available';
-  }
-  const { error } = await supabase
-    .from('rides')
-    .update({ available_seats: Math.max(ride.available_seats - 1, 0) })
-    .eq('id', ride.id);
-  if (error) {
-    return 'Failed to update available seats';
-  }
-  return true;
-}
-
-/**
- * Updates the booking status.
- * Validates that the status is a valid enum value from the database schema.
- */
-async function updateBookingStatus(
-  supabase: SupabaseClient<Database>,
-  bookingId: string,
-  nextStatus: string
-): Promise<true | Error> {
-  // Validate that nextStatus is a valid booking status enum value
-  if (!isValidBookingStatus(nextStatus)) {
-    return new Error(
-      `Invalid booking status: ${nextStatus}. Must be one of: ${VALID_BOOKING_STATUSES.join(', ')}`
-    );
-  }
-
-  const { error } = await supabase
-    .from('trip_bookings')
-    .update({
-      status: nextStatus,
-      confirmed_at: nextStatus === 'confirmed' ? new Date().toISOString() : null,
-    })
-    .eq('id', bookingId);
-  if (error) return error;
-  return true;
 }
 
 /**

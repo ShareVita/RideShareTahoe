@@ -23,6 +23,7 @@ export default function MyTripsView({ user, supabase, onMessage }: Readonly<MyTr
   const [passengerTrips, setPassengerTrips] = useState<TripBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingActionLoadingIds, setBookingActionLoadingIds] = useState<string[]>([]);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   const loadTrips = useCallback(async () => {
     setLoading(true);
@@ -45,6 +46,8 @@ export default function MyTripsView({ user, supabase, onMessage }: Readonly<MyTr
   }, [loadTrips]);
 
   const handleUpdateBooking = async (bookingId: string, newStatus: TripBooking['status']) => {
+    setBookingError(null);
+    setBookingActionLoadingIds((prev) => (prev.includes(bookingId) ? prev : [...prev, bookingId]));
     try {
       // Optimistic update could go here, but let's wait for server confirmation for safety
       await updateTripBooking(supabase, bookingId, { status: newStatus });
@@ -58,12 +61,22 @@ export default function MyTripsView({ user, supabase, onMessage }: Readonly<MyTr
       );
     } catch (error) {
       console.error('Error updating booking:', error);
-      throw error; // Let the child component handle the toast/alert if needed, or handle here
+      setBookingError(
+        typeof error === 'object' &&
+          error !== null &&
+          'message' in error &&
+          typeof error.message === 'string'
+          ? error.message
+          : 'Unable to update booking. Please refresh and try again.'
+      );
+    } finally {
+      setBookingActionLoadingIds((prev) => prev.filter((id) => id !== bookingId));
     }
   };
 
   const handleCancelBookingRequest = useCallback(
     async (bookingId: string) => {
+      setBookingError(null);
       setBookingActionLoadingIds((prev) =>
         prev.includes(bookingId) ? prev : [...prev, bookingId]
       );
@@ -83,6 +96,9 @@ export default function MyTripsView({ user, supabase, onMessage }: Readonly<MyTr
         await loadTrips();
       } catch (error) {
         console.error('Error cancelling booking request:', error);
+        setBookingError(
+          error instanceof Error ? error.message : 'Unable to cancel booking request'
+        );
       } finally {
         setBookingActionLoadingIds((prev) => prev.filter((id) => id !== bookingId));
       }
@@ -100,6 +116,11 @@ export default function MyTripsView({ user, supabase, onMessage }: Readonly<MyTr
 
   return (
     <div className="bg-white/60 dark:bg-slate-900/60 rounded-xl p-6 shadow-md border border-white/20 dark:border-slate-700/30 backdrop-blur-md">
+      {bookingError && (
+        <p role="alert" className="mb-4 text-red-700 dark:text-red-300">
+          {bookingError}
+        </p>
+      )}
       <TabGroup>
         <TabList className="flex space-x-1 rounded-xl bg-blue-900/20 p-1 mb-6">
           <Tab

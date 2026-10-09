@@ -117,6 +117,14 @@ it('real GoTrue hard deletion preserves asymmetric history and rejects stale JWT
       passenger_notes: 'Remove deleted passenger notes',
     })
   );
+  must(
+    await admin.from('trip_bookings').insert({
+      ride_id: survivingRideId,
+      driver_id: a,
+      passenger_id: b,
+      status: 'confirmed',
+    })
+  );
   const past = await admin
     .from('rides')
     .insert({
@@ -207,10 +215,20 @@ it('real GoTrue hard deletion preserves asymmetric history and rejects stale JWT
         .from('trip_bookings')
         .select('status,driver_notes,passenger_notes')
         .eq('ride_id', survivingRideId)
+        .eq('passenger_id', deleted)
     ).data
   ).toEqual([
     { status: 'cancelled', driver_notes: 'Keep surviving driver notes', passenger_notes: null },
   ]);
+  expect(
+    (
+      await members[1]
+        .from('trip_bookings')
+        .select('status')
+        .eq('ride_id', survivingRideId)
+        .eq('passenger_id', b)
+    ).data
+  ).toEqual([{ status: 'confirmed' }]);
   expect(
     (await members[1].from('trip_bookings').select('status').eq('id', pastBooking.data!.id)).data
   ).toEqual([{ status: 'confirmed' }]);

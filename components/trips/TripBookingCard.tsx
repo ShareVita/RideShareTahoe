@@ -11,7 +11,7 @@ interface TripBookingCardProps {
   onMessage: (recipient: ProfileType, ride: RidePostType) => void;
   // eslint-disable-next-line no-unused-vars
   onCancelRequest?: (bookingId: string) => Promise<void>;
-  readonly isCancelling?: boolean;
+  readonly isSaving?: boolean;
 }
 
 export default function TripBookingCard({
@@ -20,7 +20,7 @@ export default function TripBookingCard({
   onUpdateStatus,
   onMessage,
   onCancelRequest,
-  isCancelling,
+  isSaving,
 }: Readonly<TripBookingCardProps>) {
   const isDriver = role === 'driver';
   const otherPerson = isDriver ? booking.passenger : booking.driver;
@@ -142,10 +142,10 @@ export default function TripBookingCard({
                 <button
                   type="button"
                   onClick={() => void onCancelRequest(booking.id)}
-                  disabled={isCancelling}
+                  disabled={isSaving}
                   className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isCancelling ? 'Cancelling…' : 'Cancel request'}
+                  {isSaving ? 'Cancelling…' : 'Cancel request'}
                 </button>
               )}
 
@@ -154,12 +154,14 @@ export default function TripBookingCard({
               <>
                 <button
                   className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+                  disabled={isSaving}
                   onClick={() => onUpdateStatus(booking.id, 'confirmed')}
                 >
                   Accept
                 </button>
                 <button
                   className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                  disabled={isSaving}
                   onClick={() => onUpdateStatus(booking.id, 'cancelled')}
                 >
                   Decline
@@ -172,12 +174,14 @@ export default function TripBookingCard({
               <>
                 <button
                   className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+                  disabled={isSaving}
                   onClick={() => onUpdateStatus(booking.id, 'confirmed')}
                 >
                   Accept Invitation
                 </button>
                 <button
                   className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                  disabled={isSaving}
                   onClick={() => onUpdateStatus(booking.id, 'cancelled')}
                 >
                   Decline
