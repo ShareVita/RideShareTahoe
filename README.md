@@ -111,6 +111,23 @@ Coordinate this as a maintenance cutover after the service-role key is verified.
 
 For database security verification when full Supabase cannot run, `scripts/test-horizontal-security.sh` replays migrations and runs real PostgreSQL RLS/trigger regression checks in a new disposable native database. It is not a substitute for Supabase authentication or browser end-to-end checks.
 
+### Atomic booking capacity
+
+For the later `20261010000000_atomic_booking_capacity.sql` rollout, apply the
+database migration **before** promoting the matching application. Unlike the
+earlier security cutover above, the new routes remove application-side seat
+writes and require the database accounting triggers. The old routes remain
+compatible after migration: their stale counter writes are ignored by the
+database-derived counter.
+
+Driver availability is total seats minus invited, confirmed and completed
+bookings. Pending requests reserve nothing; accepting an invitation does not
+reserve twice, and cancellation restores capacity in the same transaction.
+Capacity edits cannot reduce seats below reservations. Unknown total capacity
+and passenger/flexible posts remain untracked. Migration reconciliation preserves
+ride timestamps and existing booking history; inspect legacy capacity values and
+take a verified backup first. This rollout does not enable account deletion.
+
 ## Scheduled jobs
 
 `vercel.json` schedules two Vercel Cron jobs (times are UTC):

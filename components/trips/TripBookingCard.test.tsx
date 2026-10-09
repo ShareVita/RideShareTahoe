@@ -1,6 +1,20 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { createClient } from '@supabase/supabase-js';
 import TripBookingCard from './TripBookingCard';
+import MyTripsView from './MyTripsView';
+import {
+  fetchMyDriverTrips,
+  fetchMyPassengerTrips,
+  updateTripBooking,
+} from '@/libs/community/tripsData';
 import type { TripBooking } from '@/app/community/types';
+import type { Database } from '@/types/database.types';
+
+jest.mock('@/libs/community/tripsData', () => ({
+  fetchMyDriverTrips: jest.fn(),
+  fetchMyPassengerTrips: jest.fn(),
+  updateTripBooking: jest.fn(),
+}));
 
 const booking = {
   id: 'return-booking',
@@ -20,6 +34,42 @@ const booking = {
 } as unknown as TripBooking;
 
 describe('TripBookingCard', () => {
+  it('keeps a rejected My Trips approval pending, shows the conflict, and permits retry', async () => {
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      jest.mocked(fetchMyDriverTrips).mockResolvedValue([booking]);
+      jest.mocked(fetchMyPassengerTrips).mockResolvedValue([]);
+      const pending = Promise.withResolvers<void>();
+      jest.mocked(updateTripBooking).mockReturnValueOnce(pending.promise);
+      render(
+        <MyTripsView
+          user={{ id: 'driver' }}
+          supabase={createClient<Database>('http://localhost:54321', 'test', {
+            auth: { persistSession: false },
+          })}
+          onMessage={jest.fn()}
+        />
+      );
+      const accept = await screen.findByRole('button', { name: 'Accept' });
+      fireEvent.click(accept);
+      expect(accept).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Decline' })).toBeDisabled();
+      await act(async () => {
+        pending.reject({ message: 'No seats available' });
+      });
+      expect(screen.getByRole('alert')).toHaveTextContent('No seats available');
+      expect(screen.getByText('pending')).toBeInTheDocument();
+      expect(screen.queryByText('confirmed')).not.toBeInTheDocument();
+      expect(accept).toBeEnabled();
+      jest.mocked(updateTripBooking).mockResolvedValueOnce(undefined);
+      fireEvent.click(accept);
+      expect(await screen.findByText('confirmed')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it('retains the deleted counterpart name and history without actionable contact or booking controls', () => {
     const onUpdateStatus = jest.fn();
     const onMessage = jest.fn();

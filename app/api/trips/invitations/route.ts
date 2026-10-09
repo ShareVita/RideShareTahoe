@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const { data: ride, error: rideError } = await supabase
       .from('rides')
       .select(
-        'poster_id, available_seats, status, title, start_location, end_location, departure_date, departure_time'
+        'poster_id, status, title, start_location, end_location, departure_date, departure_time'
       )
       .eq('id', body.ride_id)
       .single();
@@ -69,10 +69,6 @@ export async function POST(request: NextRequest) {
 
     if (ride.status !== 'active') {
       return NextResponse.json({ error: 'Ride is no longer active' }, { status: 400 });
-    }
-
-    if (ride.available_seats !== null && ride.available_seats <= 0) {
-      return NextResponse.json({ error: 'No seats available' }, { status: 400 });
     }
 
     const { data: existingBooking } = await supabase
@@ -105,25 +101,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
-    }
-
-    // Decrement available seats when invitation is created (if seats are tracked)
-    if (ride.available_seats !== null) {
-      const { error: seatUpdateError } = await supabase
-        .from('rides')
-        .update({ available_seats: ride.available_seats - 1 })
-        .eq('id', body.ride_id)
-        .gt('available_seats', 0); // Only update if seats are still available
-
-      if (seatUpdateError) {
-        // If seat update fails, we need to roll back the booking
-        await supabase.from('trip_bookings').delete().eq('id', booking.id);
-        return NextResponse.json(
-          { error: 'Failed to reserve seat for invitation' },
-          { status: 500 }
-        );
-      }
+      const capacityConflict =
+        insertError.code === 'P0001' && insertError.message === 'No seats available';
+      return NextResponse.json(
+        { error: insertError.message },
+        { status: capacityConflict ? 409 : 500 }
+      );
     }
 
     try {

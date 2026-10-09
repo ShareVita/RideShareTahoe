@@ -50,7 +50,7 @@ export default function TripBookingsList({
           onUpdateStatus={onUpdateStatus}
           onMessage={onMessage}
           onCancelRequest={onCancelRequest}
-          isCancelling={bookingActionLoadingIds.includes(booking.id)}
+          isSaving={bookingActionLoadingIds.includes(booking.id)}
         />
       ))}
     </div>
