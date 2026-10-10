@@ -11,6 +11,16 @@ interface NominatimResult {
   lat: string;
   lon: string;
   display_name: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    postcode?: string;
+    country_code?: string;
+  };
 }
 
 /**
@@ -18,7 +28,9 @@ interface NominatimResult {
  * @param query - Zip code or city name (e.g., "78701" or "Austin, TX")
  * @returns Promise resolving to coordinates or null on error
  */
-export async function geocodeLocation(query: string): Promise<Coordinates | null> {
+async function lookupLocation(
+  query: string
+): Promise<(Coordinates & Omit<NominatimResult, 'lat'>) | null> {
   if (!query?.trim()) {
     return null;
   }
@@ -62,7 +74,7 @@ export async function geocodeLocation(query: string): Promise<Coordinates | null
         Math.abs(coords.lng) > 180
       )
         return null;
-      return coords;
+      return { ...result, ...coords };
     }
 
     return null;
@@ -70,4 +82,27 @@ export async function geocodeLocation(query: string): Promise<Coordinates | null
     console.error('Error geocoding location:', error);
     return null;
   }
+}
+
+export async function geocodeLocation(query: string): Promise<Coordinates | null> {
+  const result = await lookupLocation(query);
+  return result ? { lat: result.lat, lng: result.lng } : null;
+}
+
+/** Resolve a US ZIP to an approximate location, not a verified home address. */
+export async function geocodeZipCode(zip: string) {
+  if (!/^\d{5}$/.test(zip)) return null;
+  const result = await lookupLocation(zip);
+  const address = result?.address;
+  const city =
+    address?.city || address?.town || address?.village || address?.municipality || address?.county;
+  if (
+    !result ||
+    !city ||
+    !address?.state ||
+    address.country_code !== 'us' ||
+    address.postcode?.split('-')[0] !== zip
+  )
+    return null;
+  return { lat: result.lat, lng: result.lng, city, state: address.state };
 }

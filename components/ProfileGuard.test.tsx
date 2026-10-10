@@ -149,6 +149,7 @@ describe('ProfileGuard', () => {
   });
 
   it('navigates to /complete-profile when the modal confirmation is clicked', async () => {
+    window.history.replaceState({}, '', '/rides/post?type=passenger');
     (useUser as jest.Mock).mockReturnValue({ user: { id: '1' }, loading: false });
     (useUserProfile as jest.Mock).mockReturnValue({ data: null, isLoading: false });
     (usePathname as jest.Mock).mockReturnValue('/dashboard');
@@ -163,7 +164,9 @@ describe('ProfileGuard', () => {
 
     fireEvent.click(updateButton);
 
-    expect(mockPush).toHaveBeenCalledWith('/complete-profile');
+    expect(mockPush).toHaveBeenCalledWith(
+      '/complete-profile?next=%2Frides%2Fpost%3Ftype%3Dpassenger'
+    );
     expect(toast).toHaveBeenCalledWith(
       'Please finish your profile before accessing protected areas.'
     );

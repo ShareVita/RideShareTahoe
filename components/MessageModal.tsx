@@ -2,12 +2,19 @@
 
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { Fragment, FormEvent, useEffect, useRef, useState } from 'react';
+import { formatDateLabel } from '@/lib/dateFormat';
 
 interface MessageModalProps {
   isOpen: boolean;
   onClose: () => void;
   recipient: { id: string; first_name: string } | null;
-  ridePost: { id: string } | null;
+  ridePost: {
+    id: string;
+    title?: string | null;
+    start_location?: string;
+    end_location?: string;
+    departure_date?: string;
+  } | null;
 }
 
 /**
@@ -100,6 +107,17 @@ export default function MessageModal({
   };
 
   const isSubmitDisabled = sending || !message.trim();
+  const rideRoute =
+    ridePost?.start_location && ridePost.end_location
+      ? `${ridePost.start_location} → ${ridePost.end_location}`
+      : null;
+  const rideContext = [
+    ridePost?.title?.trim(),
+    rideRoute,
+    formatDateLabel(ridePost?.departure_date),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   if (!isOpen) {
     return null;
@@ -143,7 +161,7 @@ export default function MessageModal({
                     To: {recipient?.first_name ?? 'Guest'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {ridePost ? `Re: Ride post ${ridePost.id}` : 'General Message'}
+                    {ridePost ? `Re: ${rideContext || 'Ride'}` : 'General Message'}
                   </p>
                 </div>
 

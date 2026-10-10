@@ -84,34 +84,35 @@ export function PassengersSection({
     return base;
   }, [totalCount, departureFilter, destinationFilter]);
 
-  if (loading) {
-    return <PassengersLoading />;
-  }
-
-  if (error) {
-    return (
-      <SectionError title="Passengers Looking for Rides" message={error} onRetry={loadRides} />
-    );
-  }
-
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasFilters = Boolean(departureFilter || destinationFilter);
 
   return (
     <div ref={tabRef} className="space-y-6">
       <LocationFilters
         onDepartureFilterChange={setDepartureFilter}
         onDestinationFilterChange={setDestinationFilter}
-        ridesFoundLabel={ridesFoundLabel}
+        ridesFoundLabel={loading ? 'Loading requests...' : error ? undefined : ridesFoundLabel}
       />
 
-      {rides.length === 0 ? (
+      {loading ? (
+        <PassengersLoading />
+      ) : error ? (
+        <SectionError title="Passengers Looking for Rides" message={error} onRetry={loadRides} />
+      ) : rides.length === 0 ? (
         <SectionEmpty
           title="Passengers Looking for Rides"
-          message="No passengers looking right now"
-          subMessage="Be the first to request a ride!"
+          message={
+            hasFilters ? 'No requests match your filters' : 'No passengers looking right now'
+          }
+          subMessage={
+            hasFilters
+              ? 'Try a different location, increase the radius, or clear your filters.'
+              : 'Be the first to request a ride!'
+          }
           icon="👋"
-          actionLabel="Request a Ride"
-          actionLink="/rides/post"
+          actionLabel={hasFilters ? undefined : 'Request a Ride'}
+          actionLink={hasFilters ? undefined : '/rides/post'}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -127,7 +128,7 @@ export function PassengersSection({
         </div>
       )}
 
-      {totalCount > 0 && (
+      {!loading && !error && totalCount > 0 && (
         <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}

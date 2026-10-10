@@ -30,7 +30,7 @@ it.each([
   (useRouter as jest.Mock).mockReturnValue({ push });
   window.history.replaceState({}, '', `/onboarding/welcome?next=${encodeURIComponent(next)}`);
   render(<WelcomePage />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Browse Community →' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue →' }));
   expect(push).toHaveBeenCalledWith(destination);
 });
 
@@ -42,7 +42,16 @@ it('offers browse and optional vehicle setup without querying a removed profile 
   expect(screen.getByText('Ready for your next trip?')).toBeInTheDocument();
   expect(createClient).toHaveBeenCalled();
   fireEvent.click(vehicle);
-  expect(push).toHaveBeenCalledWith('/vehicles');
-  fireEvent.click(screen.getByRole('button', { name: 'Browse Community →' }));
+  expect(push).toHaveBeenCalledWith('/vehicles?next=%2Fcommunity');
+  fireEvent.click(screen.getByRole('button', { name: 'Continue →' }));
   expect(push).toHaveBeenCalledWith('/community');
+});
+
+it('carries the requested post destination through optional vehicle setup', async () => {
+  const push = jest.fn();
+  (useRouter as jest.Mock).mockReturnValue({ push });
+  window.history.replaceState({}, '', '/onboarding/welcome?next=%2Frides%2Fpost');
+  render(<WelcomePage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Add a Vehicle (Optional)' }));
+  expect(push).toHaveBeenCalledWith('/vehicles?next=%2Frides%2Fpost');
 });

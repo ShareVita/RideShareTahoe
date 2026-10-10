@@ -136,8 +136,20 @@ describe('MessagesPage', () => {
       expect(screen.getByText('No conversations yet')).toBeInTheDocument();
     });
 
-    // The right pane should show the placeholder
-    expect(screen.getByRole('heading', { name: /select a conversation/i })).toBeInTheDocument();
+    expect(
+      screen.getByText('Post a ride or request one, then message someone to coordinate your trip.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Post or request a ride' })).toHaveAttribute(
+      'href',
+      '/rides/post'
+    );
+    expect(screen.getByRole('link', { name: 'Browse rides' })).toHaveAttribute(
+      'href',
+      '/rides/find'
+    );
+    expect(
+      screen.queryByRole('heading', { name: /select a conversation/i })
+    ).not.toBeInTheDocument();
   });
 
   it('fetches and displays conversations, then loads messages for the first one', async () => {

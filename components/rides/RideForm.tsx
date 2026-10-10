@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { RidePostType, Vehicle } from '@/app/community/types';
 import { tahoeDateTime } from '@/lib/dateFormat';
 import { geocodeLocation } from '@/libs/geocoding';
+import { RIDE_DRAFT_KEY } from '@/components/vehicles/rideDraft';
 
 interface RideFormProps {
   initialData?: Partial<RidePostType>;
@@ -11,6 +12,8 @@ interface RideFormProps {
   isLoading?: boolean;
   isEditing?: boolean;
   vehicles?: Vehicle[];
+  draftOwnerId?: string;
+  initialVehicleId?: string;
 }
 
 /**
@@ -25,9 +28,11 @@ export default function RideForm({
   isLoading = false,
   isEditing = false,
   vehicles = [],
+  draftOwnerId,
+  initialVehicleId = '',
 }: Readonly<RideFormProps>) {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
-    isEditing && initialData?.car_type ? 'existing' : ''
+    isEditing && initialData?.car_type ? 'existing' : initialVehicleId
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -80,21 +85,6 @@ export default function RideForm({
       }));
       return;
     }
-    if (!vehicleId) return;
-
-    const vehicle = vehicles.find((v) => v.id === vehicleId);
-
-    if (vehicle) {
-      const isAwd = vehicle.drivetrain === 'AWD' || vehicle.drivetrain === '4WD';
-      setFormData((prev) => ({
-        ...prev,
-        // Combine make, model, year, color, and drivetrain into a descriptive string
-        car_type: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color}) ${
-          vehicle.drivetrain ? `- ${vehicle.drivetrain}` : ''
-        }`,
-        has_awd: isAwd,
-      }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,7 +92,12 @@ export default function RideForm({
     if (submitting || isLoading) return;
     setError(null);
 
-    if (formData.posting_type === 'driver' && !selectedVehicleId) {
+    const vehicle = vehicles.find((v) => v.id === selectedVehicleId);
+    if (
+      formData.posting_type === 'driver' &&
+      !vehicle &&
+      !(isEditing && initialData?.car_type && selectedVehicleId === 'existing')
+    ) {
       setError('Select a vehicle before posting a driver ride.');
       return;
     }
@@ -147,6 +142,12 @@ export default function RideForm({
       ]);
       await onSave({
         ...formData,
+        ...(vehicle
+          ? {
+              car_type: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color})${vehicle.drivetrain ? ` - ${vehicle.drivetrain}` : ''}`,
+              has_awd: vehicle.drivetrain === 'AWD' || vehicle.drivetrain === '4WD',
+            }
+          : {}),
         start_lat: start?.lat ?? null,
         start_lng: start?.lng ?? null,
         end_lat: end?.lat ?? null,
@@ -459,7 +460,25 @@ export default function RideForm({
                     <p>
                       You need to add at least one vehicle before posting a driver ride.{' '}
                       <a
-                        href="/vehicles"
+                        href={draftOwnerId ? '/vehicles?next=%2Frides%2Fpost' : '/vehicles'}
+                        onClick={(event) => {
+                          if (!draftOwnerId) return;
+                          try {
+                            sessionStorage.setItem(
+                              RIDE_DRAFT_KEY,
+                              JSON.stringify({
+                                ownerId: draftOwnerId,
+                                data: formData,
+                                vehicleId: selectedVehicleId,
+                              })
+                            );
+                          } catch {
+                            event.preventDefault();
+                            setError(
+                              'Could not save your draft in this browser. Enable session storage before adding a vehicle so your work is not lost.'
+                            );
+                          }
+                        }}
                         className="font-medium underline hover:text-yellow-600 dark:hover:text-yellow-100"
                       >
                         Add a vehicle now

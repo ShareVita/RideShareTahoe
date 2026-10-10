@@ -3,6 +3,7 @@ import RideForm from './RideForm';
 import { Vehicle } from '@/app/community/types';
 import userEvent from '@testing-library/user-event';
 import { geocodeLocation } from '@/libs/geocoding';
+import { readRideDraft } from '@/components/vehicles/rideDraft';
 
 jest.setTimeout(10000);
 
@@ -40,6 +41,7 @@ describe('RideForm', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    sessionStorage.clear();
     mockOnSave.mockResolvedValue(undefined);
     (geocodeLocation as jest.Mock).mockImplementation(async (place: string) =>
       place === 'San Francisco' ? { lat: 37.77, lng: -122.42 } : { lat: 39.17, lng: -120.14 }
@@ -56,6 +58,66 @@ describe('RideForm', () => {
 
     // Check for Title input
     expect(screen.getByLabelText(/Ride Title/i)).toBeInTheDocument();
+  });
+
+  it('preserves the complete draft through vehicle setup and submits the newly selected vehicle', async () => {
+    const user = userEvent.setup();
+    const initialData = {
+      posting_type: 'driver' as const,
+      title: 'Weekend trip',
+      start_location: 'Truckee',
+      end_location: 'Tahoe City',
+      departure_date: '2026-12-20',
+      departure_time: '08:15',
+      is_round_trip: true,
+      return_date: '2026-12-21',
+      return_time: '17:30',
+      price_per_seat: 27,
+      total_seats: 3,
+      description: 'Ski bags welcome',
+      special_instructions: 'Meet by the station',
+      has_awd: false,
+    };
+    const { unmount } = render(
+      <RideForm
+        initialData={initialData}
+        draftOwnerId="user1"
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />
+    );
+    await user.type(screen.getByLabelText(/Description \/ Notes/i), ' and boots');
+    const link = screen.getByRole('link', { name: 'Add a vehicle now' });
+    expect(link).toHaveAttribute('href', '/vehicles?next=%2Frides%2Fpost');
+    link.addEventListener('click', (event) => event.preventDefault());
+    await user.click(link);
+    const saved = readRideDraft();
+    expect(saved?.data).toEqual(
+      expect.objectContaining({ ...initialData, description: 'Ski bags welcome and boots' })
+    );
+    unmount();
+    render(
+      <RideForm
+        initialData={saved!.data}
+        initialVehicleId="v1"
+        vehicles={mockVehicles}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />
+    );
+    expect(screen.getByLabelText(/Select from My Vehicles/i)).toHaveValue('v1');
+    expect(screen.getByLabelText(/Return Time/i)).toHaveValue('17:30');
+    await user.click(screen.getByRole('button', { name: 'Post Ride' }));
+    await waitFor(() =>
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...initialData,
+          description: 'Ski bags welcome and boots',
+          car_type: '2020 Subaru Outback (Blue) - AWD',
+          has_awd: true,
+        })
+      )
+    );
   });
 
   it('validates round trip return date', async () => {

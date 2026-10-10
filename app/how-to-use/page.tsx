@@ -126,8 +126,8 @@ export default function HowToUsePage() {
                           Verify Your Account
                         </h3>
                         <p className="text-gray-700 mb-2">
-                          Building trust is key. Verify your email and phone number to show others
-                          you&apos;re a real person.
+                          Building trust is key. Verify your email to show others you&apos;re a real
+                          person.
                         </p>
                       </div>
                     </div>

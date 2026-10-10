@@ -8,9 +8,14 @@ export const vehicleSchema = z.object({
     .regex(/^[a-zA-Z0-9\s]+$/, 'Make can only contain letters, numbers, and spaces'),
   model: z
     .string()
+    .trim()
     .min(1, 'Model is required')
     .max(50, 'Model must be less than 50 characters')
-    .regex(/^[a-zA-Z0-9\s]+$/, 'Model can only contain letters, numbers, and spaces'),
+    .regex(
+      /^[a-zA-Z0-9 .(),'’+/-]+$/,
+      'Model can only contain letters, numbers, spaces, and common punctuation'
+    )
+    .regex(/[a-zA-Z0-9]/, 'Model must contain a letter or number'),
   year: z
     .number()
     .int()

@@ -4,6 +4,7 @@ import { JSX, useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import ProfileCompletionModal from '@/components/ProfileCompletionModal';
+import { withNextPath } from '@/lib/authRedirect';
 
 interface UseProfileCompletionPromptOptions {
   toastMessage?: string;
@@ -50,7 +51,9 @@ export function useProfileCompletionPrompt(
     if (toastMessage) {
       toast(toastMessage);
     }
-    router.push('/complete-profile');
+    router.push(
+      withNextPath('/complete-profile', window.location.pathname + window.location.search)
+    );
   }, [router, toastMessage]);
 
   const profileCompletionModal = useMemo(

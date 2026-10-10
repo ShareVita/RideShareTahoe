@@ -12,6 +12,10 @@ interface Recipient {
 
 interface RidePost {
   id: string;
+  title?: string | null;
+  start_location?: string;
+  end_location?: string;
+  departure_date?: string;
 }
 
 interface MessageModalProps {
@@ -35,6 +39,10 @@ const mockRecipient: Recipient = {
 
 const mockRidePost: RidePost = {
   id: 'ride-post-uuid-456',
+  title: 'Weekend ski trip',
+  start_location: 'Oakland',
+  end_location: 'Truckee',
+  departure_date: '2026-12-12',
 };
 
 const defaultProps: MessageModalProps = {
@@ -91,7 +99,21 @@ describe('MessageModal', () => {
   it('displays recipient and post title when a post is provided', () => {
     renderComponent({ ridePost: mockRidePost });
     expect(screen.getByText(/To:/i)).toHaveTextContent('To: Jane Doe');
-    expect(screen.getByText(/Re:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Re:/i)).toHaveTextContent(
+      'Re: Weekend ski trip · Oakland → Truckee · Dec 12, 2026'
+    );
+    expect(screen.queryByText(new RegExp(mockRidePost.id))).not.toBeInTheDocument();
+  });
+
+  it('uses route and date when the ride has no title', () => {
+    renderComponent({ ridePost: { ...mockRidePost, title: null } });
+    expect(screen.getByText(/Re:/i)).toHaveTextContent('Re: Oakland → Truckee · Dec 12, 2026');
+  });
+
+  it('does not expose an id when ride details are unavailable', () => {
+    renderComponent({ ridePost: { id: mockRidePost.id } });
+    expect(screen.getByText('Re: Ride')).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(mockRidePost.id))).not.toBeInTheDocument();
   });
 
   it('calls onClose when the "Cancel" button is clicked', () => {
@@ -140,7 +162,7 @@ describe('MessageModal', () => {
   });
 
   it('submits the form, shows success, and closes after 2 seconds', async () => {
-    renderComponent();
+    renderComponent({ ridePost: mockRidePost });
     const textarea = screen.getByPlaceholderText(/Type your message here/i);
     const submitButton = screen.getByRole('button', { name: /Send Message/i });
 
@@ -152,9 +174,7 @@ describe('MessageModal', () => {
     fireEvent.click(submitButton);
 
     // 3. Check loading state
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Sending.../i })).toBeDisabled();
-    });
+    expect(screen.getByRole('button', { name: /Sending.../i })).toBeDisabled();
 
     // 4. Verify fetch call
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
@@ -163,23 +183,29 @@ describe('MessageModal', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         recipient_id: mockRecipient.id,
-        ride_post_id: null,
+        ride_post_id: mockRidePost.id,
         content: 'Test message',
       }),
     });
 
     // 5. Check for success message
-    await waitFor(() => {
-      expect(screen.getByText('Message sent successfully!')).toBeInTheDocument();
-    });
+    // Flush the request promises without waitFor advancing the fake clock.
+    await act(async () => {});
+    expect(screen.getByText('Message sent successfully!')).toBeInTheDocument();
     expect(textarea).toHaveValue(''); // Message is cleared
 
     // 6. Check that onClose has NOT been called yet
     expect(mockOnClose).not.toHaveBeenCalled();
 
-    // 7. Advance timers by 2 seconds
+    // The normal success delay is not a stuck composer.
     act(() => {
-      jest.advanceTimersByTime(2000);
+      jest.advanceTimersByTime(1999);
+    });
+    expect(mockOnClose).not.toHaveBeenCalled();
+
+    // 7. Complete the 2-second delay
+    act(() => {
+      jest.advanceTimersByTime(1);
     });
 
     // 8. Check that onClose has NOW been called

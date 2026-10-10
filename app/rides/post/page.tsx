@@ -8,6 +8,8 @@ import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import type { RidePostType, Vehicle } from '@/app/community/types';
 import { toast } from 'react-hot-toast';
 import { tahoeDateTime } from '@/lib/dateFormat';
+import Link from 'next/link';
+import { readRideDraft, RIDE_DRAFT_KEY, type RideDraft } from '@/components/vehicles/rideDraft';
 
 /**
  * Page for creating new ride posts.
@@ -19,9 +21,14 @@ export default function CreateRidePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [draft, setDraft] = useState<RideDraft | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const [posted, setPosted] = useState<Partial<RidePostType> | null>(null);
+  const userId = user?.id;
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
+    const saved = readRideDraft();
 
     const fetchVehicles = async () => {
       try {
@@ -32,12 +39,14 @@ export default function CreateRidePage() {
         }
       } catch (err) {
         console.error('Failed to fetch vehicles', err);
-        // Don't simplify error state; vehicle selection is optional
+      } finally {
+        setDraft(saved?.ownerId === userId ? saved : null);
+        setDraftReady(true);
       }
     };
 
     fetchVehicles();
-  }, [user]);
+  }, [userId]);
 
   const handleSave = async (data: Partial<RidePostType>) => {
     if (!user) return;
@@ -130,7 +139,13 @@ export default function CreateRidePage() {
           { duration: 10000 }
         );
       }
-      router.push('/community');
+      setPosted(data);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      try {
+        sessionStorage.removeItem(RIDE_DRAFT_KEY);
+      } catch {
+        // A storage restriction must not turn a successful insert into an error.
+      }
     } catch (err) {
       console.error('Error creating ride:', err);
       setError('Failed to create ride. Please try again.');
@@ -139,7 +154,7 @@ export default function CreateRidePage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || (user && !draftReady)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -168,25 +183,52 @@ export default function CreateRidePage() {
             </div>
           )}
 
-          <RideForm
-            initialData={{
-              posting_type: 'driver',
-              start_location: '',
-              end_location: '',
-              departure_date: '',
-              departure_time: '',
-              price_per_seat: 0,
-              total_seats: 1,
-              description: '',
-              special_instructions: '',
-              has_awd: false,
-            }}
-            onSave={handleSave}
-            onCancel={() => router.back()}
-            isLoading={saving}
-            isEditing={false}
-            vehicles={vehicles}
-          />
+          {posted ? (
+            <div role="status" className="space-y-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {posted.is_round_trip ? 'Your round trip is posted' : 'Your ride is posted'}
+              </h2>
+              <p className="text-gray-700 dark:text-gray-300">
+                {posted.title}: {posted.start_location} → {posted.end_location}. Your post is saved.
+                You can manage it in My Posts.
+              </p>
+              {(posted.start_lat == null || posted.end_lat == null) && (
+                <p className="text-amber-800 dark:text-amber-200">
+                  One or more locations could not be mapped. Your ride will not appear in those
+                  location-filtered searches; edit the locations in My Posts to try again.
+                </p>
+              )}
+              <Link
+                href="/community?view=my-posts"
+                className="inline-flex rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+              >
+                View My Posts
+              </Link>
+            </div>
+          ) : (
+            <RideForm
+              initialData={{
+                posting_type: 'driver',
+                start_location: '',
+                end_location: '',
+                departure_date: '',
+                departure_time: '',
+                price_per_seat: 0,
+                total_seats: 1,
+                description: '',
+                special_instructions: '',
+                has_awd: false,
+                ...draft?.data,
+              }}
+              draftOwnerId={user.id}
+              initialVehicleId={draft?.vehicleId}
+              onSave={handleSave}
+              onCancel={() => router.back()}
+              isLoading={saving}
+              isEditing={false}
+              vehicles={vehicles}
+            />
+          )}
         </div>
       </div>
     </div>
