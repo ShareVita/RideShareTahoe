@@ -4,6 +4,7 @@ import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { Session, User } from '@supabase/supabase-js';
 import React from 'react';
 import ProfileEditPage from './page';
+import { geocodeZipCode } from '@/libs/geocoding';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
 import {
   useUpdateProfile,
@@ -22,6 +23,7 @@ jest.mock('@/hooks/useProfile', () => ({
   useUpdateProfile: jest.fn(),
   useUserConsents: jest.fn(),
 }));
+jest.mock('@/libs/geocoding', () => ({ geocodeZipCode: jest.fn() }));
 
 const pushMock = jest.fn();
 
@@ -194,7 +196,7 @@ describe('ProfileEditPage', () => {
 
     render(<ProfileEditPage />);
 
-    expect(pushMock).toHaveBeenCalledWith('/login');
+    expect(pushMock).toHaveBeenCalledWith('/login?next=%2Fprofile%2Fedit');
   });
 
   it('renders the form when profile data is available', async () => {
@@ -204,7 +206,7 @@ describe('ProfileEditPage', () => {
 
     await waitFor(() => expect(screen.getByDisplayValue('Jane')).toBeInTheDocument());
     expect(screen.getByDisplayValue('Doe')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Tahoe City')).toBeInTheDocument();
+    expect(screen.getByText('Location: Tahoe City, CA')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Save profile/i })).toBeInTheDocument();
   });
 
@@ -216,19 +218,6 @@ describe('ProfileEditPage', () => {
 
     fireEvent.change(screen.getByLabelText(/First name/i), {
       target: { value: '  Janet ' },
-    });
-    fireEvent.change(screen.getByLabelText(/City/i), {
-      target: { value: 'Tahoma' },
-    });
-    // Fill required address fields to pass validation
-    fireEvent.change(screen.getByPlaceholderText('123 Main St'), {
-      target: { value: '123 Test St' },
-    });
-    fireEvent.change(screen.getByLabelText(/State/i), {
-      target: { value: 'CA' },
-    });
-    fireEvent.change(screen.getByLabelText(/Zip Code/i), {
-      target: { value: '96145' },
     });
 
     // Check the terms checkbox (required for new users without existing consent)
@@ -242,11 +231,52 @@ describe('ProfileEditPage', () => {
       expect.objectContaining({
         profileData: expect.objectContaining({
           first_name: 'Janet',
-          city: 'Tahoma',
+          city: 'Tahoe City',
+          street_address: '123 Main St',
         }),
         recordConsent: true,
       })
     );
+  });
+
+  it('saves a ZIP-only location after changing an existing ZIP, never reusing old coordinates', async () => {
+    setHooksToDefault();
+    useUserProfileMock.mockReturnValue(
+      createProfileQuery({ data: { ...defaultProfile, street_address: '' } })
+    );
+    (geocodeZipCode as jest.Mock).mockResolvedValue({
+      city: 'San Francisco',
+      state: 'California',
+      lat: 37.78,
+      lng: -122.42,
+    });
+    render(<ProfileEditPage />);
+    expect(screen.queryByLabelText(/Street Address/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/ZIP code/i), { target: { value: '94102' } });
+    expect(screen.queryByText('Location: Tahoe City, CA')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/I agree to the/i));
+    fireEvent.click(screen.getByRole('button', { name: /Save profile/i }));
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+    expect(mutateMock.mock.calls[0][0].profileData).toMatchObject({
+      zip_code: '94102',
+      city: 'San Francisco',
+      state: 'California',
+      display_lat: 37.78,
+      display_lng: -122.42,
+      street_address: null,
+    });
+  });
+
+  it('uses the same ZIP validation for checking and saving', async () => {
+    setHooksToDefault();
+    render(<ProfileEditPage />);
+    fireEvent.change(screen.getByLabelText(/ZIP code/i), { target: { value: '9410' } });
+    fireEvent.click(screen.getByRole('button', { name: /Check ZIP code/i }));
+    expect(screen.getByRole('status')).toHaveTextContent('Enter a 5-digit US ZIP code.');
+    fireEvent.click(screen.getByLabelText(/I agree to the/i));
+    fireEvent.click(screen.getByRole('button', { name: /Save profile/i }));
+    expect(mutateMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('status')).toHaveTextContent('Enter a 5-digit US ZIP code.');
   });
 
   it('shows success state once the mutation completes', async () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useProtectedRoute } from '@/hooks/useProtectedRoute';
 import { validateUUID } from '@/libs/validation';
@@ -518,12 +519,6 @@ export default function MessagesPage() {
 
           {fetchError && <div className="text-sm text-red-600 dark:text-red-400">{fetchError}</div>}
 
-          {!conversationsLoading && conversations.length === 0 && (
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-              No conversations yet
-            </p>
-          )}
-
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 max-h-[55vh] overflow-y-auto pr-1">
               {conversations.map((conversation) => {
@@ -827,11 +822,31 @@ export default function MessagesPage() {
           ) : (
             <div className="flex flex-col items-center justify-center space-y-3 py-12">
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                Select a conversation
+                {conversations.length === 0 && !conversationsLoading
+                  ? 'No conversations yet'
+                  : 'Select a conversation'}
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Pick a conversation from the list to open the thread.
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                {conversations.length === 0 && !conversationsLoading
+                  ? 'Post a ride or request one, then message someone to coordinate your trip.'
+                  : 'Pick a conversation from the list to open the thread.'}
               </p>
+              {conversations.length === 0 && !conversationsLoading && (
+                <div className="flex flex-col items-center gap-3 sm:flex-row">
+                  <Link
+                    href="/rides/post"
+                    className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                  >
+                    Post or request a ride
+                  </Link>
+                  <Link
+                    href="/rides/find"
+                    className="rounded-2xl border border-blue-600 px-5 py-3 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-slate-800"
+                  >
+                    Browse rides
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </section>

@@ -61,7 +61,7 @@ const faqData = [
     id: 'safety',
     question: 'How do you ensure safety on the platform?',
     answer:
-      'We prioritize safety through community verification (email/phone), secure messaging, and profile reviews. We encourage all users to verify their accounts and check reviews before traveling.',
+      'We prioritize safety through community verification (email), secure messaging, and profile reviews. We encourage all users to verify their accounts and check reviews before traveling.',
     category: 'safety',
   },
   {
@@ -127,8 +127,16 @@ const faqData = [
   {
     id: 'report',
     question: 'Can I report inappropriate behavior?',
-    answer:
-      'Yes, please report any concerning behavior immediately. We take all reports seriously and will investigate. You can report through our contact form or messaging system.',
+    answer: (
+      <>
+        Yes, please report any concerning behavior immediately. We take all reports seriously and
+        will investigate. You can report through our messaging system or email{' '}
+        <a href="mailto:support@ridesharetahoe.com" className="text-blue-600 underline">
+          support@ridesharetahoe.com
+        </a>
+        .
+      </>
+    ),
     category: 'community',
   },
   {
@@ -249,12 +257,12 @@ export default function FAQPage() {
             Can&apos;t find what you&apos;re looking for? Our community team is here to help!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/community"
+            <a
+              href="mailto:support@ridesharetahoe.com"
               className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              Join Community
-            </Link>
+              Email Support
+            </a>
             <Link
               href="/safety"
               className="border-2 border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"

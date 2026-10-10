@@ -147,6 +147,7 @@ export function RidesTab({
   }, [departureFilter, destinationFilter]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
+  const hasFilters = Boolean(departureFilter || destinationFilter);
 
   const renderRidesSection = () => {
     if (loading) {
@@ -176,30 +177,28 @@ export function RidesTab({
     }
 
     if (error) {
-      return <SectionError title="Find a Ride" message={error} onRetry={() => setCurrentPage(1)} />;
+      return <SectionError title="Find a Ride" message={error} onRetry={loadRides} />;
     }
 
     if (rides.length === 0) {
       return (
         <SectionEmpty
           title="Find a Ride"
-          message="No Rides Found"
-          subMessage="Be the first to post a ride to Tahoe!"
+          message={hasFilters ? 'No rides match your filters' : 'No Rides Found'}
+          subMessage={
+            hasFilters
+              ? 'Try a different location, increase the radius, or clear your filters.'
+              : 'Be the first to post a ride to Tahoe!'
+          }
           icon="🚗"
-          actionLabel="+ Post a Ride"
-          actionLink="/rides/post"
+          actionLabel={hasFilters ? undefined : '+ Post a Ride'}
+          actionLink={hasFilters ? undefined : '/rides/post'}
         />
       );
     }
 
     return (
-      <div ref={tabRef} className="space-y-6">
-        <LocationFilters
-          onDepartureFilterChange={setDepartureFilter}
-          onDestinationFilterChange={setDestinationFilter}
-          ridesFoundLabel={ridesFoundLabel}
-        />
-
+      <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groupedRides.map((post) => (
             <RidePostCard
@@ -240,7 +239,14 @@ export function RidesTab({
 
   return (
     <div className="space-y-12">
-      <section>{renderRidesSection()}</section>
+      <section ref={tabRef} className="space-y-6">
+        <LocationFilters
+          onDepartureFilterChange={setDepartureFilter}
+          onDestinationFilterChange={setDestinationFilter}
+          ridesFoundLabel={loading ? 'Loading rides...' : error ? undefined : ridesFoundLabel}
+        />
+        {renderRidesSection()}
+      </section>
     </div>
   );
 }

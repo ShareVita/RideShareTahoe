@@ -8,7 +8,8 @@ import toast from 'react-hot-toast';
 
 interface VehicleFormProps {
   initialData?: VehicleSchema & { id: string };
-  onSuccess?: () => void;
+  // eslint-disable-next-line no-unused-vars
+  onSuccess?: (_vehicleId?: string) => void;
   onCancel?: () => void;
 }
 
@@ -54,8 +55,9 @@ export default function VehicleForm({
         throw new Error('Failed to save vehicle');
       }
 
+      const result = await response.json();
       toast.success(initialData ? 'Vehicle updated' : 'Vehicle added');
-      onSuccess?.();
+      onSuccess?.(result.vehicle?.id);
     } catch (error) {
       console.error(error);
       toast.error('Failed to save vehicle');

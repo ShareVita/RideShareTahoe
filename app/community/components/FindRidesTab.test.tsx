@@ -1,43 +1,23 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { RidesTab } from './FindRidesTab';
-import { fetchAllRides } from '@/libs/community/ridesData';
-import type { RidePostType, LocationFilterType } from '../types';
+import { PassengersSection } from './passengers/PassengersSection';
+import { fetchAllRides, fetchPassengerRides } from '@/libs/community/ridesData';
+import { geocodeLocation } from '@/libs/geocoding';
+import type { RidePostType } from '../types';
 import type { CommunitySupabaseClient } from '@/libs/community/ridesData';
 import type { CommunityUser } from '@/app/community/types';
 
 // Mock dependencies
 jest.mock('@/libs/community/ridesData', () => ({
   fetchAllRides: jest.fn(),
+  fetchPassengerRides: jest.fn(),
 }));
 
-// Mock child components to simplify testing
-jest.mock('./LocationFilters', () => ({
-  LocationFilters: ({
-    onDepartureFilterChange,
-    onDestinationFilterChange,
-  }: {
-    // eslint-disable-next-line no-unused-vars
-    onDepartureFilterChange: (_f: LocationFilterType) => void;
-    // eslint-disable-next-line no-unused-vars
-    onDestinationFilterChange: (_f: LocationFilterType) => void;
-  }) => (
-    <div data-testid="location-filters">
-      <button
-        onClick={() => onDepartureFilterChange({ lat: 10, lng: 20, radius: 25 })}
-        data-testid="filter-dept"
-      >
-        Filter Dept
-      </button>
-      <button
-        onClick={() => onDestinationFilterChange({ lat: 30, lng: 40, radius: 25 })}
-        data-testid="filter-dest"
-      >
-        Filter Dest
-      </button>
-    </div>
-  ),
+jest.mock('@/libs/geocoding', () => ({
+  geocodeLocation: jest.fn(),
 }));
 
+// Keep the real filter controls so tests exercise their state across result changes.
 jest.mock('./rides-posts/RidePostCard', () => ({
   RidePostCard: ({
     post,
@@ -81,6 +61,7 @@ describe('RidesTab', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (geocodeLocation as jest.Mock).mockResolvedValue({ lat: 10, lng: 20 });
     globalThis.HTMLElement.prototype.scrollIntoView = jest.fn();
   });
 
@@ -135,6 +116,39 @@ describe('RidesTab', () => {
     expect(screen.getByText('ride-1')).toBeInTheDocument();
   });
 
+  it('retains the destination query and radius when a search returns matching rides', async () => {
+    const result = {
+      rides: [{ id: 'truckee-ride', departure_date: '2026-11-01' }] as RidePostType[],
+      totalCount: 1,
+      hasMore: false,
+    };
+    (fetchAllRides as jest.Mock).mockResolvedValue(result);
+    render(
+      <RidesTab user={mockUser} supabase={mockSupabase} openMessageModal={mockOpenMessageModal} />
+    );
+    await screen.findByText('truckee-ride');
+    fireEvent.change(screen.getByLabelText('Destination Location'), {
+      target: { value: 'Truckee' },
+    });
+    fireEvent.change(screen.getAllByRole('slider')[1], { target: { value: '40' } });
+    // eslint-disable-next-line no-unused-vars
+    let resolveSearch!: (value: typeof result) => void;
+    (fetchAllRides as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSearch = resolve;
+        })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /search destination/i }));
+    await screen.findByText('Loading rides...');
+    expect(screen.getByLabelText('Destination Location')).toHaveValue('Truckee');
+    await act(async () => resolveSearch(result));
+    await screen.findByText('truckee-ride');
+    expect(screen.getByLabelText('Destination Location')).toHaveValue('Truckee');
+    expect(screen.getAllByRole('slider')[1]).toHaveValue('40');
+    expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
+  });
+
   it('should handle pagination', async () => {
     // 20 items, page size 10 (default) implies 2 pages
     // Must return at least one ride so we don't hit SectionEmpty
@@ -182,12 +196,15 @@ describe('RidesTab', () => {
     });
 
     // Apply filter
-    fireEvent.click(screen.getByTestId('filter-dept'));
+    fireEvent.change(screen.getByLabelText('Departure Location'), { target: { value: 'Truckee' } });
+    fireEvent.click(screen.getByRole('button', { name: /search departure/i }));
 
     // Should reset to page 1
     await waitFor(() => {
       expect(screen.getByText('Page 1')).toBeInTheDocument();
     });
+    expect(screen.getByLabelText('Departure Location')).toHaveValue('Truckee');
+    expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
   });
 
   it('should handle error state', async () => {
@@ -236,4 +253,68 @@ describe('RidesTab', () => {
       expect(cards).toHaveLength(2);
     });
   });
+
+  it.each([
+    ['rides', RidesTab, fetchAllRides, 'No rides match your filters', 'No Rides Found'],
+    [
+      'requests',
+      PassengersSection,
+      fetchPassengerRides,
+      'No requests match your filters',
+      'No passengers looking right now',
+    ],
+  ] as const)(
+    'keeps %s search recoverable through loading, errors, no matches, and clearing',
+    async (_kind, Tab, fetchRides, noMatches, noInventory) => {
+      const empty = { rides: [], totalCount: 0, hasMore: false };
+      const fetchMock = fetchRides as jest.Mock;
+      fetchMock.mockResolvedValue(empty);
+      render(
+        <Tab user={mockUser} supabase={mockSupabase} openMessageModal={mockOpenMessageModal} />
+      );
+      await screen.findByText(noInventory);
+
+      const input = screen.getByLabelText('Departure Location');
+      const radius = screen.getAllByRole('slider')[0];
+      fireEvent.change(input, { target: { value: 'Los Angeles, CA' } });
+      fireEvent.change(radius, { target: { value: '60' } });
+
+      // eslint-disable-next-line no-unused-vars
+      let resolveSearch!: (value: typeof empty) => void;
+      fetchMock.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSearch = resolve;
+          })
+      );
+      fireEvent.click(screen.getByRole('button', { name: /search departure/i }));
+      await screen.findByText(`Loading ${_kind}...`);
+      expect(screen.getByLabelText('Departure Location')).toHaveValue('Los Angeles, CA');
+      expect(screen.getAllByRole('slider')[0]).toHaveValue('60');
+      expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
+
+      await act(async () => resolveSearch(empty));
+      await screen.findByText(noMatches);
+      expect(screen.queryByText(/Be the first/)).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Departure Location')).toHaveValue('Los Angeles, CA');
+      expect(screen.getAllByRole('slider')[0]).toHaveValue('60');
+
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+      fetchMock.mockRejectedValueOnce(new Error('Network unavailable'));
+      fireEvent.change(radius, { target: { value: '65' } });
+      await screen.findByText(/Failed to load/);
+      expect(screen.getByLabelText('Departure Location')).toHaveValue('Los Angeles, CA');
+      expect(screen.getAllByRole('slider')[0]).toHaveValue('65');
+      expect(screen.queryByText(/0 .* available/)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Try Again' }));
+      await screen.findByText(noMatches);
+      consoleError.mockRestore();
+      fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+      await screen.findByText(noInventory);
+      expect(screen.getByLabelText('Departure Location')).toHaveValue('');
+      expect(screen.queryByRole('button', { name: /clear/i })).not.toBeInTheDocument();
+      expect(screen.getByText(/Be the first/)).toBeInTheDocument();
+    }
+  );
 });

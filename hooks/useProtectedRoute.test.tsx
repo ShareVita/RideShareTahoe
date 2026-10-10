@@ -22,6 +22,7 @@ describe('useProtectedRoute', () => {
   beforeEach(() => {
     pushMock.mockClear();
     useUserMock.mockReset();
+    window.history.replaceState({}, '', '/rides/post?type=passenger');
   });
 
   it('keeps loading state while auth is resolving', () => {
@@ -39,7 +40,11 @@ describe('useProtectedRoute', () => {
 
     const { result } = renderHook(() => useProtectedRoute());
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(config.auth.loginUrl));
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(
+        `${config.auth.loginUrl}?next=%2Frides%2Fpost%3Ftype%3Dpassenger`
+      )
+    );
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.user).toBeNull();

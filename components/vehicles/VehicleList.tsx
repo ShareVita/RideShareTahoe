@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import VehicleForm from './VehicleForm';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { readRideDraft, RIDE_DRAFT_KEY } from './rideDraft';
+import { safeNextPath } from '@/lib/authRedirect';
 
 interface VehicleWithId {
   id: string;
@@ -15,6 +19,9 @@ interface VehicleWithId {
 }
 
 export default function VehicleList() {
+  const router = useRouter();
+  const [returnToRide, setReturnToRide] = useState(false);
+  const [nextPath, setNextPath] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<VehicleWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -44,7 +51,14 @@ export default function VehicleList() {
   };
 
   useEffect(() => {
-    fetchVehicles();
+    fetchVehicles().then(() => {
+      const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
+      if (next) {
+        setNextPath(next);
+        setReturnToRide(next === '/rides/post' && !!readRideDraft());
+        setIsAdding(true);
+      }
+    });
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -69,6 +83,20 @@ export default function VehicleList() {
 
   return (
     <div className="space-y-6">
+      {returnToRide && (
+        <p className="text-sm text-gray-700 dark:text-gray-300">
+          Your ride draft is saved in this tab. Add a vehicle to return with it selected, or{' '}
+          <Link href="/rides/post" className="font-medium underline">
+            return to your ride draft
+          </Link>
+          .
+        </p>
+      )}
+      {nextPath && !returnToRide && (
+        <Link href={nextPath} className="text-sm font-medium underline">
+          Return to where you left off
+        </Link>
+      )}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-gray-900 dark:text-white">My Vehicles</h3>
         {!isAdding && !editingVehicle && (
@@ -84,7 +112,23 @@ export default function VehicleList() {
       {(isAdding || editingVehicle) && (
         <VehicleForm
           initialData={editingVehicle ?? undefined}
-          onSuccess={() => {
+          onSuccess={(vehicleId) => {
+            if (returnToRide && !editingVehicle && vehicleId) {
+              const draft = readRideDraft();
+              if (draft) {
+                try {
+                  sessionStorage.setItem(RIDE_DRAFT_KEY, JSON.stringify({ ...draft, vehicleId }));
+                } catch {
+                  toast.error(
+                    'Vehicle added, but it could not be selected in your saved draft. Select it when you return.'
+                  );
+                }
+              }
+            }
+            if (nextPath && !editingVehicle) {
+              router.push(nextPath);
+              return;
+            }
             setIsAdding(false);
             setEditingVehicle(null);
             fetchVehicles();

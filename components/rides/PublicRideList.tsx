@@ -58,7 +58,7 @@ function PublicRideCard({ ride, mode }: { ride: PublicRide; mode: ListMode }) {
             <dt className="sr-only">Car</dt>
             <dd>
               {ride.carType}
-              {ride.hasAwd ? ' · AWD' : ''}
+              {ride.hasAwd && !/\b(?:AWD|4WD|FWD|RWD)\b/i.test(ride.carType) ? ' · AWD/4WD' : ''}
             </dd>
           </div>
         )}

@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/components/providers/SupabaseUserProvider';
 import config from '@/config';
+import { withNextPath } from '@/lib/authRedirect';
 import type { User } from '@supabase/supabase-js';
 
 /**
@@ -47,7 +48,9 @@ export const useProtectedRoute = (): ProtectedRouteResult => {
     // Only run redirection logic when userLoading is false and no user is present.
     // userLoading being false means the auth state is resolved.
     if (!userLoading && !user) {
-      router.push(config.auth.loginUrl);
+      router.push(
+        withNextPath(config.auth.loginUrl, window.location.pathname + window.location.search)
+      );
     }
     // This effect handles only the side-effect (redirection) and avoids setting state.
   }, [user, userLoading, router]);

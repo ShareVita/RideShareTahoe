@@ -1,9 +1,9 @@
 'use client';
 
-import React, { FormEvent, useState, useMemo } from 'react';
+import React, { FormEvent, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUpdateProfile, useUserConsents, type UpdatableProfileData } from '@/hooks/useProfile';
-import { geocodeLocation } from '@/libs/geocoding';
+import { geocodeZipCode } from '@/libs/geocoding';
 import { trackSignupConversion } from '@/libs/googleAds';
 import PhotoUpload from '@/components/ui/PhotoUpload';
 import { safeNextPath, withNextPath } from '@/lib/authRedirect';
@@ -94,14 +94,21 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     linkedin_url: safeString(initialData.linkedin_url),
     airbnb_url: safeString(initialData.airbnb_url),
   });
+  const currentZip = useRef(formState.zip_code);
 
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = event.target;
+    if (name === 'zip_code') {
+      currentZip.current = value;
+      setValidationStatus('idle');
+      setValidationMessage('');
+    }
     setFormState((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === 'zip_code' ? { city: '', state: '', display_lat: null, display_lng: null } : {}),
     }));
   };
 
@@ -120,28 +127,29 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const handleValidateLocation = async () => {
-    if (!formState.city || !formState.state) {
+    const zip = formState.zip_code.trim();
+    if (!/^\d{5}$/.test(zip)) {
       setValidationStatus('error');
-      setValidationMessage('Please enter both City and State.');
-      return;
+      setValidationMessage('Enter a 5-digit US ZIP code.');
+      return null;
     }
 
     setValidationStatus('validating');
     setValidationMessage('Checking location...');
 
-    const query = formState.street_address
-      ? `${formState.street_address}, ${formState.city}, ${formState.state} ${formState.zip_code}`
-      : `${formState.city}, ${formState.state} ${formState.zip_code}`;
-    const coords = await geocodeLocation(query);
+    const coords = await geocodeZipCode(zip);
+    if (currentZip.current.trim() !== zip) return null;
 
     if (coords) {
       setFormState((prev) => ({
         ...prev,
+        city: coords.city,
+        state: coords.state,
         display_lat: coords.lat,
         display_lng: coords.lng,
       }));
       setValidationStatus('success');
-      setValidationMessage('Location verified!');
+      setValidationMessage(`Location found: ${coords.city}, ${coords.state}.`);
     } else {
       setFormState((prev) => ({
         ...prev,
@@ -149,8 +157,9 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         display_lng: null,
       }));
       setValidationStatus('error');
-      setValidationMessage('Could not find this location. Please check spelling.');
+      setValidationMessage('Could not find that ZIP code. Check it and try again.');
     }
+    return coords;
   };
 
   const buildPayload = (): UpdatableProfileData => {
@@ -189,39 +198,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       return;
     }
 
-    // Address Validation: Require full address
-    if (
-      !formState.street_address.trim() ||
-      !formState.city.trim() ||
-      !formState.state.trim() ||
-      !formState.zip_code.trim()
-    ) {
-      setSubmitError('Please complete your full address (Street, City, State, Zip).');
-      return;
-    }
-
-    // Auto-geocode if coordinates are missing
-    let resolvedLat = formState.display_lat;
-    let resolvedLng = formState.display_lng;
-    if (!resolvedLat || !resolvedLng) {
-      setValidationStatus('validating');
-      setValidationMessage('Checking location...');
-      const query = `${formState.street_address}, ${formState.city}, ${formState.state} ${formState.zip_code}`;
-      const coords = await geocodeLocation(query);
-      if (coords) {
-        resolvedLat = coords.lat;
-        resolvedLng = coords.lng;
-        setFormState((prev) => ({ ...prev, display_lat: coords.lat, display_lng: coords.lng }));
-        setValidationStatus('success');
-        setValidationMessage('Location verified!');
-      } else {
-        setValidationStatus('error');
-        setValidationMessage('Could not verify your address. Please check spelling and try again.');
-        setSubmitError('Could not verify your address. Please check spelling and try again.');
-        return;
-      }
-    }
-
     // Consent validation: required if user hasn't already agreed
     if (!hasExistingConsent && !agreedToTerms) {
       setSubmitError(
@@ -230,9 +206,32 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       return;
     }
 
+    if (!/^\d{5}$/.test(formState.zip_code.trim())) {
+      setValidationStatus('error');
+      setValidationMessage('Enter a 5-digit US ZIP code.');
+      return;
+    }
+    let location = {
+      lat: formState.display_lat,
+      lng: formState.display_lng,
+      city: formState.city,
+      state: formState.state,
+    };
+    if (location.lat === null || location.lng === null || !location.city || !location.state) {
+      const resolved = await handleValidateLocation();
+      if (!resolved) return;
+      location = resolved;
+    }
+
     updateProfile.mutate(
       {
-        profileData: { ...buildPayload(), display_lat: resolvedLat, display_lng: resolvedLng },
+        profileData: {
+          ...buildPayload(),
+          city: location.city,
+          state: location.state,
+          display_lat: location.lat,
+          display_lng: location.lng,
+        },
         recordConsent: !hasExistingConsent && agreedToTerms,
       },
       {
@@ -326,72 +325,56 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             ))}
           </select>
         </label>
-        <div className="sm:col-span-2 space-y-2">
-          <label className="space-y-2">
-            <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">
-              Street Address <span className="text-xs font-normal text-gray-500">(Private)</span>
-            </span>
-            <input
-              name="street_address"
-              value={formState.street_address}
-              onChange={handleInputChange}
-              placeholder="123 Main St"
-              className={getInputClass(formState.street_address)}
-            />
-          </label>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Your street address is private and only used for verification. It will not be shown
-            publicly.
-          </p>
-        </div>
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">City</span>
-          <input
-            name="city"
-            value={formState.city}
-            onChange={handleInputChange}
-            className={getInputClass(formState.city)}
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">State</span>
-          <input
-            name="state"
-            value={formState.state}
-            onChange={handleInputChange}
-            className={getInputClass(formState.state)}
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">Zip Code</span>
+          <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">
+            ZIP code (required)
+          </span>
           <input
             name="zip_code"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            aria-describedby="zip-help zip-status"
             value={formState.zip_code}
             onChange={handleInputChange}
             className={getInputClass(formState.zip_code)}
           />
         </label>
+        <div className="sm:col-span-2 text-sm text-gray-600 dark:text-gray-300">
+          <p id="zip-help">
+            We use your ZIP code to find nearby rides. Only your city and approximate location are
+            shared — no street address needed.
+          </p>
+          {formState.city && formState.state && (
+            <p className="mt-2">
+              Location: {formState.city}, {formState.state}
+            </p>
+          )}
+        </div>
       </section>
 
       <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={handleValidateLocation}
-          disabled={validationStatus === 'validating'}
+          disabled={validationStatus === 'validating' || updateProfile.isPending}
           className="rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50"
         >
-          {validationStatus === 'validating' ? 'Checking...' : 'Validate Location'}
+          {validationStatus === 'validating' ? 'Checking...' : 'Check ZIP code'}
         </button>
         <div className="flex flex-col">
           {validationMessage && (
-            <span className={`text-sm ${getValidationMessageClass()}`}>{validationMessage}</span>
+            <span
+              id="zip-status"
+              role="status"
+              className={`text-sm ${getValidationMessageClass()}`}
+            >
+              {validationMessage}
+            </span>
           )}
           {validationStatus === 'error' && (
             <a
               href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(
-                formState.street_address
-                  ? `${formState.street_address} ${formState.zip_code}`
-                  : `${formState.zip_code}`
+                formState.zip_code
               )}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -485,7 +468,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         )}
         <button
           type="submit"
-          disabled={updateProfile.isPending}
+          disabled={updateProfile.isPending || validationStatus === 'validating'}
           className="rounded-2xl bg-blue-600 dark:bg-blue-500 px-6 py-3 text-white transition hover:bg-blue-700 dark:hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-400 dark:disabled:bg-blue-800"
         >
           {updateProfile.isPending ? 'Saving...' : 'Save profile'}

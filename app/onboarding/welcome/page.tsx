@@ -9,7 +9,7 @@ import { fetchAllRides } from '@/libs/community/ridesData';
 import { RidePostCard } from '@/app/community/components/rides-posts/RidePostCard';
 import type { RidePostType, ProfileType } from '@/app/community/types';
 import PostDetailModal from '@/app/community/components/PostDetailModal';
-import { safeNextPath } from '@/lib/authRedirect';
+import { safeNextPath, withNextPath } from '@/lib/authRedirect';
 
 export default function WelcomePage() {
   const { user } = useUser();
@@ -107,7 +107,7 @@ export default function WelcomePage() {
               onClick={finishOnboarding}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
             >
-              Browse Community
+              Continue
             </button>
           </div>
         )}
@@ -125,10 +125,18 @@ export default function WelcomePage() {
               onClick={finishOnboarding}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
-              Browse Community →
+              Continue →
             </button>
             <button
-              onClick={() => router.push('/vehicles')}
+              onClick={() =>
+                router.push(
+                  withNextPath(
+                    '/vehicles',
+                    safeNextPath(new URLSearchParams(window.location.search).get('next')) ||
+                      '/community'
+                  )
+                )
+              }
               className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
             >
               Add a Vehicle (Optional)

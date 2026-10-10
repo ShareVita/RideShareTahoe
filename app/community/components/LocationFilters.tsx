@@ -172,12 +172,12 @@ export function LocationFilters({
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 shadow-md border border-gray-200 dark:border-slate-700 mb-6">
-      <div className="flex items-start justify-between mb-4 gap-4">
+      <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-2 sm:gap-4">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-50">
           Filter by Location
         </h3>
         {ridesFoundLabel && (
-          <p className="text-sm text-gray-600 dark:text-slate-400 whitespace-nowrap">
+          <p role="status" className="text-sm text-gray-600 dark:text-slate-400">
             {ridesFoundLabel}
           </p>
         )}

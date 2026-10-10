@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VehicleForm from './VehicleForm';
-import { VehicleSchema } from '@/libs/validations/vehicle';
+import { vehicleSchema, VehicleSchema } from '@/libs/validations/vehicle';
 import toast from 'react-hot-toast';
 
 jest.setTimeout(10000);
@@ -174,7 +174,7 @@ describe('VehicleForm', () => {
       const user = userEvent.setup();
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: 'new-id' }),
+        json: async () => ({ vehicle: { id: 'new-id' } }),
       });
 
       render(<VehicleForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
@@ -604,5 +604,21 @@ describe('VehicleForm', () => {
         drivetrain: '4WD',
       });
     });
+  });
+
+  describe('shared model validation', () => {
+    const vehicle = { make: 'Mazda', year: 2024, color: 'Blue', drivetrain: 'AWD' };
+    it.each(['CX-5', 'F-150', 'ID.4', 'e-tron (Sportback)', 'Cooper S/SE', 'Cee’d', '500+'])(
+      'accepts model %s',
+      (model) => {
+        expect(vehicleSchema.safeParse({ ...vehicle, model }).success).toBe(true);
+      }
+    );
+    it.each(['   ', '---', '<script>', 'a\nb', 'a'.repeat(51)])(
+      'rejects invalid model %s',
+      (model) => {
+        expect(vehicleSchema.safeParse({ ...vehicle, model }).success).toBe(false);
+      }
+    );
   });
 });
