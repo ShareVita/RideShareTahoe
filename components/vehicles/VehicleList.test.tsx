@@ -63,9 +63,9 @@ it.each(['https://evil.example', '//evil.example', '/login'])(
 it('preserves onboarding next without requiring a ride draft', async () => {
   window.history.replaceState({}, '', '/vehicles?next=%2Fcommunity%3Fview%3Dmy-posts');
   render(<VehicleList />);
-  expect(await screen.findByRole('link', { name: 'Return to where you left off' })).toHaveAttribute(
-    'href',
-    '/community?view=my-posts'
+  const link = await screen.findByRole('link', { name: 'Return to where you left off' });
+  expect(new URL(link.getAttribute('href')!, window.location.origin).href).toBe(
+    `${window.location.origin}/community?view=my-posts`
   );
   expect(screen.getByLabelText('Model')).toBeInTheDocument();
 });

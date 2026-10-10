@@ -93,7 +93,8 @@ export default function VehicleList() {
         </p>
       )}
       {nextPath && !returnToRide && (
-        <Link href={nextPath} className="text-sm font-medium underline">
+        // Fix the relative URL base before the validated path, so it cannot become an authority.
+        <Link href={`/.${nextPath}`} className="text-sm font-medium underline">
           Return to where you left off
         </Link>
       )}
