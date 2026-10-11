@@ -120,29 +120,22 @@ function LoginContent() {
         <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-emerald-500/20 dark:bg-emerald-500/70 blur-3xl" />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-16 text-slate-900 dark:text-white sm:px-8">
-        <div className="space-y-3 text-center lg:text-left">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-600 dark:text-cyan-300/80">
-            Shared rides
-          </p>
-          <h1 className="text-3xl font-black leading-tight text-slate-900 dark:text-white sm:text-4xl">
-            Sign in to {config.appName} and plan your next Tahoe trip in minutes.
-          </h1>
-          <p className="text-base text-slate-600 dark:text-slate-300 sm:text-lg">
-            Find a carpool, share your next ride, and keep in touch with your Tahoe travel buddies.
-          </p>
-        </div>
-
-        <div className="w-full max-w-xl">
-          <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-8 shadow-xl dark:shadow-[0_20px_120px_rgba(15,23,42,0.7)] backdrop-blur">
+      <div className="relative z-10 mx-auto grid w-full max-w-5xl items-center gap-8 px-4 py-8 text-slate-900 dark:text-white sm:px-8 sm:py-12 lg:grid-cols-2">
+        <div className="w-full">
+          <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 sm:p-8 shadow-xl dark:shadow-[0_20px_120px_rgba(15,23,42,0.7)] backdrop-blur">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium uppercase tracking-widest text-slate-500 dark:text-slate-300">
-                  Welcome to the community
+                  {config.appName}
                 </p>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  Sign in or create an account
-                </h2>
+                <h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                  {next === '/rides/post'
+                    ? 'Sign in to post your ride'
+                    : 'Sign in to get connected'}
+                </h1>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  New here? These options create your account too.
+                </p>
               </div>
             </div>
 
@@ -227,6 +220,12 @@ function LoginContent() {
               ← Back to homepage
             </Link>
           </div>
+        </div>
+        <div className="space-y-3 px-2 text-center lg:text-left">
+          <h2 className="text-xl font-bold">Your next Tahoe trip starts here.</h2>
+          <p className="text-base text-slate-600 dark:text-slate-300">
+            Find a carpool, share your next ride, and keep in touch with your Tahoe travel buddies.
+          </p>
         </div>
       </div>
     </main>

@@ -35,7 +35,7 @@ it('returns to the complete ride draft with the newly created API vehicle select
   await user.type(screen.getByLabelText('Make'), 'Mazda');
   await user.type(screen.getByLabelText('Model'), 'CX-5');
   await user.type(screen.getByLabelText('Color'), 'Blue');
-  await user.selectOptions(screen.getByLabelText('Drivetrain'), 'AWD');
+  await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
   (global.fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
     json: async () => ({ vehicle: { id: 'new-vehicle' } }),

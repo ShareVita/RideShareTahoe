@@ -51,9 +51,7 @@ export function useProfileCompletionPrompt(
     if (toastMessage) {
       toast(toastMessage);
     }
-    router.push(
-      withNextPath('/complete-profile', window.location.pathname + window.location.search)
-    );
+    router.push(withNextPath('/profile/edit', window.location.pathname + window.location.search));
   }, [router, toastMessage]);
 
   const profileCompletionModal = useMemo(

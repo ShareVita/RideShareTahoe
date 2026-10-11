@@ -6,7 +6,7 @@ import { useUpdateProfile, useUserConsents, type UpdatableProfileData } from '@/
 import { geocodeZipCode } from '@/libs/geocoding';
 import { trackSignupConversion } from '@/libs/googleAds';
 import PhotoUpload from '@/components/ui/PhotoUpload';
-import { safeNextPath, withNextPath } from '@/lib/authRedirect';
+import { safeNextPath } from '@/lib/authRedirect';
 
 const PRONOUN_OPTIONS = [
   { value: 'he/him', label: 'He/Him' },
@@ -240,8 +240,8 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           if (isFirstTimeUser) {
             // A completed first profile is the sign-up conversion for Google Ads
             trackSignupConversion();
-            // Redirect first-time users to onboarding welcome page
-            router.push(withNextPath('/onboarding/welcome', next));
+            // Resume the intended task; discovery is for users without a destination.
+            router.push(next || '/onboarding/welcome');
           } else {
             // Redirect existing users to community page
             router.push(next || '/community');

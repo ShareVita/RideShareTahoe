@@ -52,8 +52,8 @@ export default function ProfileCompletionModal({
                   Complete your profile
                 </DialogTitle>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-300">
-                  We need a few more details in your profile before you can send messages or book
-                  rides. It&apos;s quick to finish and keeps the community trusted.
+                  Complete your profile before posting a ride, sending messages, or booking. Your
+                  name and ZIP code help other members know who they&apos;re connecting with.
                 </p>
                 <div className="mt-6 flex justify-end space-x-2">
                   <button

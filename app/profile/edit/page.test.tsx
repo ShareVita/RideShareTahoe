@@ -155,7 +155,7 @@ describe('ProfileEditPage', () => {
 
   it.each([
     ['Jane', '/messages?thread=42', '/messages?thread=42'],
-    ['', '/messages?thread=42', '/onboarding/welcome?next=%2Fmessages%3Fthread%3D42'],
+    ['', '/messages?thread=42', '/messages?thread=42'],
     ['Jane', '//evil.test', '/community'],
     ['', '/login', '/onboarding/welcome'],
     ['Jane', '', '/community'],

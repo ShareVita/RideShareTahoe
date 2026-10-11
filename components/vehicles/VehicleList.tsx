@@ -15,7 +15,7 @@ interface VehicleWithId {
   year: number;
   color: string;
   license_plate?: string;
-  drivetrain?: 'FWD' | 'RWD' | 'AWD' | '4WD';
+  drivetrain?: 'FWD' | 'RWD' | 'AWD' | '4WD' | 'AWD/4WD' | null;
 }
 
 export default function VehicleList() {
@@ -166,7 +166,10 @@ export default function VehicleList() {
                 {vehicle.year} {vehicle.make} {vehicle.model}
               </h4>
               <p className="text-gray-600 dark:text-gray-300">
-                {vehicle.color} • {vehicle.drivetrain || 'Unknown Drivetrain'}
+                {vehicle.color}
+                {vehicle.drivetrain && ['AWD', '4WD', 'AWD/4WD'].includes(vehicle.drivetrain)
+                  ? ' • AWD / 4WD'
+                  : ''}
               </p>
               {vehicle.license_plate && (
                 <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">

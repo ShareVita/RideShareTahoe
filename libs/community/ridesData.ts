@@ -170,6 +170,7 @@ export const fetchMyRides = async (
     `
     )
     .eq('poster_id', currentUser.id)
+    .eq('status', 'active')
     .order('created_at', { ascending: false })) as {
     data: Omit<RidePostType, 'owner'>[] | null;
     error: unknown;

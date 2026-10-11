@@ -439,6 +439,23 @@ describeIntegration('Rides Display Integration Test', () => {
     // Should NOT contain User 2's posts
     const foundUser2Post = myRides.some((ride) => ride.poster_id === user2Id);
     expect(foundUser2Post).toBe(false);
+
+    // A deleted post stays hidden on a fresh fetch without deleting its history.
+    try {
+      const { error } = await user1Client
+        .from('rides')
+        .update({ status: 'inactive' } as never)
+        .eq('id', user1DriverRideId);
+      expect(error).toBeNull();
+      const afterDelete = await fetchMyRides(user1Client, user1Profile);
+      expect(afterDelete.some((ride) => ride.id === user1DriverRideId)).toBe(false);
+      expect(afterDelete.some((ride) => ride.id === user1PassengerRideId)).toBe(true);
+    } finally {
+      await supabaseAdmin
+        .from('rides')
+        .update({ status: 'active' } as never)
+        .eq('id', user1DriverRideId);
+    }
   });
 
   it('should include round trip posts with proper grouping', async () => {

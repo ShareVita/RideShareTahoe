@@ -85,12 +85,12 @@ export function RidePostCard({
         className={`${cardBackground} rounded-xl p-4 sm:p-6 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-200 dark:border-slate-800 flex flex-col h-full`}
       >
         {/* Header */}
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1 min-w-0 pr-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 mb-4">
+          <div className="min-w-0 min-h-20">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white line-clamp-1">
               {post.title || 'Untitled Ride'}
             </h3>
-            <div className="flex items-center space-x-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mt-1 min-h-6">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badgeStyles}`}
               >
@@ -103,15 +103,6 @@ export function RidePostCard({
                   {directionLabel}
                 </span>
               )}
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {departureDateLabel ?? 'Date TBD'}
-                {departureTimeLabel && ` · ${departureTimeLabel}`}
-                {hasReturnInfo && (
-                  <span className="block mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    Return: {returnDateLabel} · {returnTimeLabel}
-                  </span>
-                )}
-              </span>
             </div>
           </div>
 
@@ -136,6 +127,15 @@ export function RidePostCard({
                 }`}
               >
                 {post.status}
+              </span>
+            )}
+          </div>
+          <div className="col-span-2 min-h-9 text-xs text-gray-500 dark:text-gray-400">
+            {departureDateLabel ?? 'Date TBD'}
+            {departureTimeLabel && ` · ${departureTimeLabel}`}
+            {hasReturnInfo && (
+              <span className="block mt-0.5">
+                Return: {returnDateLabel} · {returnTimeLabel}
               </span>
             )}
           </div>

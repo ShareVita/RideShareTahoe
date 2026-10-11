@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { vehicleSchema, VehicleSchema } from '@/libs/validations/vehicle';
 import toast from 'react-hot-toast';
@@ -23,6 +23,7 @@ export default function VehicleForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<VehicleSchema>({
     resolver: zodResolver(vehicleSchema),
@@ -32,6 +33,7 @@ export default function VehicleForm({
       year: new Date().getFullYear(),
       color: '',
       license_plate: '',
+      drivetrain: null,
     },
   });
 
@@ -151,23 +153,35 @@ export default function VehicleForm({
         </div>
 
         <div>
-          <label
-            htmlFor="drivetrain"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
-            Drivetrain
-          </label>
-          <select
-            id="drivetrain"
-            {...register('drivetrain')}
-            className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          >
-            <option value="">Select type</option>
-            <option value="FWD">FWD (Front Wheel Drive)</option>
-            <option value="RWD">RWD (Rear Wheel Drive)</option>
-            <option value="AWD">AWD (All Wheel Drive)</option>
-            <option value="4WD">4WD (Four Wheel Drive)</option>
-          </select>
+          <Controller
+            name="drivetrain"
+            control={control}
+            render={({ field }) => (
+              <label className="flex items-center gap-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  name={field.name}
+                  ref={field.ref}
+                  onBlur={field.onBlur}
+                  checked={['AWD', '4WD', 'AWD/4WD'].includes(field.value ?? '')}
+                  onChange={(event) =>
+                    field.onChange(
+                      event.target.checked
+                        ? initialData?.drivetrain === 'AWD' || initialData?.drivetrain === '4WD'
+                          ? initialData.drivetrain
+                          : 'AWD/4WD'
+                        : null
+                    )
+                  }
+                  className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                My vehicle has AWD / 4WD
+              </label>
+            )}
+          />
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            All-wheel or four-wheel drive. Leave unchecked if your vehicle has neither.
+          </p>
           {errors.drivetrain && (
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">
               {errors.drivetrain.message}
