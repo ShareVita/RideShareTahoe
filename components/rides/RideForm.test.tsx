@@ -182,44 +182,53 @@ describe('RideForm', () => {
     });
   });
 
-  it('sets has_awd based on selected vehicle drivetrain', async () => {
-    const user = userEvent.setup();
-    render(<RideForm onSave={mockOnSave} onCancel={mockOnCancel} vehicles={mockVehicles} />);
-
-    // Select AWD Vehicle
-    await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'v1');
-
-    // Fill required fields
-    await user.type(screen.getByLabelText(/Ride Title/i), 'AWD Trip');
-    await user.type(screen.getByLabelText(/Start Location/i), 'A');
-    await user.type(screen.getByLabelText(/End Location/i), 'B');
-    await user.type(screen.getByLabelText(/Departure Date/i), '2025-12-25');
-    await user.type(screen.getByLabelText(/Departure Time/i), '08:00');
-
-    await user.click(screen.getByRole('button', { name: /Post Ride/i }));
-
-    await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          has_awd: true,
-          car_type: expect.stringContaining('AWD'),
-        })
+  it.each(['AWD', '4WD', 'AWD/4WD'] as const)(
+    'sets has_awd for %s and clears it for FWD',
+    async (drivetrain) => {
+      const user = userEvent.setup();
+      render(
+        <RideForm
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          vehicles={mockVehicles.map((v) => (v.id === 'v1' ? { ...v, drivetrain } : v))}
+        />
       );
-    });
 
-    // Select FWD Vehicle
-    await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'v2');
-    await user.click(screen.getByRole('button', { name: /Post Ride/i }));
+      // Select AWD Vehicle
+      await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'v1');
 
-    await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalledWith(
-        expect.objectContaining({
-          has_awd: false,
-          car_type: expect.stringContaining('FWD'),
-        })
-      );
-    });
-  });
+      // Fill required fields
+      await user.type(screen.getByLabelText(/Ride Title/i), 'AWD Trip');
+      await user.type(screen.getByLabelText(/Start Location/i), 'A');
+      await user.type(screen.getByLabelText(/End Location/i), 'B');
+      await user.type(screen.getByLabelText(/Departure Date/i), '2025-12-25');
+      await user.type(screen.getByLabelText(/Departure Time/i), '08:00');
+
+      await user.click(screen.getByRole('button', { name: /Post Ride/i }));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            has_awd: true,
+            car_type: expect.stringContaining(drivetrain),
+          })
+        );
+      });
+
+      // Select FWD Vehicle
+      await user.selectOptions(screen.getByLabelText(/Select from My Vehicles/i), 'v2');
+      await user.click(screen.getByRole('button', { name: /Post Ride/i }));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            has_awd: false,
+            car_type: expect.stringContaining('FWD'),
+          })
+        );
+      });
+    }
+  );
 
   it('keeps the existing vehicle and coordinates on edit, and restores it after another selection', async () => {
     const user = userEvent.setup();

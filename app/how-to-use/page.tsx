@@ -501,7 +501,7 @@ export default function HowToUsePage() {
                 <p className="text-gray-600 mb-4">Ready to hit the road?</p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Link
-                    href="/community"
+                    href="/rides/find"
                     className="bg-linear-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium"
                   >
                     Find a Ride →

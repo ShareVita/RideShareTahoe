@@ -145,7 +145,7 @@ export default function RideForm({
         ...(vehicle
           ? {
               car_type: `${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.color})${vehicle.drivetrain ? ` - ${vehicle.drivetrain}` : ''}`,
-              has_awd: vehicle.drivetrain === 'AWD' || vehicle.drivetrain === '4WD',
+              has_awd: ['AWD', '4WD', 'AWD/4WD'].includes(vehicle.drivetrain ?? ''),
             }
           : {}),
         start_lat: start?.lat ?? null,

@@ -39,7 +39,7 @@ describe('VehicleForm', () => {
       expect(screen.getByLabelText(/Model/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Year/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Color/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Drivetrain/i)).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i })).not.toBeChecked();
       expect(screen.getByLabelText(/License Plate/i)).toBeInTheDocument();
     });
 
@@ -87,7 +87,7 @@ describe('VehicleForm', () => {
       expect(screen.getByLabelText(/Year/i)).toHaveValue(2019);
       expect(screen.getByLabelText(/Color/i)).toHaveValue('Blue');
       expect(screen.getByLabelText(/License Plate/i)).toHaveValue('XYZ789');
-      expect(screen.getByLabelText(/Drivetrain/i)).toHaveValue('AWD');
+      expect(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i })).toBeChecked();
     });
   });
 
@@ -108,7 +108,7 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2021');
       await user.type(screen.getByLabelText(/Color/i), 'Green');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'AWD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
 
       // Submit form
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
@@ -185,7 +185,7 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2023');
       await user.type(screen.getByLabelText(/Color/i), 'White');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'AWD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
       await user.type(screen.getByLabelText(/License Plate/i), 'TESLA1');
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
@@ -199,7 +199,7 @@ describe('VehicleForm', () => {
           model: 'Model 3',
           year: 2023,
           color: 'White',
-          drivetrain: 'AWD',
+          drivetrain: 'AWD/4WD',
           license_plate: 'TESLA1',
         });
       });
@@ -219,7 +219,7 @@ describe('VehicleForm', () => {
       await user.type(screen.getByLabelText(/Make/i), 'Mazda');
       await user.type(screen.getByLabelText(/Model/i), 'CX5');
       await user.type(screen.getByLabelText(/Color/i), 'Black');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'AWD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
       // Year defaults to current year, which is valid
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
@@ -276,7 +276,6 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2022');
       await user.type(screen.getByLabelText(/Color/i), 'Blue');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'FWD');
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
 
@@ -334,7 +333,6 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2021');
       await user.type(screen.getByLabelText(/Color/i), 'White');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'FWD');
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
 
@@ -359,7 +357,6 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2020');
       await user.type(screen.getByLabelText(/Color/i), 'Red');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'FWD');
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
 
@@ -381,7 +378,7 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2022');
       await user.type(screen.getByLabelText(/Color/i), 'Orange');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), '4WD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
 
@@ -431,7 +428,6 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2024');
       await user.type(screen.getByLabelText(/Color/i), 'Yellow');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'RWD');
 
       const submitButton = screen.getByRole('button', { name: /Add Vehicle/i });
       await user.click(submitButton);
@@ -467,7 +463,7 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2023');
       await user.type(screen.getByLabelText(/Color/i), 'Pearl');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'AWD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
 
       const submitButton = screen.getByRole('button', { name: /Add Vehicle/i });
       await user.click(submitButton);
@@ -496,7 +492,7 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2022');
       await user.type(screen.getByLabelText(/Color/i), 'White');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'AWD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
 
       const submitButton = screen.getByRole('button', { name: /Add Vehicle/i });
       await user.click(submitButton);
@@ -534,6 +530,43 @@ describe('VehicleForm', () => {
   });
 
   describe('Optional Fields', () => {
+    it.each(['AWD', '4WD', 'AWD/4WD'] as const)(
+      'preserves %s when checked and clears it when unchecked',
+      async (drivetrain) => {
+        const user = userEvent.setup();
+        (global.fetch as jest.Mock).mockResolvedValue({
+          ok: true,
+          json: async () => ({ vehicle: { id: 'existing' } }),
+        });
+        render(
+          <VehicleForm
+            initialData={{
+              id: 'existing',
+              make: 'Subaru',
+              model: 'Outback',
+              year: 2020,
+              color: 'Blue',
+              drivetrain,
+            }}
+          />
+        );
+        const checkbox = screen.getByRole('checkbox', { name: /AWD \/ 4WD/i });
+        expect(checkbox).toBeChecked();
+        await user.click(screen.getByRole('button', { name: /Update Vehicle/i }));
+        await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
+        expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body).drivetrain).toBe(
+          drivetrain
+        );
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: /Update Vehicle/i })).toBeEnabled()
+        );
+        await user.click(checkbox);
+        await user.click(screen.getByRole('button', { name: /Update Vehicle/i }));
+        await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
+        expect(JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body).drivetrain).toBeNull();
+      }
+    );
+
     it('allows submission without license plate', async () => {
       const user = userEvent.setup();
 
@@ -550,7 +583,7 @@ describe('VehicleForm', () => {
       await user.clear(yearInput);
       await user.type(yearInput, '2023');
       await user.type(screen.getByLabelText(/Color/i), 'Black');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), 'AWD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
       // Do not fill license plate
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
@@ -584,7 +617,7 @@ describe('VehicleForm', () => {
       await user.type(yearInput, '2024');
       await user.type(screen.getByLabelText(/Color/i), 'Silver');
       await user.type(screen.getByLabelText(/License Plate/i), 'CAD123');
-      await user.selectOptions(screen.getByLabelText(/Drivetrain/i), '4WD');
+      await user.click(screen.getByRole('checkbox', { name: /AWD \/ 4WD/i }));
 
       await user.click(screen.getByRole('button', { name: /Add Vehicle/i }));
 
@@ -601,19 +634,26 @@ describe('VehicleForm', () => {
         year: 2024,
         color: 'Silver',
         license_plate: 'CAD123',
-        drivetrain: '4WD',
+        drivetrain: 'AWD/4WD',
       });
     });
   });
 
   describe('shared model validation', () => {
     const vehicle = { make: 'Mazda', year: 2024, color: 'Blue', drivetrain: 'AWD' };
-    it.each(['CX-5', 'F-150', 'ID.4', 'e-tron (Sportback)', 'Cooper S/SE', 'Cee’d', '500+'])(
-      'accepts model %s',
-      (model) => {
-        expect(vehicleSchema.safeParse({ ...vehicle, model }).success).toBe(true);
-      }
-    );
+    it.each([
+      'CX-5',
+      'CX–5',
+      'CX—5',
+      'F-150',
+      'ID.4',
+      'e-tron (Sportback)',
+      'Cooper S/SE',
+      'Cee’d',
+      '500+',
+    ])('accepts model %s', (model) => {
+      expect(vehicleSchema.safeParse({ ...vehicle, model }).success).toBe(true);
+    });
     it.each(['   ', '---', '<script>', 'a\nb', 'a'.repeat(51)])(
       'rejects invalid model %s',
       (model) => {

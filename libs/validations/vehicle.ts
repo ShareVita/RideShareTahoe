@@ -12,7 +12,7 @@ export const vehicleSchema = z.object({
     .min(1, 'Model is required')
     .max(50, 'Model must be less than 50 characters')
     .regex(
-      /^[a-zA-Z0-9 .(),'’+/-]+$/,
+      /^[a-zA-Z0-9 .(),'’+/–—-]+$/,
       'Model can only contain letters, numbers, spaces, and common punctuation'
     )
     .regex(/[a-zA-Z0-9]/, 'Model must contain a letter or number'),
@@ -35,7 +35,7 @@ export const vehicleSchema = z.object({
     )
     .optional()
     .or(z.literal('')),
-  drivetrain: z.enum(['FWD', 'RWD', 'AWD', '4WD']).optional(),
+  drivetrain: z.enum(['FWD', 'RWD', 'AWD', '4WD', 'AWD/4WD']).nullable().optional(),
 });
 
 export type VehicleSchema = z.infer<typeof vehicleSchema>;

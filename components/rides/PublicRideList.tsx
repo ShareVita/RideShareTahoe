@@ -24,12 +24,12 @@ function PublicRideCard({ ride, mode }: { ride: PublicRide; mode: ListMode }) {
       : 'Happy to chip in for gas';
 
   return (
-    <li className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <li className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col h-full min-w-0">
+      <div className="space-y-2">
         <span className={`text-xs font-semibold px-3 py-1 rounded-full ${badge.className}`}>
           {badge.label}
         </span>
-        <span className="text-sm text-slate-500 dark:text-slate-400">
+        <span className="block min-h-10 text-sm text-slate-500 dark:text-slate-400">
           {formatDateLabel(ride.departureDate)} · {formatTimeLabel(ride.departureTime)}
           {ride.isRoundTrip && ride.returnDate
             ? ` · returns ${formatDateLabel(ride.returnDate)}`
@@ -37,34 +37,32 @@ function PublicRideCard({ ride, mode }: { ride: PublicRide; mode: ListMode }) {
         </span>
       </div>
 
-      <p className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+      <p className="mt-4 min-h-14 text-lg font-semibold text-slate-900 dark:text-white break-words">
         {ride.from} <span aria-hidden="true">→</span> <span className="sr-only">to</span>
         {ride.to}
       </p>
 
-      <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-700 dark:text-slate-300">
-        {seats && (
-          <div>
-            <dt className="sr-only">Seats</dt>
-            <dd>{seats}</dd>
-          </div>
-        )}
+      <dl className="mt-3 space-y-1 text-sm text-slate-700 dark:text-slate-300 grow">
+        <div className="min-h-5">
+          <dt className="sr-only">Seats</dt>
+          <dd>{seats}</dd>
+        </div>
         <div>
           <dt className="sr-only">Cost share</dt>
           <dd>{costShare}</dd>
         </div>
-        {ride.carType && (
-          <div>
-            <dt className="sr-only">Car</dt>
-            <dd>
-              {ride.carType}
-              {ride.hasAwd && !/\b(?:AWD|4WD|FWD|RWD)\b/i.test(ride.carType) ? ' · AWD/4WD' : ''}
-            </dd>
-          </div>
-        )}
+        <div className="min-h-5 break-words">
+          <dt className="sr-only">Car</dt>
+          <dd>
+            {ride.carType}
+            {ride.carType && ride.hasAwd && !/\b(?:AWD|4WD|FWD|RWD)\b/i.test(ride.carType)
+              ? ' · AWD/4WD'
+              : ''}
+          </dd>
+        </div>
       </dl>
 
-      <div className="mt-4 flex items-center justify-between gap-4">
+      <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 items-start gap-4">
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Posted by {ride.posterLabel}
           {mode === 'past' ? ' · trip date has passed' : ''}
@@ -125,7 +123,7 @@ export default function PublicRideList({
   }
 
   return (
-    <ul className="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <ul className="grid grid-cols-1 md:grid-cols-2 auto-rows-fr gap-5">
       {rides.map((ride) => (
         <PublicRideCard key={ride.id} ride={ride} mode={mode} />
       ))}

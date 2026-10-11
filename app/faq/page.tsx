@@ -159,8 +159,6 @@ const categories = [
   { id: 'all', name: 'All Questions', icon: '❓' },
   { id: 'general', name: 'General', icon: '🏠' },
   { id: 'safety', name: 'Safety & Privacy', icon: '🔒' },
-  { id: 'drivers', name: 'For Drivers', icon: '🚗' },
-  { id: 'passengers', name: 'For Passengers', icon: '👋' },
   { id: 'technical', name: 'Technical', icon: '⚙️' },
   { id: 'community', name: 'Community', icon: '🤝' },
 ];
@@ -174,12 +172,7 @@ export default function FAQPage() {
   const filteredFAQ =
     selectedCategory === 'all'
       ? faqData
-      : faqData.filter((item) => {
-          if (item.category === selectedCategory) return true;
-          // Map drivers/passengers categories to general or community if specific ones don't exist in data yet
-          // For now, we'll just show all relevant ones.
-          return false;
-        });
+      : faqData.filter((item) => item.category === selectedCategory);
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
@@ -275,7 +268,7 @@ export default function FAQPage() {
         {/* Quick Links */}
         <div className="mt-12 grid md:grid-cols-3 gap-6">
           <Link
-            href="/community"
+            href="/rides/find"
             className="bg-white rounded-lg shadow-xs border border-gray-200 p-6 hover:shadow-md transition-shadow"
           >
             <div className="text-3xl mb-3">🤝</div>
